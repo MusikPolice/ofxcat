@@ -31,13 +31,18 @@ public class TransactionCategoryStore {
     /**
      * Returns the category that exactly matches the specified transaction's description, or else null
      */
-    public Category getCategoryExact(Transaction transaction) {
-        return descriptionCategories.entrySet()
+    public CategorizedTransaction getCategoryExact(Transaction transaction) {
+        final Category category = descriptionCategories.entrySet()
                 .parallelStream()
                 .filter(es -> es.getKey().equalsIgnoreCase(transaction.getDescription()))
                 .map(Map.Entry::getValue)
                 .findFirst()
                 .orElse(null);
+
+        if (category != null) {
+            return new CategorizedTransaction(transaction, category);
+        }
+        return null;
     }
 
     /**
@@ -45,14 +50,14 @@ public class TransactionCategoryStore {
      * Once a category is selected from the returned set, it must be associated to the specified transaction by way
      * of the {@link #put(Transaction, Category)} method.
      */
-    public Set<Category> getCategoryFuzzy(Transaction transaction, int limit) {
+    public List<Category> getCategoryFuzzy(Transaction transaction, int limit) {
         // TODO: is 80% match good enough?
         return FuzzySearch.extractSorted(transaction.getDescription(), descriptionCategories.keySet(), 80)
                 .parallelStream()
                 .map(er -> descriptionCategories.get(er.getString()))
                 .distinct()
                 .limit(limit)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
     }
 
     public Set<Category> getCategories() {
