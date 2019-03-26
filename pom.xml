@@ -30,6 +30,13 @@
             <version>1.4</version>
         </dependency>
 
+        <!-- interactive CLI -->
+        <dependency>
+            <groupId>org.beryx</groupId>
+            <artifactId>text-io</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+
         <!-- parses ofx files -->
         <dependency>
             <groupId>com.webcohesion.ofx4j</groupId>
