@@ -24,8 +24,6 @@ public class CLI {
     public Set<CategorizedTransaction> categorizeTransactions(Set<Transaction> transactions) {
         final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
 
-        // TODO: when adding a description to a category, let user control the part of the description to match on so that IDP PURCHASE can be stripped out
-
         for (Transaction transaction : transactions) {
             // try to automatically categorize the transaction
             CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction);
@@ -71,7 +69,7 @@ public class CLI {
         final String input = textIO.newStringInputReader()
                 .withIgnoreCase()
                 .withNumberedPossibleValues(
-                        Stream.concat(potentialCategories.stream().map(Category::getName), Arrays.stream(new String[] {"New Category"}))
+                        Stream.concat(potentialCategories.stream().map(Category::getName), Arrays.stream(new String[] {"Choose another Category"}))
                         .collect(Collectors.toList())
                 ).read(String.format("\nSelect a category for %s:", transaction));
 
@@ -93,19 +91,33 @@ public class CLI {
     }
 
     private CategorizedTransaction addNewCategory(Transaction transaction) {
-        // TODO: fuzzy match on category names
+        // choose from existing categories? TODO: this can be generalized with code that chooses from small set of matchers
+        List<String> potentialCategories = transactionCategoryStore.getCategoryNames();
+        final String input = textIO.newStringInputReader()
+                .withNumberedPossibleValues(
+                        Stream.concat(potentialCategories.stream(), Arrays.stream(new String[] {"New Category"}))
+                                .collect(Collectors.toList())
+                )
+                .read(String.format("\nSelect a category for %s:", transaction));
 
-        // no existing categories that pass the threshold test - prompt for a new one
-        final String categoryName = textIO.newStringInputReader()
-                .withValueChecker((val, itemName) -> {
-                    if (StringUtils.isBlank(val)) {
-                        return Collections.singletonList("Category names must not be blank");
-                    } else if (val.contains(",")) {
-                       return Collections.singletonList("Category names must not contain a comma");
-                    }
-                    return null;
-                })
-                .read(String.format("\nPlease enter a new category for %s", transaction));
+        String categoryName = potentialCategories.stream()
+                .filter(pc -> pc.equalsIgnoreCase(input))
+                .findFirst()
+                .orElse(null);
+
+        if (StringUtils.isBlank(categoryName)) {
+            // no existing categories that pass the threshold test - prompt for a new one
+            categoryName = textIO.newStringInputReader()
+                    .withValueChecker((val, itemName) -> {
+                        if (StringUtils.isBlank(val)) {
+                            return Collections.singletonList("Category names must not be blank");
+                        } else if (val.contains(",")) {
+                            return Collections.singletonList("Category names must not contain a comma");
+                        }
+                        return null;
+                    })
+                    .read(String.format("\nPlease enter a new category for %s", transaction));
+        }
 
         return transactionCategoryStore.put(transaction, new Category(categoryName));
     }

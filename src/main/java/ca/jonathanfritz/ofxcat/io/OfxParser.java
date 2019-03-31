@@ -1,6 +1,5 @@
 package ca.jonathanfritz.ofxcat.io;
 
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import com.webcohesion.ofx4j.io.OFXHandler;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import com.webcohesion.ofx4j.io.OFXReader;
@@ -17,6 +16,8 @@ import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Set;
 
+// TODO: add filter to clean up institution-specific codes like C-IDP, IDP, and WWW PMT LOAN, etc
+// these typically appear in either the memo or the name column, though it isn't consistent. That column should be dropped if possible
 public class OfxParser {
 
     private static final String STMTTRN = "STMTTRN";
@@ -31,17 +32,17 @@ public class OfxParser {
 
     private final Logger logger = LoggerFactory.getLogger(OfxParser.class);
 
-    public Set<Transaction> parse(final InputStream inputStream) throws IOException, OFXParseException {
-        final Set<Transaction> transactions = new HashSet<>();
+    public Set<OfxTransaction> parse(final InputStream inputStream) throws IOException, OFXParseException {
+        final Set<OfxTransaction> transactions = new HashSet<>();
 
         final OFXReader ofxReader = new NanoXMLOFXReader();
         ofxReader.setContentHandler(new OFXHandler() {
 
-            Transaction.TransactionBuilder transactionBuilder;
+            OfxTransaction.TransactionBuilder transactionBuilder;
 
             public void startAggregate(String name) {
                 if (STMTTRN.equalsIgnoreCase(name)) {
-                    transactionBuilder = Transaction.newBuilder();
+                    transactionBuilder = OfxTransaction.newBuilder();
                 }
             }
 
@@ -74,7 +75,7 @@ public class OfxParser {
 
             public void endAggregate(String name) {
                 if (STMTTRN.equalsIgnoreCase(name)) {
-                    final Transaction t = transactionBuilder.build();
+                    final OfxTransaction t = transactionBuilder.build();
                     transactions.add(t);
                     logger.debug("Parsed transaction {}", t);
                 }

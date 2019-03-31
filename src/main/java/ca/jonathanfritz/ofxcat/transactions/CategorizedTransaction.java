@@ -8,7 +8,7 @@ public class CategorizedTransaction extends Transaction {
     private final Category category;
 
     CategorizedTransaction(Transaction transaction, Category category) {
-        super(Transaction.newBuilder(transaction));
+        super(transaction.getType(), transaction.getDate(), transaction.getAmount(), transaction.getDescription());
         this.category = category;
     }
 

@@ -1,5 +1,4 @@
 package ca.jonathanfritz.ofxcat.transactions;
-
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 
 import java.util.*;
@@ -62,5 +61,13 @@ public class TransactionCategoryStore {
 
     public Set<Category> getCategories() {
         return new HashSet<>(categories);
+    }
+
+    public List<String> getCategoryNames() {
+        return categories
+                .stream()
+                .map(Category::getName)
+                .sorted()
+                .collect(Collectors.toList());
     }
 }

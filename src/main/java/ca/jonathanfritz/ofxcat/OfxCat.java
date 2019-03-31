@@ -1,6 +1,9 @@
 package ca.jonathanfritz.ofxcat;
 
+import ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner;
+import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
+import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import ca.jonathanfritz.ofxcat.transactions.TransactionCategoryStore;
@@ -14,6 +17,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class OfxCat {
 
@@ -25,7 +29,7 @@ public class OfxCat {
         this.cli = cli;
     }
 
-    private Set<Transaction> parseOfxFile(final File inputFile) throws OFXException {
+    private Set<OfxTransaction> parseOfxFile(final File inputFile) throws OFXException {
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
 
             final OfxParser ofxParser = new OfxParser();
@@ -57,12 +61,19 @@ public class OfxCat {
                 final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(); // TODO: load categorizations from previous runs here
                 final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
                 final OfxCat ofxCat = new OfxCat(transactionCategoryStore, cli);
-                final Set<Transaction> transactions = ofxCat.parseOfxFile(file);
-                final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(transactions);
+
+                // TODO: can this return a Stream<OfxTransaction> that we can run through transformations?
+                final Set<OfxTransaction> ofxTransactions = ofxCat.parseOfxFile(file);
+
+                // TODO: auto-discover the institution so that we can use the appropriate transaction cleaner
+                final TransactionCleaner transactionCleaner = new RbcTransactionCleaner();
+                final Set<Transaction> cleanedTransactions = ofxTransactions
+                        .parallelStream()
+                        .map(transactionCleaner::clean)
+                        .collect(Collectors.toSet());
+                final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(cleanedTransactions);
 
                 // TODO: present the results in a pleasing manner
-                //exportTransactions(categorizedTransactions);
-
                 // TODO: save state of transaction store to disk
 
             } else {
