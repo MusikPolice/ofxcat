@@ -7,10 +7,13 @@ import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import ca.jonathanfritz.ofxcat.transactions.TransactionCategoryStore;
+import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.webcohesion.ofx4j.OFXException;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import org.apache.commons.cli.*;
 import org.beryx.textio.TextIoFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,14 +27,16 @@ public class OfxCat {
     private final TransactionCategoryStore transactionCategoryStore;
     private final CLI cli;
 
+    private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
+
     public OfxCat(TransactionCategoryStore transactionCategoryStore, CLI cli) {
         this.transactionCategoryStore = transactionCategoryStore;
         this.cli = cli;
     }
 
     private Set<OfxTransaction> parseOfxFile(final File inputFile) throws OFXException {
+        log.debug("Attempting to parse file {}", inputFile.toString());
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
-
             final OfxParser ofxParser = new OfxParser();
             return ofxParser.parse(inputStream);
 
@@ -57,7 +62,7 @@ public class OfxCat {
             final CommandLine commandLine = commandLineParser.parse(options, args);
 
             if (commandLine.hasOption("f")) {
-                final File file  = new File(commandLine.getOptionValue("f"));
+                final File file  =  PathUtils.expand(commandLine.getOptionValue("f")).toFile();
                 final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(); // TODO: load categorizations from previous runs here
                 final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
                 final OfxCat ofxCat = new OfxCat(transactionCategoryStore, cli);
@@ -86,6 +91,4 @@ public class OfxCat {
             e.printStackTrace();
         }
     }
-
-
 }
