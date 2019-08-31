@@ -7,9 +7,10 @@ public class OfxTransaction {
     private final String type;
     private final LocalDate date;
     private final float amount;
-    private final String fitId;
+    private final String fitId; // bank id, followed by date in format yyyymmdd, followed by 12 character hex string
     private final String name;
     private final String memo;
+    private final OfxAccount account;
 
     private OfxTransaction(TransactionBuilder transactionBuilder) {
         this.type = transactionBuilder.type;
@@ -18,6 +19,7 @@ public class OfxTransaction {
         this.fitId = transactionBuilder.fitId;
         this.name = transactionBuilder.name;
         this.memo = transactionBuilder.memo;
+        this.account = transactionBuilder.account;
     }
 
     public String getType() {
@@ -44,6 +46,10 @@ public class OfxTransaction {
         return memo;
     }
 
+    public OfxAccount getAccount() {
+        return account;
+    }
+
     static TransactionBuilder newBuilder() {
         return new TransactionBuilder();
     }
@@ -55,9 +61,9 @@ public class OfxTransaction {
                 .setFitId(other.fitId)
                 .setMemo(other.memo)
                 .setName(other.name)
-                .setType(other.type);
+                .setType(other.type)
+                .setAccount(other.account);
     }
-
     @Override
     public String toString() {
         return "OfxTransaction{" +
@@ -67,6 +73,7 @@ public class OfxTransaction {
                 ", fitId='" + fitId + '\'' +
                 ", name='" + name + '\'' +
                 ", memo='" + memo + '\'' +
+                ", account=" + account +
                 '}';
     }
 
@@ -80,12 +87,13 @@ public class OfxTransaction {
                 Objects.equals(date, that.date) &&
                 Objects.equals(fitId, that.fitId) &&
                 Objects.equals(name, that.name) &&
-                Objects.equals(memo, that.memo);
+                Objects.equals(memo, that.memo) &&
+                Objects.equals(account, that.account);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, date, amount, fitId, name, memo);
+        return Objects.hash(type, date, amount, fitId, name, memo, account);
     }
 
     public static class TransactionBuilder {
@@ -95,6 +103,7 @@ public class OfxTransaction {
         private String fitId;
         private String name;
         private String memo;
+        private OfxAccount account;
 
         private TransactionBuilder() {}
 
@@ -125,6 +134,11 @@ public class OfxTransaction {
 
         public TransactionBuilder setMemo(String memo) {
             this.memo = memo;
+            return this;
+        }
+
+        public TransactionBuilder setAccount(OfxAccount account) {
+            this.account = account;
             return this;
         }
 
