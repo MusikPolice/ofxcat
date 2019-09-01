@@ -10,6 +10,18 @@ import java.util.Arrays;
  */
 public class DefaultTransactionCleaner implements TransactionCleaner {
 
+    public static final String DEFAULT_BANK_ID = "default";
+
+    @Override
+    public String getBankId() {
+        return DEFAULT_BANK_ID;
+    }
+
+    @Override
+    public String getInstitutionName() {
+        return "default";
+    }
+
     @Override
     public Transaction clean(OfxTransaction ofxTransaction) {
         final Transaction.TransactionType type = Arrays.stream(Transaction.TransactionType.values())

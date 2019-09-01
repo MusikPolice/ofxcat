@@ -73,10 +73,10 @@ public class OfxParser {
                 switch (name.toUpperCase()) {
                     //account information
                     case BANKID:
-                        accountBuilder.setInstitutionId(value);
+                        accountBuilder.setBankId(value);
                         break;
                     case ACCTID:
-                        accountBuilder.setAccountNumber(value);
+                        accountBuilder.setAccountId(value);
                         break;
                     case ACCTTYPE:
                         accountBuilder.setAccountType(value);

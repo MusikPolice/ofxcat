@@ -48,6 +48,13 @@
             <version>1.2.0</version>
         </dependency>
 
+        <!-- classpath scanner for creating factories that provide concrete implementations of an interface -->
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <version>4.8.47</version>
+        </dependency>
+
         <!-- handy common stuff -->
         <dependency>
             <groupId>org.apache.commons</groupId>

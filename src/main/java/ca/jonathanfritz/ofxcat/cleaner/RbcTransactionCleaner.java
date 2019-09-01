@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
  */
 public class RbcTransactionCleaner implements TransactionCleaner {
 
-    private final static List<Pattern> patternsToDiscard = Arrays.asList(
+    private static final List<Pattern> patternsToDiscard = Arrays.asList(
             // Interac purchase
             Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
 
@@ -47,7 +47,9 @@ public class RbcTransactionCleaner implements TransactionCleaner {
             Pattern.compile("^MISC PAYMENT$")
     );
 
-    private final static Map<Pattern, String> patternsToReplace = new HashMap<>();
+    private static final Map<Pattern, String> patternsToReplace = new HashMap<>();
+
+    static final String RBC_BANK_ID = "900000100";
 
     public RbcTransactionCleaner() {
         // online transfer between accounts - groups with WWW TRANSFER
@@ -58,6 +60,16 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // Interac e-transfer outgoing
         patternsToReplace.put(Pattern.compile("^EMAIL TRFS$"), "INTERAC E-TRANSFER");
+    }
+
+    @Override
+    public String getBankId() {
+        return RBC_BANK_ID;
+    }
+
+    @Override
+    public String getInstitutionName() {
+        return "Royal Bank Canada";
     }
 
     @Override

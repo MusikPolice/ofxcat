@@ -20,9 +20,9 @@ class OfxParserTest {
     // this test data matches the contents of the two ofx files
     private static final LocalDate december10th2018 = LocalDate.of(2018, 12, 10);
     private static final OfxAccount expectedAccount1 = OfxAccount.newBuilder()
-            .setAccountNumber("089429276203")
+            .setAccountId("089429276203")
             .setAccountType("CHECKING")
-            .setInstitutionId("900000100")
+            .setBankId("900000100")
             .build();
     private static final Set<OfxTransaction> expectedAccount1Transactions = Set.of(
             OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-31.21f).setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY").setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
@@ -35,9 +35,9 @@ class OfxParserTest {
 
     private static final LocalDate december17th2018 = LocalDate.of(2018, 12, 17);
     private static final OfxAccount expectedAccount2 = OfxAccount.newBuilder()
-            .setAccountNumber("089321286209")
+            .setAccountId("089321286209")
             .setAccountType("CHECKING")
-            .setInstitutionId("900000100")
+            .setBankId("900000100")
             .build();
     private static final Set<OfxTransaction> expectedAccount2Transactions = Set.of(
             OfxTransaction.newBuilder().setType("POS").setDate(december17th2018).setAmount(-241.94f).setFitId("90000010020181217C08184422CF1").setName("A AND M WOOD A").setMemo("IDP PURCHASE - 2835").setAccount(expectedAccount2).build(),

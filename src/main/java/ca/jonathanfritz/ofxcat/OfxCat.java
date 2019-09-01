@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat;
 
-import ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
+import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -67,23 +67,27 @@ public class OfxCat {
                 final File file  =  PathUtils.expand(commandLine.getOptionValue("f")).toFile();
                 final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(); // TODO: load categorizations from previous runs here
                 final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
+                final TransactionCleanerFactory transactionCleanerFactory = new TransactionCleanerFactory();
                 final OfxCat ofxCat = new OfxCat(transactionCategoryStore, cli);
 
-                final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
+                // TODO: name accounts?
+                // TODO: load known accounts from file?
 
-                // TODO: auto-discover the institution so that we can use the appropriate transaction cleaner
-                final TransactionCleaner transactionCleaner = new RbcTransactionCleaner();
-                for (Map.Entry<OfxAccount, Set<OfxTransaction>> entry : ofxTransactions.entrySet()) {
-                    final Set<Transaction> cleanedTransactions = entry.getValue()
+                final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
+                for (OfxAccount account : ofxTransactions.keySet()) {
+                    // clean up any garbage data that may be in the export file
+                    final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(account.getBankId());
+                    final Set<Transaction> cleanedTransactions = ofxTransactions.get(account)
                             .parallelStream()
                             .map(transactionCleaner::clean)
                             .collect(Collectors.toSet());
+
+                    // TODO: pass a Stream<Transaction> to categorizeTransactions() ?
                     final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(cleanedTransactions);
 
                     // TODO: present the results in a pleasing manner
                     // TODO: save state of transaction store to disk
                 }
-
             } else {
                 System.err.println("Use the -f or --file parameter to specify a valid *.ofx file to parse");
             }

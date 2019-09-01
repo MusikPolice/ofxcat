@@ -4,22 +4,22 @@ import java.util.Objects;
 
 public class OfxAccount {
 
-    private final String institutionId;
-    private final String accountNumber;
+    private final String bankId;
+    private final String accountId;
     private final String accountType;
 
     private OfxAccount(Builder builder) {
-        institutionId = builder.institutionId;
-        accountNumber = builder.accountNumber;
+        bankId = builder.bankId;
+        accountId = builder.accountId;
         accountType = builder.accountType;
     }
 
-    public String getInstitutionId() {
-        return institutionId;
+    public String getBankId() {
+        return bankId;
     }
 
-    public String getAccountNumber() {
-        return accountNumber;
+    public String getAccountId() {
+        return accountId;
     }
 
     public String getAccountType() {
@@ -29,8 +29,8 @@ public class OfxAccount {
     @Override
     public String toString() {
         return "OfxAccount{" +
-                "institutionId='" + institutionId + '\'' +
-                ", accountNumber='" + accountNumber + '\'' +
+                "bankId='" + bankId + '\'' +
+                ", accountId='" + accountId + '\'' +
                 ", accountType='" + accountType + '\'' +
                 '}';
     }
@@ -40,14 +40,14 @@ public class OfxAccount {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OfxAccount that = (OfxAccount) o;
-        return Objects.equals(institutionId, that.institutionId) &&
-                Objects.equals(accountNumber, that.accountNumber) &&
+        return Objects.equals(bankId, that.bankId) &&
+                Objects.equals(accountId, that.accountId) &&
                 Objects.equals(accountType, that.accountType);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(institutionId, accountNumber, accountType);
+        return Objects.hash(bankId, accountId, accountType);
     }
 
     public static Builder newBuilder() {
@@ -56,28 +56,28 @@ public class OfxAccount {
 
     public static Builder newBuilder(OfxAccount copy) {
         Builder builder = new Builder();
-        builder.institutionId = copy.getInstitutionId();
-        builder.accountNumber = copy.getAccountNumber();
+        builder.bankId = copy.getBankId();
+        builder.accountId = copy.getAccountId();
         builder.accountType = copy.getAccountType();
         return builder;
     }
 
 
     public static final class Builder {
-        private String institutionId;
-        private String accountNumber;
+        private String bankId;
+        private String accountId;
         private String accountType;
 
         private Builder() {
         }
 
-        public Builder setInstitutionId(String institutionId) {
-            this.institutionId = institutionId;
+        public Builder setBankId(String bankId) {
+            this.bankId = bankId;
             return this;
         }
 
-        public Builder setAccountNumber(String accountNumber) {
-            this.accountNumber = accountNumber;
+        public Builder setAccountId(String accountId) {
+            this.accountId = accountId;
             return this;
         }
 
