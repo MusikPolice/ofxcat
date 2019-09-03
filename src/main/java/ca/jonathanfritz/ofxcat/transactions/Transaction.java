@@ -9,12 +9,14 @@ public class Transaction {
     private final LocalDate date;
     private final float amount;
     private final String description;
+    private final Account account;
 
-    public Transaction(TransactionType type, LocalDate date, float amount, String description) {
-        this.type = type;
-        this.date = date;
-        this.amount = amount;
-        this.description = description;
+    protected Transaction(Builder builder) {
+        type = builder.type;
+        date = builder.date;
+        amount = builder.amount;
+        description = builder.description;
+        account = builder.account;
     }
 
     public TransactionType getType() {
@@ -33,6 +35,10 @@ public class Transaction {
         return description;
     }
 
+    public Account getAccount() {
+        return account;
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -40,6 +46,7 @@ public class Transaction {
                 ", date=" + date +
                 ", amount=" + amount +
                 ", description='" + description + '\'' +
+                ", account=" + account +
                 '}';
     }
 
@@ -51,12 +58,68 @@ public class Transaction {
         return Float.compare(that.amount, amount) == 0 &&
                 type == that.type &&
                 Objects.equals(date, that.date) &&
-                Objects.equals(description, that.description);
+                Objects.equals(description, that.description) &&
+                Objects.equals(account, that.account);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, date, amount, description);
+        return Objects.hash(type, date, amount, description, account);
+    }
+
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
+    public static Builder newBuilder(Transaction copy) {
+        Builder builder = new Builder();
+        builder.type = copy.getType();
+        builder.date = copy.getDate();
+        builder.amount = copy.getAmount();
+        builder.description = copy.getDescription();
+        builder.account = Account.newBuilder(copy.getAccount()).build();
+        return builder;
+    }
+
+    public static final class Builder {
+
+        private TransactionType type;
+        private LocalDate date;
+        private float amount;
+        private String description;
+        private Account account;
+
+        private Builder() {
+        }
+
+        public Builder setType(TransactionType type) {
+            this.type = type;
+            return this;
+        }
+
+        public Builder setDate(LocalDate date) {
+            this.date = date;
+            return this;
+        }
+
+        public Builder setAmount(float amount) {
+            this.amount = amount;
+            return this;
+        }
+
+        public Builder setDescription(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder setAccount(Account account) {
+            this.account = account;
+            return this;
+        }
+
+        public Transaction build() {
+            return new Transaction(this);
+        }
     }
 
     public enum TransactionType {

@@ -1,9 +1,7 @@
 package ca.jonathanfritz.ofxcat;
 
-import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Category;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
-import ca.jonathanfritz.ofxcat.transactions.TransactionCategoryStore;
+import ca.jonathanfritz.ofxcat.io.OfxAccount;
+import ca.jonathanfritz.ofxcat.transactions.*;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.TextIO;
 
@@ -13,6 +11,8 @@ import java.util.stream.Stream;
 
 public class CLI {
 
+    public static final String NEW_CATEGORY_PROMPT = "New Category";
+    public static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
     private final TextIO textIO;
     private final TransactionCategoryStore transactionCategoryStore;
 
@@ -21,105 +21,115 @@ public class CLI {
         this.transactionCategoryStore = transactionCategoryStore;
     }
 
-    public Set<CategorizedTransaction> categorizeTransactions(Set<Transaction> transactions) {
-        final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
+    public Account assignAccountName(OfxAccount ofxAccount) {
+        final String accountName = textIO.newStringInputReader()
+                .withValueChecker((val, itemName) -> {
+                    if (StringUtils.isBlank(val)) {
+                        return Collections.singletonList("Account name must not be blank");
+                    }
+                    return null;
+                })
+                .read(String.format("\nPlease enter a name for account number %s", ofxAccount.getAccountId()));
 
-        for (Transaction transaction : transactions) {
-            // try to automatically categorize the transaction
-            CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction);
-            if (categorizedTransaction == null) {
-                // didn't work, fall back to prompting the user for a category
-                categorizedTransaction = categorizeTransaction(transaction);
-            }
-
-            if (categorizedTransaction != null) {
-                categorizedTransactions.add(categorizedTransaction);
-                textIO.getTextTerminal().println(String.format("Categorized transaction %s as %s", transaction, categorizedTransaction.getCategory().getName()));
-            } else {
-                textIO.getTextTerminal().println("Failed to categorize transaction " + transaction.toString());
-            }
-        }
-
-        return categorizedTransactions;
+        return Account.newBuilder()
+                .setAccountId(ofxAccount.getAccountId())
+                .setBankId(ofxAccount.getBankId())
+                .setAccountType(ofxAccount.getAccountType())
+                .setName(accountName)
+                .build();
     }
 
-    private CategorizedTransaction categorizeTransaction(Transaction transaction) {
-        final List<Category> potentialCategories = transactionCategoryStore.getCategoryFuzzy(transaction, 5);
-        if (potentialCategories.isEmpty()) {
-            final CategorizedTransaction categorizedTransaction = addNewCategory(transaction);
-            if (categorizedTransaction != null) {
-                return categorizedTransaction;
-            }
-        } else if (potentialCategories.size() == 1) {
-            // special case for exactly one potential match
-            final boolean input = textIO.newBooleanInputReader()
+    public CategorizedTransaction categorizeTransaction(Transaction transaction) {
+        // try to automatically categorize the transaction
+        // fall back to prompting the user for a category if an exact match cannot be found
+        final CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction)
+                .orElse(categorizeTransactionFuzzy(transaction));
+
+        textIO.getTextTerminal().println(String.format("Categorized transaction %s as %s", transaction, categorizedTransaction.getCategory().getName()));
+        return categorizedTransaction;
+    }
+
+    private CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
+        final List<Category> fuzzyMatches = transactionCategoryStore.getCategoryFuzzy(transaction, 5);
+        if (fuzzyMatches.isEmpty()) {
+            // no fuzzy match - add a new category
+            return addNewCategory(transaction);
+        } else if (fuzzyMatches.size() == 1) {
+            // exactly one potential match - prompt user to confirm
+            final boolean transactionBelongsToCategory = textIO.newBooleanInputReader()
                     .withDefaultValue(true)
-                    .read(String.format("\nDoes %s belong to category %s?", transaction, potentialCategories.get(0).getName()));
-            if (input) {
-                return transactionCategoryStore.put(transaction, potentialCategories.get(0));
+                    .read(String.format("\nDoes %s belong to category %s?", transaction, fuzzyMatches.get(0).getName()));
+            if (transactionBelongsToCategory) {
+                return transactionCategoryStore.put(transaction, fuzzyMatches.get(0));
             } else {
-                final CategorizedTransaction categorizedTransaction = addNewCategory(transaction);
-                if (categorizedTransaction != null) {
-                    return categorizedTransaction;
-                }
+                // false positive - add a new category for the transaction
+                return addNewCategory(transaction);
             }
         }
 
-        // a bunch of potential matches, select one
+        // a bunch of potential matches, prompt user to select one
+        final List<String> potentialCategories = Stream.concat(
+                fuzzyMatches.stream().map(Category::getName),
+                Arrays.stream(new String[]{CHOOSE_ANOTHER_CATEGORY_PROMPT})
+            )
+            .collect(Collectors.toList());
         final String input = textIO.newStringInputReader()
-                .withIgnoreCase()
-                .withNumberedPossibleValues(
-                        Stream.concat(potentialCategories.stream().map(Category::getName), Arrays.stream(new String[] {"Choose another Category"}))
-                        .collect(Collectors.toList())
-                ).read(String.format("\nSelect a category for %s:", transaction));
+                .withNumberedPossibleValues(potentialCategories)
+                .read(String.format("\nSelect a category for %s:", transaction));
 
-        final Category existingCategory = potentialCategories.stream()
+        // associate the transaction with the selected category, or prompt the user to add a new category if none was selected
+        return fuzzyMatches.parallelStream()
                 .filter(pc -> pc.getName().equalsIgnoreCase(input))
                 .findFirst()
-                .orElse(null);
-
-        if (existingCategory != null) {
-            return transactionCategoryStore.put(transaction, existingCategory);
-        } else {
-            final CategorizedTransaction categorizedTransaction = addNewCategory(transaction);
-            if (categorizedTransaction != null) {
-                return categorizedTransaction;
-            }
-        }
-
-        return null;
+                .map(selectedCategory -> transactionCategoryStore.put(transaction, selectedCategory))
+                .orElse(addNewCategory(transaction));
     }
 
     private CategorizedTransaction addNewCategory(Transaction transaction) {
-        // choose from existing categories? TODO: this can be generalized with code that chooses from small set of matchers
-        List<String> potentialCategories = transactionCategoryStore.getCategoryNames();
+        // if there are no existing categories, prompt the user to enter the first one
+        final List<String> existingCategoryNames = transactionCategoryStore.getCategoryNames();
+        if (existingCategoryNames.isEmpty()) {
+            final String newCategoryName = promptForNewCategoryName(transaction);
+            return transactionCategoryStore.put(transaction, new Category(newCategoryName));
+        }
+
+        // prompt the user to choose from an existing category name or a new category name
+        final List<String> potentialCategories = Stream.concat(
+                existingCategoryNames.stream(),
+                Arrays.stream(new String[] {NEW_CATEGORY_PROMPT})
+            ).collect(Collectors.toList());
+
         final String input = textIO.newStringInputReader()
-                .withNumberedPossibleValues(
-                        Stream.concat(potentialCategories.stream(), Arrays.stream(new String[] {"New Category"}))
-                                .collect(Collectors.toList())
-                )
+                .withNumberedPossibleValues(potentialCategories)
                 .read(String.format("\nSelect a category for %s:", transaction));
 
-        String categoryName = potentialCategories.stream()
+        // if their choice matches an existing category name, return that category
+        final String categoryName = existingCategoryNames.parallelStream()
                 .filter(pc -> pc.equalsIgnoreCase(input))
                 .findFirst()
-                .orElse(null);
-
-        if (StringUtils.isBlank(categoryName)) {
-            // no existing categories that pass the threshold test - prompt for a new one
-            categoryName = textIO.newStringInputReader()
-                    .withValueChecker((val, itemName) -> {
-                        if (StringUtils.isBlank(val)) {
-                            return Collections.singletonList("Category names must not be blank");
-                        } else if (val.contains(",")) {
-                            return Collections.singletonList("Category names must not contain a comma");
-                        }
-                        return null;
-                    })
-                    .read(String.format("\nPlease enter a new category for %s", transaction));
-        }
+                .orElseGet(() -> {
+                    return promptForNewCategoryName(transaction);
+                });
 
         return transactionCategoryStore.put(transaction, new Category(categoryName));
     }
 
+    private String promptForNewCategoryName(Transaction transaction) {
+        // otherwise, prompt them to enter a new category name
+        return textIO.newStringInputReader()
+                .withValueChecker((val, itemName) -> {
+                    if (StringUtils.isBlank(val)) {
+                        return Collections.singletonList("Category names must not be blank");
+                    } else if (val.contains(",")) {
+                        // TODO: better csv escaping?
+                        return Collections.singletonList("Category names must not contain a comma");
+                    } else if (val.equalsIgnoreCase(NEW_CATEGORY_PROMPT)) {
+                        return Collections.singletonList(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
+                    } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
+                        return Collections.singletonList(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
+                    }
+                    return null;
+                })
+                .read(String.format("\nPlease enter a new category for %s", transaction));
+    }
 }

@@ -16,7 +16,7 @@ public class TransactionCategoryStore {
     public CategorizedTransaction put(Transaction newTransaction, Category newCategory) {
         // to ensure that we don't have duplicate categories in the system, we'll check if there is an existing category
         // that has the same name as the supplied category
-        Category singletonCategory = categories.stream()
+        final Category singletonCategory = categories.stream()
                 .filter(c -> c.equals(newCategory))
                 .findFirst()
                 .orElse(newCategory);
@@ -30,18 +30,13 @@ public class TransactionCategoryStore {
     /**
      * Returns the category that exactly matches the specified transaction's description, or else null
      */
-    public CategorizedTransaction getCategoryExact(Transaction transaction) {
-        final Category category = descriptionCategories.entrySet()
+    public Optional<CategorizedTransaction> getCategoryExact(Transaction transaction) {
+        return descriptionCategories.entrySet()
                 .parallelStream()
                 .filter(es -> es.getKey().equalsIgnoreCase(transaction.getDescription()))
                 .map(Map.Entry::getValue)
                 .findFirst()
-                .orElse(null);
-
-        if (category != null) {
-            return new CategorizedTransaction(transaction, category);
-        }
-        return null;
+                .map(category -> new CategorizedTransaction(transaction, category));
     }
 
     /**
@@ -59,13 +54,12 @@ public class TransactionCategoryStore {
                 .collect(Collectors.toList());
     }
 
-    public Set<Category> getCategories() {
-        return new HashSet<>(categories);
-    }
-
+    /**
+     * Returns an alphabetically sorted list of all known category names
+     */
     public List<String> getCategoryNames() {
         return categories
-                .stream()
+                .parallelStream()
                 .map(Category::getName)
                 .sorted()
                 .collect(Collectors.toList());

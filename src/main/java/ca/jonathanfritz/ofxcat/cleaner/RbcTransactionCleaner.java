@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
  */
 public class RbcTransactionCleaner implements TransactionCleaner {
 
+    // TODO: don't discard account numbers - we can match them to other accounts to improve UI
     private static final List<Pattern> patternsToDiscard = Arrays.asList(
             // Interac purchase
             Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
@@ -73,12 +74,7 @@ public class RbcTransactionCleaner implements TransactionCleaner {
     }
 
     @Override
-    public Transaction clean(OfxTransaction ofxTransaction) {
-        final Transaction.TransactionType type = Arrays.stream(Transaction.TransactionType.values())
-                .filter(transactionType -> transactionType.toString().equalsIgnoreCase(ofxTransaction.getType()))
-                .findFirst()
-                .orElse(Transaction.TransactionType.UNKNOWN);
-
+    public Transaction.Builder clean(OfxTransaction ofxTransaction) {
         final String name = clean(ofxTransaction.getName());
         final String memo = clean(ofxTransaction.getMemo());
 
@@ -91,7 +87,11 @@ public class RbcTransactionCleaner implements TransactionCleaner {
             description.append(memo);
         }
 
-        return new Transaction(type, ofxTransaction.getDate(), ofxTransaction.getAmount(), description.toString());
+        return Transaction.newBuilder()
+            .setType(categorizeTransactionType(ofxTransaction))
+            .setDate(ofxTransaction.getDate())
+            .setAmount(ofxTransaction.getAmount())
+            .setDescription(description.toString());
     }
 
     private String clean(final String input) {

@@ -5,8 +5,8 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
+import ca.jonathanfritz.ofxcat.transactions.Account;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import ca.jonathanfritz.ofxcat.transactions.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.webcohesion.ofx4j.OFXException;
@@ -20,19 +20,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class OfxCat {
 
-    private final TransactionCategoryStore transactionCategoryStore;
+    private final TransactionCleanerFactory transactionCleanerFactory;
     private final CLI cli;
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
-    public OfxCat(TransactionCategoryStore transactionCategoryStore, CLI cli) {
-        this.transactionCategoryStore = transactionCategoryStore;
+    public OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli) {
+        this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
     }
 
@@ -51,8 +51,33 @@ public class OfxCat {
         }
     }
 
-    private Set<CategorizedTransaction> categorizeTransactions(Set<Transaction> transactions) {
-        return cli.categorizeTransactions(transactions);
+    private Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
+        final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
+        for (OfxAccount ofxAccount : ofxTransactions.keySet()) {
+            // identify the account by name
+            final Account account  = knownAccounts.stream()
+                    .filter(a -> a.getBankId().equalsIgnoreCase(ofxAccount.getBankId()))
+                    .filter(a -> a.getAccountId().equalsIgnoreCase(ofxAccount.getAccountId()))
+                    .findFirst()
+                    .orElseGet(() -> cli.assignAccountName(ofxAccount));
+            log.info("Processing transactions for Account {}", account);
+
+            // clean up any garbage data that may be in the export file, associate the transaction with the account,
+            // prompt the user to associate it with a category, and add it to the set of categorized transactions
+            final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(ofxAccount.getBankId());
+            ofxTransactions.get(ofxAccount)
+                    .stream()
+                    .map(transactionCleaner::clean)
+                    .map(builder -> {
+                        // associate the transaction with the account
+                        return builder
+                                .setAccount(account)
+                                .build();
+                    })
+                    .map(cli::categorizeTransaction)
+                    .forEach(categorizedTransactions::add);
+        }
+        return categorizedTransactions;
     }
 
     public static void main(String[] args) {
@@ -68,26 +93,18 @@ public class OfxCat {
                 final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(); // TODO: load categorizations from previous runs here
                 final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
                 final TransactionCleanerFactory transactionCleanerFactory = new TransactionCleanerFactory();
-                final OfxCat ofxCat = new OfxCat(transactionCategoryStore, cli);
+                final OfxCat ofxCat = new OfxCat(transactionCleanerFactory, cli);
 
-                // TODO: name accounts?
                 // TODO: load known accounts from file?
+                final Set<Account> knownAccounts = new HashSet<>();
 
+                // parse and categorize the transactions
                 final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
-                for (OfxAccount account : ofxTransactions.keySet()) {
-                    // clean up any garbage data that may be in the export file
-                    final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(account.getBankId());
-                    final Set<Transaction> cleanedTransactions = ofxTransactions.get(account)
-                            .parallelStream()
-                            .map(transactionCleaner::clean)
-                            .collect(Collectors.toSet());
+                final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(ofxTransactions, knownAccounts);
 
-                    // TODO: pass a Stream<Transaction> to categorizeTransactions() ?
-                    final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(cleanedTransactions);
+                // TODO: present the results in a pleasing manner
+                // TODO: save state of transaction store to disk
 
-                    // TODO: present the results in a pleasing manner
-                    // TODO: save state of transaction store to disk
-                }
             } else {
                 System.err.println("Use the -f or --file parameter to specify a valid *.ofx file to parse");
             }
