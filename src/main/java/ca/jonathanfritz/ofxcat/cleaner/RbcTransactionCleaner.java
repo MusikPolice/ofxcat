@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A transaction cleaner that tidies up data imported from RBC
@@ -51,6 +53,7 @@ public class RbcTransactionCleaner implements TransactionCleaner {
     private static final Map<Pattern, String> patternsToReplace = new HashMap<>();
 
     static final String RBC_BANK_ID = "900000100";
+    static final String RBC_INSTITUTION_NAME = "Royal Bank Canada";
 
     public RbcTransactionCleaner() {
         // online transfer between accounts - groups with WWW TRANSFER
@@ -70,28 +73,23 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
     @Override
     public String getInstitutionName() {
-        return "Royal Bank Canada";
+        return RBC_INSTITUTION_NAME;
     }
 
     @Override
     public Transaction.Builder clean(OfxTransaction ofxTransaction) {
         final String name = clean(ofxTransaction.getName());
         final String memo = clean(ofxTransaction.getMemo());
-
-        final StringBuilder description = new StringBuilder();
-        description.append(StringUtils.isNotBlank(name) ? name : "");
-        if (StringUtils.isNotBlank(memo)) {
-            if (description.length() > 0) {
-                description.append(" ");
-            }
-            description.append(memo);
-        }
+        final String description = Stream.of(name, memo)
+                .filter(StringUtils::isNotBlank)
+                .map(s -> s.trim().toUpperCase())
+                .collect(Collectors.joining(" "));
 
         return Transaction.newBuilder()
             .setType(categorizeTransactionType(ofxTransaction))
             .setDate(ofxTransaction.getDate())
             .setAmount(ofxTransaction.getAmount())
-            .setDescription(description.toString());
+            .setDescription(description);
     }
 
     private String clean(final String input) {

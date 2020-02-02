@@ -9,12 +9,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+// TODO: test me?
 public class CLI {
 
-    public static final String NEW_CATEGORY_PROMPT = "New Category";
-    public static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
     private final TextIO textIO;
     private final TransactionCategoryStore transactionCategoryStore;
+
+    private static final String NEW_CATEGORY_PROMPT = "New Category";
+    private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
 
     public CLI(TextIO textIO, TransactionCategoryStore transactionCategoryStore) {
         this.textIO = textIO;

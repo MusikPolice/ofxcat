@@ -50,11 +50,11 @@ public class OfxTransaction {
         return account;
     }
 
-    static TransactionBuilder newBuilder() {
+    public static TransactionBuilder newBuilder() {
         return new TransactionBuilder();
     }
 
-    static TransactionBuilder newBuilder(OfxTransaction other) {
+    public static TransactionBuilder newBuilder(OfxTransaction other) {
         return new TransactionBuilder()
                 .setAmount(other.amount)
                 .setDate(other.date)
