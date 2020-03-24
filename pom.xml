@@ -17,6 +17,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <junit-platform.version>5.5.1</junit-platform.version>
         <maven-surefire-failsafe-plugin.version>2.22.0</maven-surefire-failsafe-plugin.version>
+        <jackson-version>2.10.3</jackson-version>
     </properties>
 
     <dependencies>
@@ -53,6 +54,23 @@
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>4.8.47</version>
+        </dependency>
+
+        <!-- Json serialization -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson-version}</version>
         </dependency>
 
         <!-- handy common stuff -->

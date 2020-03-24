@@ -1,13 +1,17 @@
 package ca.jonathanfritz.ofxcat.transactions;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Objects;
 
 public class Category {
 
     private final String name;
 
-    public Category(String name) {
-        this.name = name.trim().toUpperCase();
+    @JsonCreator
+    public Category(@JsonProperty("name") String name) {
+        this.name = name != null ? name.trim().toUpperCase() : null;
     }
 
     public String getName() {

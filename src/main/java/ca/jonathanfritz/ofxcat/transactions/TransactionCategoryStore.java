@@ -1,14 +1,21 @@
 package ca.jonathanfritz.ofxcat.transactions;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
 public class TransactionCategoryStore {
 
-    // TODO: persist this to some sort of data store between executions so that knowledge is gained over time
-    private final Map<String, Category> descriptionCategories = new HashMap<>();
-    private final Set<Category> categories = new HashSet<>();
+    private final Map<String, Category> descriptionCategories;
+    private final Set<Category> categories;
+
+    @JsonCreator
+    public TransactionCategoryStore(@JsonProperty("categoryStore") Map<String, Category> descriptionCategories) {
+        this.descriptionCategories = descriptionCategories;
+        this.categories = descriptionCategories != null ? new HashSet<>(descriptionCategories.values()) : new HashSet<>();
+    }
 
     /**
      * Maps the specified transaction's description to the specified category
@@ -57,11 +64,36 @@ public class TransactionCategoryStore {
     /**
      * Returns an alphabetically sorted list of all known category names
      */
+    @JsonIgnore
     public List<String> getCategoryNames() {
         return categories
                 .parallelStream()
                 .map(Category::getName)
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns a copy of the internal map of transaction name to category
+     * For serialization purposes only
+     */
+    @JsonProperty("categoryStore")
+    public Map<String, Category> getDescriptionCategories() {
+        // return a copy so nobody can mess with our internal representation
+        return new HashMap<>(descriptionCategories);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TransactionCategoryStore that = (TransactionCategoryStore) o;
+        return Objects.equals(descriptionCategories, that.descriptionCategories) &&
+                Objects.equals(categories, that.categories);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(descriptionCategories, categories);
     }
 }

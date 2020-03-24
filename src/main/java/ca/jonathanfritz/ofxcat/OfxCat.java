@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -90,7 +91,7 @@ public class OfxCat {
 
             if (commandLine.hasOption("f")) {
                 final File file  =  PathUtils.expand(commandLine.getOptionValue("f")).toFile();
-                final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(); // TODO: load categorizations from previous runs here
+                final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(new HashMap<>()); // TODO: load categorizations from previous runs here
                 final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
                 final TransactionCleanerFactory transactionCleanerFactory = new TransactionCleanerFactory();
                 final OfxCat ofxCat = new OfxCat(transactionCleanerFactory, cli);
