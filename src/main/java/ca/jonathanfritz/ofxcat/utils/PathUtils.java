@@ -6,6 +6,21 @@ import java.nio.file.Path;
 public class PathUtils {
 
     /**
+     * Returns the full path to the ~/.ofxcat directory
+     */
+    public static Path getDataPath() {
+        final String homeDirectory = System.getProperty("user.home");
+        return join(homeDirectory, ".ofxcat");
+    }
+
+    /**
+     * Returns the full path to the ~/.ofxcat/transaction-categories.json file
+     */
+    public static Path getTransactionCategoryStorePath() {
+        return join(getDataPath().toString(), "transaction-categories.json");
+    }
+
+    /**
      * Joins multiple file path components together, ensuring that exactly one instance of {@link File#separator} is between each component
      */
     public static Path join(String ...components) {
