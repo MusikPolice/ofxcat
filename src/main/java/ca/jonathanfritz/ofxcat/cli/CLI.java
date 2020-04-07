@@ -1,7 +1,9 @@
-package ca.jonathanfritz.ofxcat;
+package ca.jonathanfritz.ofxcat.cli;
 
+import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.transactions.*;
+import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.TextIO;
 
@@ -18,6 +20,7 @@ public class CLI {
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
 
+    @Inject
     public CLI(TextIO textIO, TransactionCategoryStore transactionCategoryStore) {
         this.textIO = textIO;
         this.transactionCategoryStore = transactionCategoryStore;

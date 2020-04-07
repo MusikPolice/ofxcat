@@ -64,10 +64,12 @@ public class Account {
 
     public static Builder newBuilder(Account copy) {
         Builder builder = new Builder();
-        builder.bankId = copy.getBankId();
-        builder.accountId = copy.getAccountId();
-        builder.accountType = copy.getAccountType();
-        builder.name = copy.getName();
+        if (copy != null) {
+            builder.bankId = copy.getBankId();
+            builder.accountId = copy.getAccountId();
+            builder.accountType = copy.getAccountType();
+            builder.name = copy.getName();
+        }
         return builder;
     }
 

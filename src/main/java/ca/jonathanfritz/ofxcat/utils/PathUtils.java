@@ -5,10 +5,12 @@ import java.nio.file.Path;
 
 public class PathUtils {
 
+    // TODO: allow home directory to be configured?
+
     /**
      * Returns the full path to the ~/.ofxcat directory
      */
-    public static Path getDataPath() {
+    public Path getDataPath() {
         final String homeDirectory = System.getProperty("user.home");
         return join(homeDirectory, ".ofxcat");
     }
@@ -16,14 +18,14 @@ public class PathUtils {
     /**
      * Returns the full path to the ~/.ofxcat/transaction-categories.json file
      */
-    public static Path getTransactionCategoryStorePath() {
+    public Path getTransactionCategoryStorePath() {
         return join(getDataPath().toString(), "transaction-categories.json");
     }
 
     /**
      * Joins multiple file path components together, ensuring that exactly one instance of {@link File#separator} is between each component
      */
-    public static Path join(String ...components) {
+    public Path join(String ...components) {
         final StringBuilder sb = new StringBuilder();
         for (String component : components) {
             if (sb.length() == 0) {
@@ -50,11 +52,11 @@ public class PathUtils {
      *     <li>~/ for current user's home directory</li>
      * </ul>
      */
-    public static Path expand(String path) {
+    public Path expand(String path) {
         // handle unix-style home directory notation (i.e. ~/Documents/someFile.ofx)
         if (path.startsWith("~" + File.separatorChar)) {
             final String homeDirectory = System.getProperty("user.home");
-            return PathUtils.join(homeDirectory, path.substring(1));
+            return join(homeDirectory, path.substring(1));
         }
 
         return Path.of(path);

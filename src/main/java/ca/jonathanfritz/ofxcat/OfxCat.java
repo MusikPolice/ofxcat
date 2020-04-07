@@ -2,17 +2,20 @@ package ca.jonathanfritz.ofxcat;
 
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
+import ca.jonathanfritz.ofxcat.cli.CLI;
+import ca.jonathanfritz.ofxcat.cli.CLIModule;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Account;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.webcohesion.ofx4j.OFXException;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import org.apache.commons.cli.*;
-import org.beryx.textio.TextIoFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +34,7 @@ public class OfxCat {
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
+    @Inject
     public OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
@@ -90,16 +93,15 @@ public class OfxCat {
             final CommandLine commandLine = commandLineParser.parse(options, args);
 
             if (commandLine.hasOption("f")) {
-                final File file  =  PathUtils.expand(commandLine.getOptionValue("f")).toFile();
-                final TransactionCategoryStore transactionCategoryStore = new TransactionCategoryStore(new HashMap<>()); // TODO: load categorizations from previous runs here
-                final CLI cli = new CLI(TextIoFactory.getTextIO(), transactionCategoryStore);
-                final TransactionCleanerFactory transactionCleanerFactory = new TransactionCleanerFactory();
-                final OfxCat ofxCat = new OfxCat(transactionCleanerFactory, cli);
+                final Injector injector = Guice.createInjector(new CLIModule());
+                final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
                 // TODO: load known accounts from file?
                 final Set<Account> knownAccounts = new HashSet<>();
 
                 // parse and categorize the transactions
+                final PathUtils pathUtils = injector.getInstance(PathUtils.class);
+                final File file  =  pathUtils.expand(commandLine.getOptionValue("f")).toFile();
                 final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
                 final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(ofxTransactions, knownAccounts);
 

@@ -50,10 +50,18 @@
         </dependency>
 
         <!-- classpath scanner for creating factories that provide concrete implementations of an interface -->
+        <!-- TODO can this be replaced by guice? -->
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
             <version>4.8.47</version>
+        </dependency>
+
+        <!-- Hooray for dependency injection! -->
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>4.2.3</version>
         </dependency>
 
         <!-- Json serialization -->

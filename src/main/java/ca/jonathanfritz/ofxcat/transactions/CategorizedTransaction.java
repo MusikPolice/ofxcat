@@ -7,7 +7,7 @@ public class CategorizedTransaction extends Transaction {
 
     private final Category category;
 
-    CategorizedTransaction(Transaction transaction, Category category) {
+    public CategorizedTransaction(Transaction transaction, Category category) {
         super(Transaction.newBuilder(transaction));
         this.category = category;
     }

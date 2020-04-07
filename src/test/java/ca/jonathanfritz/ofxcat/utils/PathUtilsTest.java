@@ -10,27 +10,29 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 class PathUtilsTest {
 
+    private final PathUtils pathUtils = new PathUtils();
+
     @Test
     void noSeparatorsTest() {
-        final Path joined = PathUtils.join("C:\\Users", "SomeUser");
+        final Path joined = pathUtils.join("C:\\Users", "SomeUser");
         assertThat(joined.toString(), IsEqual.equalTo("C:\\Users" + File.separator + "SomeUser"));
     }
 
     @Test
     void trailingSeparatorTest() {
-        final Path joined = PathUtils.join("C:\\Users" + File.separator, "SomeUser");
+        final Path joined = pathUtils.join("C:\\Users" + File.separator, "SomeUser");
         assertThat(joined.toString(), IsEqual.equalTo("C:\\Users" + File.separator + "SomeUser"));
     }
 
     @Test
     void leadingSeparatorTest() {
-        final Path joined = PathUtils.join("C:\\Users", File.separator + "SomeUser");
+        final Path joined = pathUtils.join("C:\\Users", File.separator + "SomeUser");
         assertThat(joined.toString(), IsEqual.equalTo("C:\\Users" + File.separator + "SomeUser"));
     }
 
     @Test
     void leadingAndTrailingSeparatorTest() {
-        final Path joined = PathUtils.join("C:\\Users" + File.separator, File.separator + "SomeUser");
+        final Path joined = pathUtils.join("C:\\Users" + File.separator, File.separator + "SomeUser");
         assertThat(joined.toString(), IsEqual.equalTo("C:\\Users" + File.separator + "SomeUser"));
     }
 }
