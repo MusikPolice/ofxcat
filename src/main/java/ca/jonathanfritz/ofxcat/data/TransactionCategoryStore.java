@@ -56,9 +56,13 @@ public class TransactionCategoryStore {
         }
 
         final TransactionCategory deserialized = objectMapper.readValue(transactionCategoryStorePath.toFile(), TransactionCategory.class);
-        this.descriptionCategories.putAll(deserialized.descriptionCategories);
-        this.categories.addAll(descriptionCategories.values());
-        log.info("Successfully loaded existing categories {}", getCategoryNames());
+        if (deserialized.descriptionCategories != null) {
+            this.descriptionCategories.putAll(deserialized.descriptionCategories);
+            this.categories.addAll(descriptionCategories.values());
+            log.info("Successfully loaded existing categories {}", getCategoryNames());
+        } else {
+            log.info("No existing categories found");
+        }
     }
 
     /**

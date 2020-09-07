@@ -115,6 +115,8 @@ public class OfxCat {
 
                 // TODO: present the results in a pleasing manner
 
+                System.out.println(String.format("Finished processing %s", file.toString()));
+
             } else {
                 System.err.println("Use the -f or --file parameter to specify a valid *.ofx file to parse");
             }
