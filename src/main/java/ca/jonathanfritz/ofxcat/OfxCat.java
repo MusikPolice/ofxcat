@@ -4,6 +4,7 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
+import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -31,19 +32,22 @@ public class OfxCat {
 
     private final TransactionCleanerFactory transactionCleanerFactory;
     private final CLI cli;
+    private final OfxParser ofxParser;
+    private final TransactionCategoryStore transactionCategoryStore;
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    public OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli) {
+    public OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
+        this.ofxParser = ofxParser;
+        this.transactionCategoryStore = transactionCategoryStore;
     }
 
     private Map<OfxAccount, Set<OfxTransaction>> parseOfxFile(final File inputFile) throws OFXException {
         log.debug("Attempting to parse file {}", inputFile.toString());
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
-            final OfxParser ofxParser = new OfxParser();
             return ofxParser.parse(inputStream);
 
         } catch (FileNotFoundException e) {
@@ -55,7 +59,7 @@ public class OfxCat {
         }
     }
 
-    private Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
+    protected Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
         final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
         for (OfxAccount ofxAccount : ofxTransactions.keySet()) {
             // identify the account by name
@@ -81,6 +85,10 @@ public class OfxCat {
                     .map(cli::categorizeTransaction)
                     .forEach(categorizedTransactions::add);
         }
+
+        // save the transaction categorizations for later use
+        transactionCategoryStore.save();
+
         return categorizedTransactions;
     }
 
@@ -101,12 +109,11 @@ public class OfxCat {
 
                 // parse and categorize the transactions
                 final PathUtils pathUtils = injector.getInstance(PathUtils.class);
-                final File file  =  pathUtils.expand(commandLine.getOptionValue("f")).toFile();
+                final File file = pathUtils.expand(commandLine.getOptionValue("f")).toFile();
                 final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
                 final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(ofxTransactions, knownAccounts);
 
                 // TODO: present the results in a pleasing manner
-                // TODO: save state of transaction store to disk
 
             } else {
                 System.err.println("Use the -f or --file parameter to specify a valid *.ofx file to parse");

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+
+@Singleton
 public class TransactionCategoryStore {
 
     private final ObjectMapper objectMapper;
@@ -25,7 +28,7 @@ public class TransactionCategoryStore {
     private final Map<String, Category> descriptionCategories = new HashMap<>();
     private final Set<Category> categories = new HashSet<>();
 
-    private static final Logger logger = LoggerFactory.getLogger(TransactionCategoryStore.class);
+    private static final Logger log = LoggerFactory.getLogger(TransactionCategoryStore.class);
 
     @Inject
     public TransactionCategoryStore(ObjectMapper objectMapper, PathUtils pathUtils) throws IOException {
@@ -40,10 +43,10 @@ public class TransactionCategoryStore {
     void load() throws IOException {
         final Path transactionCategoryStorePath = pathUtils.getTransactionCategoryStorePath();
         if (!Files.exists(transactionCategoryStorePath)) {
-            logger.info("No existing transaction categories in {}", transactionCategoryStorePath);
+            log.info("No existing transaction categories in {}", transactionCategoryStorePath);
             return;
         }
-        logger.info("Attempting to load existing transaction categories from {}", transactionCategoryStorePath);
+        log.info("Attempting to load existing transaction categories from {}", transactionCategoryStorePath);
 
         // make sure that we can open the file
         if (!Files.isReadable(transactionCategoryStorePath)) {
@@ -55,14 +58,14 @@ public class TransactionCategoryStore {
         final TransactionCategory deserialized = objectMapper.readValue(transactionCategoryStorePath.toFile(), TransactionCategory.class);
         this.descriptionCategories.putAll(deserialized.descriptionCategories);
         this.categories.addAll(descriptionCategories.values());
-        logger.info("Successfully loaded existing categories {}", getCategoryNames());
+        log.info("Successfully loaded existing categories {}", getCategoryNames());
     }
 
     /**
      * Allows tests to clear the store
      */
     void clear() {
-        logger.debug("TransactionCategoryStore.clear() called");
+        log.debug("TransactionCategoryStore.clear() called");
         descriptionCategories.clear();
         categories.clear();
     }
@@ -124,12 +127,18 @@ public class TransactionCategoryStore {
 
     /**
      * Saves the contents of the store to disk
-     * @throws IOException thrown if something goes wrong
      */
-    public void save() throws IOException {
+    public void save() {
+        log.debug("Attempting to save transaction category store to {}", pathUtils.getTransactionCategoryStorePath());
         final TransactionCategory toSerialize = new TransactionCategory(this.descriptionCategories);
-        Files.write(pathUtils.getTransactionCategoryStorePath(), objectMapper.writeValueAsBytes(toSerialize));
-        logger.info("Successfully saved transaction category store to {}", pathUtils.getTransactionCategoryStorePath());
+
+        try {
+            Files.write(pathUtils.getTransactionCategoryStorePath(), objectMapper.writeValueAsBytes(toSerialize));
+            log.info("Successfully saved transaction category store to {}", pathUtils.getTransactionCategoryStorePath());
+        } catch (IOException ex) {
+            // failed to save the store - this is a soft failure, because it's a nice to have
+            log.warn("Failed to save transaction category store", ex);
+        }
     }
 
     /**

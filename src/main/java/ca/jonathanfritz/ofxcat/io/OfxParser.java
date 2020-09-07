@@ -44,6 +44,8 @@ public class OfxParser {
     public Map<OfxAccount, Set<OfxTransaction>> parse(final InputStream inputStream) throws IOException, OFXParseException {
         final Map<OfxAccount, Set<OfxTransaction>> transactions = new HashMap<>();
 
+        // no sense in making this a singleton, since this whole object is re-created every time the parse function is
+        // called to avoid storing state in OfxParser
         final OFXReader ofxReader = new NanoXMLOFXReader();
         ofxReader.setContentHandler(new OFXHandler() {
 
