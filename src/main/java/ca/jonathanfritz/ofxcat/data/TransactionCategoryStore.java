@@ -69,7 +69,7 @@ public class TransactionCategoryStore {
      * Allows tests to clear the store
      */
     void clear() {
-        log.debug("TransactionCategoryStore.clear() called");
+        log.debug("TransactionCategoryStore cleared");
         descriptionCategories.clear();
         categories.clear();
     }
@@ -92,7 +92,8 @@ public class TransactionCategoryStore {
     }
 
     /**
-     * Returns the category that exactly matches the specified transaction's description, or else null
+     * Converts the specified {@link Transaction} into an instance of {@link CategorizedTransaction}, assigning a
+     * {@link Category} if one exists whose name exactly matches the specified transaction's description.
      */
     public Optional<CategorizedTransaction> getCategoryExact(Transaction transaction) {
         return descriptionCategories.entrySet()
@@ -104,15 +105,23 @@ public class TransactionCategoryStore {
     }
 
     /**
-     * Finds the top limit categories that most closely match the description of the specified transaction.
+     * Returns a list of categories whose names most closely match the description of the specified transaction.
      * Once a category is selected from the returned set, it must be associated to the specified transaction by way
      * of the {@link #put(Transaction, Category)} method.
+     * @param transaction the transaction to find potential category matches for.
+     * @param limit the max number of potential categories to return
+     * @return a list of potential {@link Category} matches, sorted by relevance descending
      */
     public List<Category> getCategoryFuzzy(Transaction transaction, int limit) {
-        // TODO: is 80% match good enough?
+        // TODO: is 80% match good enough? - make this configurable
+        log.debug("Fuzzy category matches for transaction description \"{}\":", transaction.getDescription());
         return FuzzySearch.extractSorted(transaction.getDescription(), descriptionCategories.keySet(), 80)
-                .parallelStream()
-                .map(er -> descriptionCategories.get(er.getString()))
+                .stream()
+                .sorted((o1, o2) -> o2.getScore() - o1.getScore()) // sort descending
+                .map(er -> {
+                    log.debug("{}: {}", er.getString(), er.getScore());
+                    return descriptionCategories.get(er.getString());
+                })
                 .distinct()
                 .limit(limit)
                 .collect(Collectors.toList());

@@ -2,6 +2,7 @@ package ca.jonathanfritz.ofxcat.transactions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 
 import java.util.Objects;
 
@@ -29,5 +30,10 @@ public class Category {
     @Override
     public int hashCode() {
         return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return ReflectionToStringBuilder.toString(this);
     }
 }

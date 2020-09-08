@@ -26,7 +26,12 @@ public class CLI {
         this.transactionCategoryStore = transactionCategoryStore;
     }
 
+    /**
+     * Converts the provided {@link OfxAccount} into an instance of {@link Account}, prompting the user to assign a
+     * human readable friendly name along the way
+     */
     public Account assignAccountName(OfxAccount ofxAccount) {
+        // prompt the user to enter a name for the account
         final String accountName = textIO.newStringInputReader()
                 .withValueChecker((val, itemName) -> {
                     if (StringUtils.isBlank(val)) {
@@ -36,6 +41,7 @@ public class CLI {
                 })
                 .read(String.format("\nPlease enter a name for account number %s", ofxAccount.getAccountId()));
 
+        // create the account object
         return Account.newBuilder()
                 .setAccountId(ofxAccount.getAccountId())
                 .setBankId(ofxAccount.getBankId())
@@ -50,6 +56,7 @@ public class CLI {
         final CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction)
                 .orElse(categorizeTransactionFuzzy(transaction));
 
+        // TODO: better formatting for transactions
         textIO.getTextTerminal().println(String.format("Categorized transaction %s as %s", transaction, categorizedTransaction.getCategory().getName()));
         return categorizedTransaction;
     }
