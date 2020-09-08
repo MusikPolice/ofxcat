@@ -32,12 +32,12 @@ public interface TransactionCleaner {
 
     /**
      * Matches the {@link OfxTransaction#getType()} field with a known {@link ca.jonathanfritz.ofxcat.transactions.Transaction.TransactionType}.
-     * If there is no field match, {@link ca.jonathanfritz.ofxcat.transactions.Transaction.TransactionType#UNKNOWN} is returned.
+     * If there is no field match, {@link ca.jonathanfritz.ofxcat.transactions.Transaction.TransactionType#OTHER} is returned.
      */
     default Transaction.TransactionType categorizeTransactionType(final OfxTransaction ofxTransaction) {
         return Arrays.stream(Transaction.TransactionType.values())
                 .filter(transactionType -> transactionType.toString().equalsIgnoreCase(ofxTransaction.getType()))
                 .findFirst()
-                .orElse(Transaction.TransactionType.UNKNOWN);
+                .orElse(Transaction.TransactionType.OTHER);
     }
 }

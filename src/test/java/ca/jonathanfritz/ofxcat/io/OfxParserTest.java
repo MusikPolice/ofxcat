@@ -28,7 +28,7 @@ class OfxParserTest {
             OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-31.21f).setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY").setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-61.4f).setFitId("90000010020181210D02197E2FA27").setName("WILD WING").setMemo("IDP PURCHASE - 8381").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("ATM").setDate(december10th2018).setAmount(-360.0f).setFitId("90000010020181210D0219652EA07").setName("Withdrawal").setMemo("PTB WD --- KB681166").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-300.0f).setFitId("90000010020181210D02192620AD7").setName("Loan Pmt").setMemo("WWW LOAN PMT - 2155").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType("CREDIT").setDate(december10th2018).setAmount(300.0f).setFitId("90000010020181210D02192620AD7").setMemo("Bank Error in Your Favour").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-7.08f).setFitId("90000010020181210D02192320AA7").setName("C-IDP PURCHASE-7123").setMemo("FARM BOY").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-68.49f).setFitId("90000010020181210D02194C22AA7").setName("C-IDP PURCHASE-1229").setMemo("VALUMART").setAccount(expectedAccount1).build()
     );

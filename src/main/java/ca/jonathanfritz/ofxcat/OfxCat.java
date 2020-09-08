@@ -46,6 +46,10 @@ public class OfxCat {
     }
 
     private Map<OfxAccount, Set<OfxTransaction>> parseOfxFile(final File inputFile) throws OFXException {
+        cli.printWelcomeBanner();
+        cli.println("Loading transactions from file:");
+        cli.println("value", inputFile.toString());
+
         log.debug("Attempting to parse file {}", inputFile.toString());
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
             return ofxParser.parse(inputStream);
@@ -92,17 +96,22 @@ public class OfxCat {
         return categorizedTransactions;
     }
 
+    private void close() {
+        cli.close();
+    }
+
     public static void main(String[] args) {
         final Options options = new Options();
         options.addOption("f", "file", true, "the ofx file to parse");
+
+        final Injector injector = Guice.createInjector(new CLIModule());
+        final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
         try {
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, args);
 
             if (commandLine.hasOption("f")) {
-                final Injector injector = Guice.createInjector(new CLIModule());
-                final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
                 // TODO: load known accounts from file?
                 final Set<Account> knownAccounts = new HashSet<>();
@@ -125,6 +134,8 @@ public class OfxCat {
         } catch (OFXException e) {
             System.err.println(e.getMessage());
             e.printStackTrace();
+        } finally {
+            ofxCat.close();
         }
     }
 }

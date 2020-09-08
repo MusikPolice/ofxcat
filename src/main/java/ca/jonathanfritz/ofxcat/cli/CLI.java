@@ -2,28 +2,69 @@ package ca.jonathanfritz.ofxcat.cli;
 
 import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import ca.jonathanfritz.ofxcat.transactions.*;
+import ca.jonathanfritz.ofxcat.transactions.Account;
+import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.transactions.Category;
+import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.TextIO;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // TODO: test me?
 public class CLI {
 
+    public static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
     private final TransactionCategoryStore transactionCategoryStore;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
+    public static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
     public CLI(TextIO textIO, TransactionCategoryStore transactionCategoryStore) {
         this.textIO = textIO;
         this.transactionCategoryStore = transactionCategoryStore;
+    }
+
+    public void printWelcomeBanner() {
+        textIO.getTextTerminal().println(Arrays.asList(
+                "         __               _   ",
+                "        / _|             | |  ",
+                "   ___ | |___  _____ __ _| |_ ",
+                "  / _ \\|  _\\ \\/ / __/ _` | __|",
+                " | (_) | |  >  < (_| (_| | |_ ",
+                "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
+                "                              "
+        ));
+    }
+
+    /**
+     * Prints the specified line to the terminal, along with a trailing newline character
+     */
+    public void println(String line) {
+        textIO.getTextTerminal().println(line);
+    }
+
+    /**
+     * Prints the specified line to the terminal using the specified propertiesPrefix as defined in the
+     * src/main/resources/textio.properties file. Adds a trailing newline character.
+     */
+    public void println(String propertiesPrefix, String line) {
+        textIO.getTextTerminal().executeWithPropertiesPrefix(propertiesPrefix, t -> t.println(line));
+    }
+
+    /**
+     * Closes the terminal
+     */
+    public void close() {
+        textIO.dispose();
     }
 
     /**
@@ -32,6 +73,9 @@ public class CLI {
      */
     public Account assignAccountName(OfxAccount ofxAccount) {
         // prompt the user to enter a name for the account
+        textIO.getTextTerminal().print("\nFound new account with account number ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(ofxAccount.getAccountId()));
+
         final String accountName = textIO.newStringInputReader()
                 .withValueChecker((val, itemName) -> {
                     if (StringUtils.isBlank(val)) {
@@ -39,7 +83,7 @@ public class CLI {
                     }
                     return null;
                 })
-                .read(String.format("\nPlease enter a name for account number %s", ofxAccount.getAccountId()));
+                .read("Please enter a name for the account:");
 
         // create the account object
         return Account.newBuilder()
@@ -51,14 +95,50 @@ public class CLI {
     }
 
     public CategorizedTransaction categorizeTransaction(Transaction transaction) {
+        textIO.getTextTerminal().setBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
+        textIO.getTextTerminal().println("\nFound new transaction:");
+        printTransaction(transaction);
+
         // try to automatically categorize the transaction
         // fall back to prompting the user for a category if an exact match cannot be found
         final CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction)
                 .orElse(categorizeTransactionFuzzy(transaction));
 
-        // TODO: better formatting for transactions
-        textIO.getTextTerminal().println(String.format("Categorized transaction %s as %s", transaction, categorizedTransaction.getCategory().getName()));
+        // return the cursor to the bookmark that we set before starting the categorization process
+        // this will be replaced by a println(...) if not supported in the current terminal
+        textIO.getTextTerminal().resetToBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
+
+        // return the cursor to the bookmark that we set before showing the category that the last transaction was sorted into
+        // this will be replaced by a println(...) if not supported in the current terminal
+        textIO.getTextTerminal().resetToBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
+        textIO.getTextTerminal().setBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
+
+        textIO.getTextTerminal().print("\nCategorized transaction as ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(categorizedTransaction.getCategory().getName()));
+
         return categorizedTransaction;
+    }
+
+    private void printTransaction(Transaction transaction) {
+        // date
+        textIO.getTextTerminal().print("Date: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDate().toString()));
+
+        // type
+        textIO.getTextTerminal().print("Type: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->t.println(transaction.getType().name()));
+
+        // amount
+        textIO.getTextTerminal().print("Amount: ");
+        if (transaction.getAmount() >= 0) {
+            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "$%.2f", Math.abs(transaction.getAmount()))));
+        } else {
+            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "-$%.2f", Math.abs(transaction.getAmount()))));
+        }
+
+        // description
+        textIO.getTextTerminal().print("Description: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->t.println(transaction.getDescription()));
     }
 
     private CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
@@ -70,7 +150,7 @@ public class CLI {
             // exactly one potential match - prompt user to confirm
             final boolean transactionBelongsToCategory = textIO.newBooleanInputReader()
                     .withDefaultValue(true)
-                    .read(String.format("\nDoes %s belong to category %s?", transaction, fuzzyMatches.get(0).getName()));
+                    .read(String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName()));
             if (transactionBelongsToCategory) {
                 return transactionCategoryStore.put(transaction, fuzzyMatches.get(0));
             } else {
@@ -87,7 +167,7 @@ public class CLI {
             .collect(Collectors.toList());
         final String input = textIO.newStringInputReader()
                 .withNumberedPossibleValues(potentialCategories)
-                .read(String.format("\nSelect a category for %s:", transaction));
+                .read("\nSelect an existing category for the transaction:");
 
         // associate the transaction with the selected category, or prompt the user to add a new category if none was selected
         return fuzzyMatches.parallelStream()
@@ -98,14 +178,14 @@ public class CLI {
     }
 
     private CategorizedTransaction addNewCategory(Transaction transaction) {
-        // if there are no existing categories, prompt the user to enter the first one
+        // if there are no existing categories, prompt the user to enter one
         final List<String> existingCategoryNames = transactionCategoryStore.getCategoryNames();
         if (existingCategoryNames.isEmpty()) {
-            final String newCategoryName = promptForNewCategoryName(transaction);
+            final String newCategoryName = promptForNewCategoryName();
             return transactionCategoryStore.put(transaction, new Category(newCategoryName));
         }
 
-        // prompt the user to choose from an existing category name or a new category name
+        // prompt the user to choose from an existing category
         final List<String> potentialCategories = Stream.concat(
                 existingCategoryNames.stream(),
                 Arrays.stream(new String[] {NEW_CATEGORY_PROMPT})
@@ -113,20 +193,18 @@ public class CLI {
 
         final String input = textIO.newStringInputReader()
                 .withNumberedPossibleValues(potentialCategories)
-                .read(String.format("\nSelect a category for %s:", transaction));
+                .read("\nSelect an existing category for transaction:");
 
         // if their choice matches an existing category name, return that category
         final String categoryName = existingCategoryNames.parallelStream()
                 .filter(pc -> pc.equalsIgnoreCase(input))
                 .findFirst()
-                .orElseGet(() -> {
-                    return promptForNewCategoryName(transaction);
-                });
+                .orElseGet(this::promptForNewCategoryName);
 
         return transactionCategoryStore.put(transaction, new Category(categoryName));
     }
 
-    private String promptForNewCategoryName(Transaction transaction) {
+    private String promptForNewCategoryName() {
         // otherwise, prompt them to enter a new category name
         return textIO.newStringInputReader()
                 .withValueChecker((val, itemName) -> {
@@ -142,6 +220,6 @@ public class CLI {
                     }
                     return null;
                 })
-                .read(String.format("\nPlease enter a new category for %s", transaction));
+                .read("\nPlease enter a new category for transaction");
     }
 }

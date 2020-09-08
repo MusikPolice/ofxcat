@@ -122,31 +122,94 @@ public class Transaction {
         }
     }
 
+    /**
+     * Borrowed from {@link com.webcohesion.ofx4j.domain.data.common.TransactionType}
+     */
     public enum TransactionType {
 
         /**
-         * The type can't be determined
-         */
-        UNKNOWN,
-
-        /**
-         * Cash withdrawal at an ATM
-         */
-        ATM,
-
-        /**
-         * Funds credited to the account (your balance increases)
+         * generic credit.
          */
         CREDIT,
 
         /**
-         * Funds debited from the account (your balance decreases)
+         * generic debit.
          */
         DEBIT,
 
         /**
-         * Point of sale purchase, typically interac debit or visa
+         * interest earned.
          */
-        POS
+        INT,
+
+        /**
+         * dividend.
+         */
+        DIV,
+
+        /**
+         * bank fee.
+         */
+        FEE,
+
+        /**
+         * service charge.
+         */
+        SRVCHG,
+
+        /**
+         * deposit.
+         */
+        DEP,
+
+        /**
+         * ATM transaction.
+         */
+        ATM,
+
+        /**
+         * point of sale
+         */
+        POS,
+
+        /**
+         * transfer
+         */
+        XFER,
+
+        /**
+         * check
+         */
+        CHECK,
+
+        /**
+         * electronic payment
+         */
+        PAYMENT,
+
+        /**
+         * cash.
+         */
+        CASH,
+
+        /**
+         * direct deposit.
+         */
+        DIRECTDEP,
+
+        /**
+         * merchant-initiated debit
+         */
+        DIRECTDEBIT,
+
+        /**
+         * repeating payment.
+         */
+        REPEATPMT,
+
+        /**
+         * other
+         */
+        OTHER
     }
 }

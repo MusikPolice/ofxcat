@@ -72,7 +72,7 @@ class RbcTransactionCleanerTest {
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
-        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.UNKNOWN));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.OTHER));
     }
 
     @Test
