@@ -31,9 +31,11 @@ java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar --file mytransactions.of
 `ofxcat` attempts to automatically categorize newly imported transactions based on their description (typically the name of the vendor that debited or credited your account).
 
 If the transaction description is recognized, the tool will prompt you to approve the automatic categorization:
+
 ![Automatic categorization](images/ofxcat-recognized-transaction-category.png)
 
 If the transaction description could fit into one of many categories, the tool will prompt you to choose the appropriate category:
+
 ![Choose from an existing category](images/ofxcat-choose-from-existing-transaction-category.png)
 
 If the transaction description does not match any existing categories, the tool will prompt you to enter the name of a new category for the transaction.
