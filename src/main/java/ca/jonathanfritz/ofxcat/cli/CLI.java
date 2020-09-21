@@ -10,22 +10,20 @@ import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.TextIO;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // TODO: test me?
 public class CLI {
 
-    public static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
+    private static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
     private final TransactionCategoryStore transactionCategoryStore;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
-    public static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
+    private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
     public CLI(TextIO textIO, TransactionCategoryStore transactionCategoryStore) {
@@ -58,13 +56,6 @@ public class CLI {
      */
     public void println(String propertiesPrefix, String line) {
         textIO.getTextTerminal().executeWithPropertiesPrefix(propertiesPrefix, t -> t.println(line));
-    }
-
-    /**
-     * Closes the terminal
-     */
-    public void close() {
-        textIO.dispose();
     }
 
     /**
@@ -117,6 +108,38 @@ public class CLI {
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(categorizedTransaction.getCategory().getName()));
 
         return categorizedTransaction;
+    }
+
+    /**
+     * Groups the specified transactions by category and displays the sum for each group to the terminal
+     * TODO: break this down by year/month as well
+     */
+    public void displayResults(Set<CategorizedTransaction> categorizedTransactions) {
+        // if present, resetting to this bookmark will put the cursor in front of the "Categorized transaction as" message
+        textIO.getTextTerminal().resetToBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
+
+        // sum all transactions into buckets based on categorization
+        final Map<Category, Float> categorySums = new HashMap<>();
+        for (CategorizedTransaction categorizedTransaction : categorizedTransactions) {
+            final Category category = categorizedTransaction.getCategory();
+            if (categorySums.containsKey(category)) {
+                final float existing = categorySums.get(category);
+                categorySums.put(category, existing + categorizedTransaction.getAmount());
+            } else {
+                categorySums.put(category, categorizedTransaction.getAmount());
+            }
+        }
+
+        // print the results to the terminal
+        textIO.getTextTerminal().println("\nExpenses by Category:");
+        for(Map.Entry<Category, Float> entry : categorySums.entrySet()) {
+            textIO.getTextTerminal().print(String.format("%s: ", entry.getKey().getName()));
+            if (entry.getValue() >= 0) {
+                textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "$%.2f", Math.abs(entry.getValue()))));
+            } else {
+                textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "-$%.2f", Math.abs(entry.getValue()))));
+            }
+        }
     }
 
     private void printTransaction(Transaction transaction) {

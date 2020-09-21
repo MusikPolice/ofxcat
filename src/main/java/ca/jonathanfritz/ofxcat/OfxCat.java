@@ -38,22 +38,22 @@ public class OfxCat {
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    public OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore) {
+    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.transactionCategoryStore = transactionCategoryStore;
     }
 
-    private Map<OfxAccount, Set<OfxTransaction>> parseOfxFile(final File inputFile) throws OFXException {
+    private void importTransactions(final File inputFile) throws OFXException {
         cli.printWelcomeBanner();
         cli.println("Loading transactions from file:");
         cli.println("value", inputFile.toString());
 
         log.debug("Attempting to parse file {}", inputFile.toString());
+        final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions;
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
-            return ofxParser.parse(inputStream);
-
+            ofxTransactions = ofxParser.parse(inputStream);
         } catch (FileNotFoundException e) {
             throw new OFXException("File not found", e);
         } catch (OFXParseException e) {
@@ -61,9 +61,21 @@ public class OfxCat {
         } catch (IOException e) {
             throw new OFXException("An unexpected exception occurred", e);
         }
+
+        // TODO: load known accounts from file (more likely, load previously imported transactions)
+        final Set<Account> knownAccounts = new HashSet<>();
+
+        final Set<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions, knownAccounts);
+
+        // present the results in a pleasing manner
+        cli.displayResults(categorizedTransactions);
+
+        // TODO: persist transactions to disk
+
+        System.out.println(String.format("Finished processing %s", inputFile.toString()));
     }
 
-    protected Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
+    Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
         final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
         for (OfxAccount ofxAccount : ofxTransactions.keySet()) {
             // identify the account by name
@@ -96,10 +108,6 @@ public class OfxCat {
         return categorizedTransactions;
     }
 
-    private void close() {
-        cli.close();
-    }
-
     public static void main(String[] args) {
         final Options options = new Options();
         options.addOption("f", "file", true, "the ofx file to parse");
@@ -112,20 +120,10 @@ public class OfxCat {
             final CommandLine commandLine = commandLineParser.parse(options, args);
 
             if (commandLine.hasOption("f")) {
-
-                // TODO: load known accounts from file?
-                final Set<Account> knownAccounts = new HashSet<>();
-
                 // parse and categorize the transactions
                 final PathUtils pathUtils = injector.getInstance(PathUtils.class);
                 final File file = pathUtils.expand(commandLine.getOptionValue("f")).toFile();
-                final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions = ofxCat.parseOfxFile(file);
-                final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(ofxTransactions, knownAccounts);
-
-                // TODO: present the results in a pleasing manner
-
-                System.out.println(String.format("Finished processing %s", file.toString()));
-
+                ofxCat.importTransactions(file);
             } else {
                 System.err.println("Use the -f or --file parameter to specify a valid *.ofx file to parse");
             }
@@ -134,8 +132,6 @@ public class OfxCat {
         } catch (OFXException e) {
             System.err.println(e.getMessage());
             e.printStackTrace();
-        } finally {
-            ofxCat.close();
         }
     }
 }
