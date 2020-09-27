@@ -17,9 +17,14 @@ public class PathUtils {
 
     /**
      * Returns the full path to the ~/.ofxcat/transaction-categories.json file
+     * TODO: remove me
      */
     public Path getTransactionCategoryStorePath() {
         return join(getDataPath().toString(), "transaction-categories.json");
+    }
+
+    public String getDatabaseConnectionString() {
+        return String.format("%s%s","jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
     }
 
     /**

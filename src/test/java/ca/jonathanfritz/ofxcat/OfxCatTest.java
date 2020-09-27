@@ -68,7 +68,7 @@ class OfxCatTest {
                 .build());
 
         // actually run the test
-        final OfxCat ofxCat = new OfxCat(transactionCleanerFactory, mockCli, null, mockTransactionCategoryStore);
+        final OfxCat ofxCat = new OfxCat(transactionCleanerFactory, mockCli, null, mockTransactionCategoryStore, null);
         final Set<CategorizedTransaction> categorizedTransactions = ofxCat.categorizeTransactions(transactionMap, accounts);
 
         Assertions.assertEquals(1, categorizedTransactions.size());

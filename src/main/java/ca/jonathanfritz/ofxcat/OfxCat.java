@@ -4,6 +4,7 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
+import ca.jonathanfritz.ofxcat.dao.DAOModule;
 import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
@@ -17,6 +18,7 @@ import com.google.inject.Injector;
 import com.webcohesion.ofx4j.OFXException;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import org.apache.commons.cli.*;
+import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,11 +40,16 @@ public class OfxCat {
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore) {
+    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore, Flyway flyway) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.transactionCategoryStore = transactionCategoryStore;
+
+        // before we can do anything, we have to make sure that the database is up to date
+        log.debug("Attempting to migrate database schema...");
+        flyway.migrate();
+        log.info("Database schema migration complete");
     }
 
     private void importTransactions(final File inputFile) throws OFXException {
@@ -112,7 +119,8 @@ public class OfxCat {
         final Options options = new Options();
         options.addOption("f", "file", true, "the ofx file to parse");
 
-        final Injector injector = Guice.createInjector(new CLIModule());
+        // TODO: sniff for modules that extend AbstractModule?
+        final Injector injector = Guice.createInjector(new CLIModule(), new DAOModule());
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
         try {

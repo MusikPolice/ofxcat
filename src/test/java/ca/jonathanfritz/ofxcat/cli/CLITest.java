@@ -10,7 +10,7 @@ class CLITest {
     @Inject
     CLITest(TextIO textIO) {
         this.textIO = textIO;
-        this.textIO.getTextTerminal()
+        this.textIO.getTextTerminal();
     }
 
 
