@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.transactions;
 
 import ca.jonathanfritz.ofxcat.dao.Entity;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 
 import java.util.Objects;
 
@@ -19,13 +18,13 @@ public class Category implements Entity {
         this.name = name != null ? name.trim().toUpperCase() : null;
     }
 
-    public String getName() {
-        return name;
-    }
-
     @Override
     public Long getId() {
         return id;
+    }
+
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -44,6 +43,9 @@ public class Category implements Entity {
 
     @Override
     public String toString() {
-        return ReflectionToStringBuilder.toString(this);
+        return "Category{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

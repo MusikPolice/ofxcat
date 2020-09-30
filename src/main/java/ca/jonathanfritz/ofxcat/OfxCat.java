@@ -5,7 +5,6 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
 import ca.jonathanfritz.ofxcat.dao.DAOModule;
-import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -35,16 +34,14 @@ public class OfxCat {
     private final TransactionCleanerFactory transactionCleanerFactory;
     private final CLI cli;
     private final OfxParser ofxParser;
-    private final TransactionCategoryStore transactionCategoryStore;
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, TransactionCategoryStore transactionCategoryStore, Flyway flyway) {
+    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, Flyway flyway) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
         this.ofxParser = ofxParser;
-        this.transactionCategoryStore = transactionCategoryStore;
 
         // before we can do anything, we have to make sure that the database is up to date
         log.debug("Attempting to migrate database schema...");
@@ -108,9 +105,6 @@ public class OfxCat {
                     .map(cli::categorizeTransaction)
                     .forEach(categorizedTransactions::add);
         }
-
-        // save the transaction categorizations for later use
-        transactionCategoryStore.save();
 
         return categorizedTransactions;
     }

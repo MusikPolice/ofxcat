@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -25,18 +26,33 @@ public class DatabaseTransaction implements Closeable {
 
     /**
      * Executes the specified selectStatement.
+     * Use this overload if the SQL SELECT statement is not parameterized.
+     * @param selectStatement the SQL SELECT statement to execute against the database
+     * @param resultDeserializer an {@link SqlFunction<ResultSet, List<T>>} that is responsible for transforming the
+     *                           ResultSet returned by the database query into a List<T> that the caller can use
+     * @param <T> the type of object that the query is expected to return. Must extend {@link Entity}
+     * @return a {@link List<T>} of results, or an empty list if the query does not return any results
+     * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
+     * is thrown
+     */
+    public <T extends Entity> List<T> query(String selectStatement, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
+        return query(selectStatement, null, resultDeserializer);
+    }
+
+    /**
+     * Executes the specified selectStatement.
      * @param selectStatement the SQL SELECT statement to execute against the database
      * @param statementPreparer an {@link SqlConsumer<PreparedStatement>} that allows the caller to populate any ?
      *                          variables that appear in the selectStatement. Can be null if the selectStatement is not
      *                          parameterized
-     * @param resultDeserializer an {@link SqlFunction<ResultSet, Optional<T>>} that is responsible for transforming the
-     *                           ResultSet returned by the database query into an Optional<T> that the caller can use
+     * @param resultDeserializer an {@link SqlFunction<ResultSet, List<T>>} that is responsible for transforming the
+     *                           ResultSet returned by the database query into a List<T> that the caller can use
      * @param <T> the type of object that the query is expected to return. Must extend {@link Entity}
-     * @return an {@link Optional<T>} or {@link Optional#empty()} if the query does not return a result
+     * @return a {@link List<T>} of results, or an empty list if the query does not return any results
      * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
      * is thrown
      */
-    public <T extends Entity> Optional<T> query(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, Optional<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> List<T> query(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax
@@ -69,7 +85,7 @@ public class DatabaseTransaction implements Closeable {
      * @return a copy of the persisted entity that has its id attribute populated with the primary key of the persisted
      * record
      */
-    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, Optional<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax
@@ -94,13 +110,24 @@ public class DatabaseTransaction implements Closeable {
                     final String tableName = getTableNameFromInsertStatement(insertStatement);
                     final String selectStatement = String.format("SELECT * FROM %s WHERE id = ?", tableName);
                     final long id = generatedKeys.getLong(1);
-                    return query(selectStatement, sp -> sp.setLong(1, id), resultDeserializer);
+                    final List<T> results = query(selectStatement, sp -> sp.setLong(1, id), resultDeserializer);
+                    return getFirstResult(results);
                 } else {
                     throw new SQLException("Insert operation does not result in a generated primary key");
                 }
             }
         } catch (SQLException e) {
             throw rollback(e);
+        }
+    }
+
+    public static <T extends Entity> Optional<T> getFirstResult(List<T> results) throws SQLException {
+        if (results.isEmpty()) {
+            return Optional.empty();
+        } else if (results.size() == 1) {
+            return Optional.of(results.get(0));
+        } else {
+            throw new SQLException(String.format("Expected a single result, but got %d", results.size()));
         }
     }
 

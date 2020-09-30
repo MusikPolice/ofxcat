@@ -31,7 +31,7 @@ public abstract class AbstractDatabaseTest {
      * Drops all data in the database and re-initializes the database schema.
      * Useful for tests that rely on having empty tables
      */
-    void cleanDatabase() {
+    protected void cleanDatabase() {
         flyway.clean();
         flyway.migrate();
     }

@@ -2,36 +2,20 @@ package ca.jonathanfritz.ofxcat.dao;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.transactions.Category;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
+// TODO: mock connection to test failure cases
 class CategoryDaoTest extends AbstractDatabaseTest {
 
-    @Test
-    void selectSuccessTest() {
-        final CategoryDao categoryDao = new CategoryDao(connection);
-
-        // create a category that will be inserted into the database
-        final Category newCategory = new Category("Potent Potables");
-
-        // insert the category object
-        final Optional<Category> insertedCategoryOptional = categoryDao.insert(newCategory);
-        Assertions.assertTrue(insertedCategoryOptional.isPresent());
-        final Category insertedCategory = insertedCategoryOptional.get();
-
-        // get the inserted object out of the database
-        final Optional<Category> selectedCategoryOptional = categoryDao.select(insertedCategory.getId());
-        Assertions.assertTrue(selectedCategoryOptional.isPresent());
-        final Category selectedCategory = selectedCategoryOptional.get();
-
-        // make sure that they are the same object, but that they are logically equal
-        Assertions.assertEquals(newCategory.getName(), insertedCategory.getName());
-        Assertions.assertNotSame(insertedCategory, selectedCategory);
-
-        // TODO: this assertion fails with the two objects having different ids... were two inserted?
-        Assertions.assertEquals(insertedCategory, selectedCategory);
+    @AfterEach
+    void cleanup() {
+        // drop all tables and re-init the schema after each test to avoid conflicts
+        cleanDatabase();
     }
 
     @Test
@@ -51,5 +35,62 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         } else {
             Assertions.fail("Inserted Category was not returned");
         }
+    }
+
+    @Test
+    void selectSuccessTest() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // create a category that will be inserted into the database
+        final Category newCategory = new Category("Therapists");
+
+        // insert the category object
+        final Optional<Category> insertedCategoryOptional = categoryDao.insert(newCategory);
+        Assertions.assertTrue(insertedCategoryOptional.isPresent());
+        final Category insertedCategory = insertedCategoryOptional.get();
+
+        // get the inserted object out of the database
+        final Optional<Category> selectedCategoryOptional = categoryDao.select(insertedCategory.getId());
+        Assertions.assertTrue(selectedCategoryOptional.isPresent());
+        final Category selectedCategory = selectedCategoryOptional.get();
+
+        // make sure that they are not the same object, but that they are logically equal
+        Assertions.assertNotSame(insertedCategory, selectedCategory);
+        Assertions.assertEquals(insertedCategory, selectedCategory);
+    }
+
+    @Test
+    void selectByNameSuccessTest() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // create a category that will be inserted into the database
+        final String categoryName = "S Words";
+        final Category newCategory = new Category(categoryName);
+
+        // insert the category object - this is the first transaction
+        final Optional<Category> insertedCategoryOptional = categoryDao.insert(newCategory);
+        Assertions.assertTrue(insertedCategoryOptional.isPresent());
+        final Category insertedCategory = insertedCategoryOptional.get();
+
+        // get the inserted object by name - this is a second transaction that takes place after the first is committed
+        final Optional<Category> selectedCategoryOptional = categoryDao.selectByName(categoryName);
+        Assertions.assertTrue(selectedCategoryOptional.isPresent());
+        final Category selectedCategory = selectedCategoryOptional.get();
+
+        // make sure that they are not the same object, but that they are logically equal
+        Assertions.assertNotSame(insertedCategory, selectedCategory);
+        Assertions.assertEquals(insertedCategory, selectedCategory);
+    }
+
+    @Test
+    void selectAllSuccessTest() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        final Category category1 = categoryDao.insert(new Category("The Pen is Mightier")).get();
+        final Category category2 = categoryDao.insert(new Category("Japan US Relations")).get();
+
+        final List<Category> categories = categoryDao.selectAll();
+        Assertions.assertEquals(2, categories.size());
+        Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category1)));
+        Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category2)));
     }
 }

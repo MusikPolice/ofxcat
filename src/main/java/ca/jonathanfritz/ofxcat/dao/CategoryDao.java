@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class CategoryDao {
@@ -23,37 +25,109 @@ public class CategoryDao {
         this.categoryDeserializer = new CategoryDeserializer();
     }
 
+    /**
+     * Gets the {@link Category} with the specified id from the database
+     * @param id the primary key of the Category to fetch
+     * @return an {@link Optional<Category>} containing the specified Category, or {@link Optional#empty()} if it does
+     *      not exist
+     */
     public Optional<Category> select(long id) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return select(t, id);
+        }
+    }
+
+    Optional<Category> select(DatabaseTransaction t, long id) {
+        try {
+            logger.debug("Attempting to query Category with id {}", id);
             final String selectStatement = "SELECT * FROM Category WHERE id = ?";
-            return t.query(selectStatement, ps -> ps.setLong(1, id), categoryDeserializer);
+            final List<Category> results = t.query(selectStatement, ps -> ps.setLong(1, id), categoryDeserializer);
+            return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
             logger.error("Failed to query Category with id {}", id, e);
             return Optional.empty();
         }
     }
 
-    // TODO: should this return an optional or throw an exception on failure?
-    public Optional<Category> insert(Category categoryToInsert) {
+    /**
+     * Gets the {@link Category} with the specified name from the database. This query is case-insensitive.
+     * @param name the name of the Category to fetch
+     * @return an {@link Optional<Category>} containing the specified Category, or {@link Optional#empty()} if it does
+     *      not exist
+     */
+    public Optional<Category> selectByName(String name) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            final String insertStatement = "INSERT INTO Category (name) VALUES (?);";
-            return t.insert(insertStatement, ps -> ps.setString(1, categoryToInsert.getName()), categoryDeserializer);
+            return selectByName(t, name);
+        }
+    }
+
+    Optional<Category> selectByName(DatabaseTransaction t, String name) {
+        try {
+            logger.debug("Attempting to query Category with name {}", name);
+            final String selectStatement = "SELECT * FROM Category WHERE upper(name) = ?";
+            final List<Category> results = t.query(selectStatement, ps -> ps.setString(1, name.toUpperCase()), categoryDeserializer);
+            return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
-            logger.error("Failed to insert category", e);
+            logger.error("Failed to query Category with name {}", name, e);
             return Optional.empty();
         }
     }
 
-    private static class CategoryDeserializer implements SqlFunction<ResultSet, Optional<Category>> {
+    /**
+     * Selects all {@link Category} objects from the database
+     * @return a {@link List<Category>} containing the results, or an empty list if there are no results
+     */
+    public List<Category> selectAll() {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to select all Category objects");
+            final String selectStatement = "SELECT * FROM Category;";
+            return t.query(selectStatement, categoryDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to select all Category objects", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Inserts the specified categoryToInsert into the database
+     * @param categoryToInsert the {@link Category} to insert
+     * @return an {@link Optional<Category>} containing the inserted Category, or {@link Optional#empty()} if the
+     *      operation fails
+     */
+    public Optional<Category> insert(Category categoryToInsert) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return insert(t, categoryToInsert);
+        }
+    }
+
+    Optional<Category> insert(DatabaseTransaction t, Category categoryToInsert) {
+        try {
+            logger.debug("Attempting to insert Category {}", categoryToInsert);
+            final String insertStatement = "INSERT INTO Category (name) VALUES (?);";
+            return t.insert(insertStatement, ps -> ps.setString(1, categoryToInsert.getName()), categoryDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to insert Category {}", categoryToInsert, e);
+            return Optional.empty();
+        }
+    }
+
+    private static class CategoryDeserializer implements SqlFunction<ResultSet, List<Category>> {
         @Override
-        public Optional<Category> apply(ResultSet resultSet) throws SQLException {
-            if (resultSet.next()) {
+        public List<Category> apply(ResultSet resultSet) throws SQLException {
+            final List<Category> results = new ArrayList<>();
+            while (resultSet.next()) {
                 final long id = resultSet.getLong("id");
                 final String name = resultSet.getString("name");
-                return Optional.of(new Category(id, name));
-            } else {
-                return Optional.empty();
+                results.add(new Category(id, name));
             }
+
+            if (results.isEmpty()) {
+                logger.debug("ResultSet contained zero results");
+            } else {
+                logger.debug("Found {} results", results.size());
+            }
+
+            return results;
         }
     }
 }

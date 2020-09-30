@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat.cli;
 
-import ca.jonathanfritz.ofxcat.data.TransactionCategoryStore;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
+import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import ca.jonathanfritz.ofxcat.transactions.Account;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Category;
@@ -19,16 +19,16 @@ public class CLI {
 
     private static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
-    private final TransactionCategoryStore transactionCategoryStore;
+    private final TransactionCategoryService transactionCategoryService;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
     private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
-    public CLI(TextIO textIO, TransactionCategoryStore transactionCategoryStore) {
+    public CLI(TextIO textIO, TransactionCategoryService transactionCategoryService) {
         this.textIO = textIO;
-        this.transactionCategoryStore = transactionCategoryStore;
+        this.transactionCategoryService = transactionCategoryService;
     }
 
     public void printWelcomeBanner() {
@@ -92,7 +92,7 @@ public class CLI {
 
         // try to automatically categorize the transaction
         // fall back to prompting the user for a category if an exact match cannot be found
-        final CategorizedTransaction categorizedTransaction = transactionCategoryStore.getCategoryExact(transaction)
+        final CategorizedTransaction categorizedTransaction = transactionCategoryService.getCategoryExact(transaction)
                 .orElse(categorizeTransactionFuzzy(transaction));
 
         // return the cursor to the bookmark that we set before starting the categorization process
@@ -165,7 +165,7 @@ public class CLI {
     }
 
     private CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
-        final List<Category> fuzzyMatches = transactionCategoryStore.getCategoryFuzzy(transaction, 5);
+        final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(transaction, 5);
         if (fuzzyMatches.isEmpty()) {
             // no fuzzy match - add a new category
             return addNewCategory(transaction);
@@ -175,7 +175,7 @@ public class CLI {
                     .withDefaultValue(true)
                     .read(String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName()));
             if (transactionBelongsToCategory) {
-                return transactionCategoryStore.put(transaction, fuzzyMatches.get(0));
+                return transactionCategoryService.put(transaction, fuzzyMatches.get(0));
             } else {
                 // false positive - add a new category for the transaction
                 return addNewCategory(transaction);
@@ -196,16 +196,16 @@ public class CLI {
         return fuzzyMatches.parallelStream()
                 .filter(pc -> pc.getName().equalsIgnoreCase(input))
                 .findFirst()
-                .map(selectedCategory -> transactionCategoryStore.put(transaction, selectedCategory))
+                .map(selectedCategory -> transactionCategoryService.put(transaction, selectedCategory))
                 .orElse(addNewCategory(transaction));
     }
 
     private CategorizedTransaction addNewCategory(Transaction transaction) {
         // if there are no existing categories, prompt the user to enter one
-        final List<String> existingCategoryNames = transactionCategoryStore.getCategoryNames();
+        final List<String> existingCategoryNames = transactionCategoryService.getCategoryNames();
         if (existingCategoryNames.isEmpty()) {
             final String newCategoryName = promptForNewCategoryName();
-            return transactionCategoryStore.put(transaction, new Category(newCategoryName));
+            return transactionCategoryService.put(transaction, new Category(newCategoryName));
         }
 
         // prompt the user to choose from an existing category
@@ -224,7 +224,7 @@ public class CLI {
                 .findFirst()
                 .orElseGet(this::promptForNewCategoryName);
 
-        return transactionCategoryStore.put(transaction, new Category(categoryName));
+        return transactionCategoryService.put(transaction, new Category(categoryName));
     }
 
     private String promptForNewCategoryName() {
