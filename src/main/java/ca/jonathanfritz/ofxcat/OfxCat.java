@@ -119,8 +119,8 @@ public class OfxCat {
         final Options options = new Options();
         options.addOption("f", "file", true, "the ofx file to parse");
 
-        // TODO: sniff for modules that extend AbstractModule?
-        final Injector injector = Guice.createInjector(new CLIModule(), new DAOModule());
+        final PathUtils pathUtils = new PathUtils();
+        final Injector injector = Guice.createInjector(new CLIModule(), new DAOModule(pathUtils.getDatabaseConnectionString()));
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
         try {
@@ -129,7 +129,6 @@ public class OfxCat {
 
             if (commandLine.hasOption("f")) {
                 // parse and categorize the transactions
-                final PathUtils pathUtils = injector.getInstance(PathUtils.class);
                 final File file = pathUtils.expand(commandLine.getOptionValue("f")).toFile();
                 ofxCat.importTransactions(file);
             } else {

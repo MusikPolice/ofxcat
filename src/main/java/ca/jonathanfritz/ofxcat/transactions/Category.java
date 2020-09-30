@@ -1,17 +1,21 @@
 package ca.jonathanfritz.ofxcat.transactions;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import ca.jonathanfritz.ofxcat.dao.Entity;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 
 import java.util.Objects;
 
-public class Category {
+public class Category implements Entity {
 
+    private final Long id;
     private final String name;
 
-    @JsonCreator
-    public Category(@JsonProperty("name") String name) {
+    public Category(String name) {
+        this(null, name);
+    }
+
+    public Category(Long id, String name) {
+        this.id = id;
         this.name = name != null ? name.trim().toUpperCase() : null;
     }
 
@@ -20,16 +24,22 @@ public class Category {
     }
 
     @Override
+    public Long getId() {
+        return id;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Category category = (Category) o;
-        return name.equals(category.name);
+        return Objects.equals(id, category.id) &&
+                Objects.equals(name, category.name);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(id, name);
     }
 
     @Override
