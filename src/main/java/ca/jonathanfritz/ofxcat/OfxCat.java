@@ -4,7 +4,8 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleaner;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
-import ca.jonathanfritz.ofxcat.dao.DAOModule;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
+import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -34,14 +35,16 @@ public class OfxCat {
     private final TransactionCleanerFactory transactionCleanerFactory;
     private final CLI cli;
     private final OfxParser ofxParser;
+    private final AccountDao accountDao;
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, Flyway flyway) {
+    OfxCat(TransactionCleanerFactory transactionCleanerFactory, CLI cli, OfxParser ofxParser, Flyway flyway, AccountDao accountDao) {
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.cli = cli;
         this.ofxParser = ofxParser;
+        this.accountDao = accountDao;
 
         // before we can do anything, we have to make sure that the database is up to date
         log.debug("Attempting to migrate database schema...");
@@ -66,32 +69,27 @@ public class OfxCat {
             throw new OFXException("An unexpected exception occurred", e);
         }
 
-        // TODO: load known accounts from file (more likely, load previously imported transactions)
-        final Set<Account> knownAccounts = new HashSet<>();
-
-        final Set<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions, knownAccounts);
+        final Set<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions);
 
         // present the results in a pleasing manner
         cli.displayResults(categorizedTransactions);
 
         // TODO: persist transactions to disk
 
-        System.out.println(String.format("Finished processing %s", inputFile.toString()));
+        System.out.printf("Finished processing %s%n", inputFile.toString());
     }
 
-    Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions, final Set<Account> knownAccounts) {
+    Set<CategorizedTransaction> categorizeTransactions(final Map<OfxAccount, Set<OfxTransaction>> ofxTransactions) {
         final Set<CategorizedTransaction> categorizedTransactions = new HashSet<>();
         for (OfxAccount ofxAccount : ofxTransactions.keySet()) {
-            // identify the account by name
-            final Account account  = knownAccounts.stream()
-                    .filter(a -> a.getBankId().equalsIgnoreCase(ofxAccount.getBankId()))
-                    .filter(a -> a.getAccountId().equalsIgnoreCase(ofxAccount.getAccountId()))
-                    .findFirst()
-                    .orElseGet(() -> cli.assignAccountName(ofxAccount));
-            log.info("Processing transactions for Account {}", account);
+            // figure out which account this transaction belongs to
+            final Account account = accountDao.selectByAccountNumber(ofxAccount.getAccountId())
+                    .or(() -> accountDao.insert(cli.assignAccountName(ofxAccount)))
+                    .orElseThrow(() -> new RuntimeException(String.format("Failed to find or create account %s", ofxAccount)));
 
             // clean up any garbage data that may be in the export file, associate the transaction with the account,
             // prompt the user to associate it with a category, and add it to the set of categorized transactions
+            log.info("Processing transactions for Account {}", account);
             final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(ofxAccount.getBankId());
             ofxTransactions.get(ofxAccount)
                     .stream()
@@ -114,7 +112,7 @@ public class OfxCat {
         options.addOption("f", "file", true, "the ofx file to parse");
 
         final PathUtils pathUtils = new PathUtils();
-        final Injector injector = Guice.createInjector(new CLIModule(), new DAOModule(pathUtils.getDatabaseConnectionString()));
+        final Injector injector = Guice.createInjector(new CLIModule(), new DatastoreModule(pathUtils.getDatabaseConnectionString()));
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
 
         try {

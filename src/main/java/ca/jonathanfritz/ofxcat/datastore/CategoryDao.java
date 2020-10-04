@@ -1,5 +1,9 @@
-package ca.jonathanfritz.ofxcat.dao;
+package ca.jonathanfritz.ofxcat.datastore;
 
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
+import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
+import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
 import ca.jonathanfritz.ofxcat.transactions.Category;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -15,14 +19,19 @@ import java.util.Optional;
 public class CategoryDao {
 
     private final Connection connection;
-    private final CategoryDeserializer categoryDeserializer;
+    private final SqlFunction<TransactionState, List<Category>> categoryDeserializer;
 
     private static final Logger logger = LoggerFactory.getLogger(CategoryDao.class);
 
     @Inject
     public CategoryDao(Connection connection) {
         this.connection = connection;
-        this.categoryDeserializer = new CategoryDeserializer();
+        this.categoryDeserializer = new ResultSetDeserializer<>((transactionState, categories) -> {
+            final ResultSet resultSet = transactionState.getResultSet();
+            final long id = resultSet.getLong("id");
+            final String name = resultSet.getString("name");
+            categories.add(new Category(id, name));
+        });
     }
 
     /**
@@ -108,26 +117,6 @@ public class CategoryDao {
         } catch (SQLException e) {
             logger.error("Failed to insert Category {}", categoryToInsert, e);
             return Optional.empty();
-        }
-    }
-
-    private static class CategoryDeserializer implements SqlFunction<ResultSet, List<Category>> {
-        @Override
-        public List<Category> apply(ResultSet resultSet) throws SQLException {
-            final List<Category> results = new ArrayList<>();
-            while (resultSet.next()) {
-                final long id = resultSet.getLong("id");
-                final String name = resultSet.getString("name");
-                results.add(new Category(id, name));
-            }
-
-            if (results.isEmpty()) {
-                logger.debug("ResultSet contained zero results");
-            } else {
-                logger.debug("Found {} results", results.size());
-            }
-
-            return results;
         }
     }
 }

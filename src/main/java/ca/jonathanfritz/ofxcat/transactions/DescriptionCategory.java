@@ -1,6 +1,6 @@
 package ca.jonathanfritz.ofxcat.transactions;
 
-import ca.jonathanfritz.ofxcat.dao.Entity;
+import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
 
 import java.util.Objects;
 

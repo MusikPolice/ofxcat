@@ -1,8 +1,8 @@
 package ca.jonathanfritz.ofxcat.service;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
-import ca.jonathanfritz.ofxcat.dao.CategoryDao;
-import ca.jonathanfritz.ofxcat.dao.DescriptionCategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.transactions.Category;
 import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import org.junit.jupiter.api.AfterEach;

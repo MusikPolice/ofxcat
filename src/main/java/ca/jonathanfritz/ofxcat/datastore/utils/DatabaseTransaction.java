@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.dao;
+package ca.jonathanfritz.ofxcat.datastore.utils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -20,7 +20,7 @@ public class DatabaseTransaction implements Closeable {
 
     private static Logger logger = LoggerFactory.getLogger(DatabaseTransaction.class);
 
-    DatabaseTransaction(Connection connection) {
+    public DatabaseTransaction(Connection connection) {
         this.connection = connection;
     }
 
@@ -28,14 +28,14 @@ public class DatabaseTransaction implements Closeable {
      * Executes the specified selectStatement.
      * Use this overload if the SQL SELECT statement is not parameterized.
      * @param selectStatement the SQL SELECT statement to execute against the database
-     * @param resultDeserializer an {@link SqlFunction<ResultSet, List<T>>} that is responsible for transforming the
-     *                           ResultSet returned by the database query into a List<T> that the caller can use
+     * @param resultDeserializer an {@link SqlFunction<TransactionState, List<T>>} that is responsible for transforming
+     *                           the ResultSet returned by the database query into a List<T> that the caller can use
      * @param <T> the type of object that the query is expected to return. Must extend {@link Entity}
      * @return a {@link List<T>} of results, or an empty list if the query does not return any results
      * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
      * is thrown
      */
-    public <T extends Entity> List<T> query(String selectStatement, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> List<T> query(String selectStatement, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
         return query(selectStatement, null, resultDeserializer);
     }
 
@@ -45,14 +45,14 @@ public class DatabaseTransaction implements Closeable {
      * @param statementPreparer an {@link SqlConsumer<PreparedStatement>} that allows the caller to populate any ?
      *                          variables that appear in the selectStatement. Can be null if the selectStatement is not
      *                          parameterized
-     * @param resultDeserializer an {@link SqlFunction<ResultSet, List<T>>} that is responsible for transforming the
-     *                           ResultSet returned by the database query into a List<T> that the caller can use
+     * @param resultDeserializer an {@link SqlFunction<TransactionState, List<T>>} that is responsible for transforming
+     *                           the ResultSet returned by the database query into a List<T> that the caller can use
      * @param <T> the type of object that the query is expected to return. Must extend {@link Entity}
      * @return a {@link List<T>} of results, or an empty list if the query does not return any results
      * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
      * is thrown
      */
-    public <T extends Entity> List<T> query(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> List<T> query(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax
@@ -68,7 +68,7 @@ public class DatabaseTransaction implements Closeable {
 
             // execute the query and return the results
             final ResultSet resultSet = statement.executeQuery();
-            return resultDeserializer.apply(resultSet);
+            return resultDeserializer.apply(new TransactionState(this, resultSet));
 
         } catch (SQLException e) {
             throw rollback(e);
@@ -80,12 +80,13 @@ public class DatabaseTransaction implements Closeable {
      * @param insertStatement the SQL INSERT INTO statement that will be executed to insert the object into the database
      * @param statementPreparer a {@link Consumer<PreparedStatement>} that allows the caller to populate ? any variables
      *                          that appear in the insertStatement
-     * @param resultDeserializer an {@link SqlFunction<ResultSet, Optional<T>>} that is responsible for transforming the
-     *                           ResultSet returned by the database query into an Optional<T> that the caller can use
+     * @param resultDeserializer an {@link SqlFunction<TransactionState, Optional<T>>} that is responsible for
+     *                           transforming the ResultSet returned by the database query into an Optional<T> that the
+     *                           caller can use
      * @return a copy of the persisted entity that has its id attribute populated with the primary key of the persisted
      * record
      */
-    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<ResultSet, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax

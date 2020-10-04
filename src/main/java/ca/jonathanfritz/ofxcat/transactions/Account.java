@@ -1,19 +1,28 @@
 package ca.jonathanfritz.ofxcat.transactions;
 
+import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
+
 import java.util.Objects;
 
-public class Account {
+public class Account implements Entity {
 
+    private final Long id;
     private final String bankId;
     private final String accountId;
     private final String accountType;
     private final String name;
 
     private Account(Builder builder) {
+        id = builder.id;
         bankId = builder.bankId;
         accountId = builder.accountId;
         accountType = builder.accountType;
         name = builder.name;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
     }
 
     public String getBankId() {
@@ -40,12 +49,13 @@ public class Account {
         return Objects.equals(bankId, account.bankId) &&
                 Objects.equals(accountId, account.accountId) &&
                 Objects.equals(accountType, account.accountType) &&
-                Objects.equals(name, account.name);
+                Objects.equals(name, account.name) &&
+                Objects.equals(id, account.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(bankId, accountId, accountType, name);
+        return Objects.hash(bankId, accountId, accountType, name, id);
     }
 
     @Override
@@ -55,6 +65,7 @@ public class Account {
                 ", accountId='" + accountId + '\'' +
                 ", accountType='" + accountType + '\'' +
                 ", name='" + name + '\'' +
+                ", id=" + id +
                 '}';
     }
 
@@ -74,12 +85,18 @@ public class Account {
     }
 
     public static final class Builder {
+        private Long id;
         private String bankId;
         private String accountId;
         private String accountType;
         private String name;
 
         private Builder() {
+        }
+
+        public Builder setId(Long id) {
+            this.id = id;
+            return this;
         }
 
         public Builder setBankId(String bankId) {

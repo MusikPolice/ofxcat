@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.dao;
+package ca.jonathanfritz.ofxcat.datastore.utils;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -13,16 +13,16 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public class DAOModule extends AbstractModule {
+public class DatastoreModule extends AbstractModule {
 
     private final String connectionString;
 
-    private static final Logger logger = LoggerFactory.getLogger(DAOModule.class);
+    private static final Logger logger = LoggerFactory.getLogger(DatastoreModule.class);
 
     /**
      * Wires up a connection to the specified database
      */
-    public DAOModule(String connectionString) {
+    public DatastoreModule(String connectionString) {
         this.connectionString = connectionString;
         logger.info("Database connection string is {}", connectionString);
     }
@@ -30,7 +30,7 @@ public class DAOModule extends AbstractModule {
     /**
      * Wires up an in-memory database for testing purposes
      */
-    public DAOModule() {
+    public DatastoreModule() {
         this.connectionString = "jdbc:sqlite:mem:testdb";
         logger.info("Database connection string is {}", connectionString);
     }

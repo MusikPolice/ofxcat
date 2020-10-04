@@ -1,5 +1,9 @@
-package ca.jonathanfritz.ofxcat.dao;
+package ca.jonathanfritz.ofxcat.datastore;
 
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
+import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
+import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
 import ca.jonathanfritz.ofxcat.transactions.Category;
 import ca.jonathanfritz.ofxcat.transactions.DescriptionCategory;
 import com.google.inject.Inject;
@@ -15,6 +19,7 @@ public class DescriptionCategoryDao {
 
     private final Connection connection;
     private final CategoryDao categoryDao;
+    private final SqlFunction<TransactionState, List<DescriptionCategory>> descriptionCategoryDeserializer;
 
     private static final Logger logger = LoggerFactory.getLogger(DescriptionCategoryDao.class);
 
@@ -22,6 +27,22 @@ public class DescriptionCategoryDao {
     public DescriptionCategoryDao(Connection connection, CategoryDao categoryDao) {
         this.connection = connection;
         this.categoryDao = categoryDao;
+        this.descriptionCategoryDeserializer = new ResultSetDeserializer<>((transactionState, results) -> {
+            final ResultSet resultSet = transactionState.getResultSet();
+            final long id = resultSet.getLong("id");
+            final String description = resultSet.getString("description");
+
+            // we can take advantage of the currently active transaction to fetch the FK category
+            // TODO: it isn't clear that this is the best approach - on one hand, we reduce code duplication and make
+            //      CategoryDao responsible for access to the Category table. On the other, we're doing an extra SELECT
+            //      for every row in the ResultSet, when we could have done an INNER JOIN instead. The problem with the
+            //      latter approach is that an INSERT operation may or may not be able to return joined results. Test?
+            final long categoryId = resultSet.getLong("category_id");
+            final Category category = categoryDao.select(transactionState.getDatabaseTransaction(), categoryId)
+                    .orElseThrow(() -> new SQLException(String.format("Category with id %d does not exist", categoryId)));
+
+            results.add(new DescriptionCategory(id, description, category));
+        });
     }
 
     public Optional<DescriptionCategory> insert(DescriptionCategory descriptionCategoryToInsert) {
@@ -40,7 +61,7 @@ public class DescriptionCategoryDao {
             return t.insert(insertStatement, ps -> {
                 ps.setString(1, descriptionCategoryToInsert.getDescription());
                 ps.setLong(2, category.getId());
-            }, new DescriptionCategoryDeserializer(t));
+            }, descriptionCategoryDeserializer);
         } catch (SQLException e) {
             logger.error("Failed to insert DescriptionCategory {}", descriptionCategoryToInsert, e);
             return Optional.empty();
@@ -55,7 +76,7 @@ public class DescriptionCategoryDao {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to select all DescriptionCategory objects");
             final String selectStatement = "SELECT * FROM DescriptionCategory;";
-            return t.query(selectStatement, new DescriptionCategoryDeserializer(t));
+            return t.query(selectStatement, descriptionCategoryDeserializer);
         } catch (SQLException e) {
             logger.error("Failed to select all DescriptionCategory objects", e);
             return new ArrayList<>();
@@ -78,38 +99,11 @@ public class DescriptionCategoryDao {
             final List<DescriptionCategory> results = t.query(selectStatement, ps -> {
                 ps.setString(1, description.toUpperCase());
                 ps.setString(2, category.getName().toUpperCase());
-            }, new DescriptionCategoryDeserializer(t));
+            }, descriptionCategoryDeserializer);
             return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
             logger.error("Failed to select DescriptionCategory with description {} and Category {}", description, category, e);
             return Optional.empty();
-        }
-    }
-
-    private class DescriptionCategoryDeserializer implements SqlFunction<ResultSet, List<DescriptionCategory>> {
-
-        private final DatabaseTransaction t;
-
-        private DescriptionCategoryDeserializer(DatabaseTransaction t) {
-            this.t = t;
-        }
-
-        @Override
-        public List<DescriptionCategory> apply(ResultSet resultSet) throws SQLException {
-            final List<DescriptionCategory> results = new ArrayList<>();
-            while (resultSet.next()) {
-                final long id = resultSet.getLong("id");
-                final String description = resultSet.getString("description");
-
-                // we can take advantage of the currently active transaction to fetch the FK category
-                // TODO: we can probably do an inner join here to make this more efficient
-                final long categoryId = resultSet.getLong("category_id");
-                final Category category = categoryDao.select(t, categoryId)
-                        .orElseThrow(() -> new SQLException(String.format("Category with id %d does not exist", categoryId)));
-
-                results.add(new DescriptionCategory(id, description, category));
-            }
-            return results;
         }
     }
 }

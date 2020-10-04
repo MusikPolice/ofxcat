@@ -1,6 +1,6 @@
 package ca.jonathanfritz.ofxcat;
 
-import ca.jonathanfritz.ofxcat.dao.DAOModule;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.flywaydb.core.Flyway;
@@ -19,7 +19,7 @@ public abstract class AbstractDatabaseTest {
     @BeforeAll
     static void setup() {
         // get a connection to an in-memory database for child classes to use
-        final Injector injector = Guice.createInjector(new DAOModule());
+        final Injector injector = Guice.createInjector(new DatastoreModule());
         connection = injector.getInstance(Connection.class);
 
         // initialize the schema of that in-memory database

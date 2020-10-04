@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.dao;
+package ca.jonathanfritz.ofxcat.datastore.utils;
 
 public interface Entity {
 
