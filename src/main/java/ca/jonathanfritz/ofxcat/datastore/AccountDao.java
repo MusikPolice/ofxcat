@@ -51,6 +51,12 @@ public class AccountDao {
      */
     public Optional<Account> select(long id) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return select(t, id);
+        }
+    }
+
+    Optional<Account> select(DatabaseTransaction t, long id) {
+        try {
             logger.debug("Attempting to query Account with id {}", id);
             final String selectStatement = "SELECT * FROM Account WHERE id = ?";
             final List<Account> results = t.query(selectStatement, ps -> ps.setLong(1, id), accountDeserializer);

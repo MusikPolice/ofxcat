@@ -76,6 +76,7 @@ public class Account implements Entity {
     public static Builder newBuilder(Account copy) {
         Builder builder = new Builder();
         if (copy != null) {
+            builder.id = copy.getId();
             builder.bankId = copy.getBankId();
             builder.accountId = copy.getAccountId();
             builder.accountType = copy.getAccountType();

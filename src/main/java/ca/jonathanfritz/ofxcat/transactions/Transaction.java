@@ -55,7 +55,7 @@ public class Transaction {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transaction that = (Transaction) o;
-        return Float.compare(that.amount, amount) == 0 &&
+        return Double.compare(that.amount, amount) == 0 &&
                 type == that.type &&
                 Objects.equals(date, that.date) &&
                 Objects.equals(description, that.description) &&
