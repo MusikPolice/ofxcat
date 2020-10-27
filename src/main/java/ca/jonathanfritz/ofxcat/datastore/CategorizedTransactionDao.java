@@ -1,9 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
-import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
-import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
-import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
+import ca.jonathanfritz.ofxcat.datastore.utils.*;
 import ca.jonathanfritz.ofxcat.transactions.Account;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Category;
@@ -12,10 +9,7 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,6 +71,31 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Checks to see if the specified {@link Transaction} already exists in the database
+     * @param t the {@link DatabaseTransaction} to perform this operation on
+     * @param transaction the Transaction to look for
+     * @return true if the specified Transaction already exists, false otherwise
+     * @throws SQLException if something goes wrong
+     */
+    public boolean isDuplicate(DatabaseTransaction t, Transaction transaction) throws SQLException {
+        logger.debug("Attempting to determine if {} is a duplicate", transaction);
+        final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE " +
+                "date = ? AND " +
+                "amount = ? AND " +
+                "description = ? AND " +
+                "account_id = ?;";
+
+        final List<CategorizedTransaction> results = t.query(selectStatement, ps -> {
+            ps.setDate(1, Date.valueOf(transaction.getDate()));
+            ps.setFloat(2, transaction.getAmount());
+            ps.setString(3, transaction.getDescription());
+            ps.setLong(4, transaction.getAccount().getId());
+        }, categorizedTransactionDeserializer);
+
+        return !results.isEmpty();
+    }
+
+    /**
      * Inserts the specified {@link CategorizedTransaction} into the database
      * @param categorizedTransactionToInsert the CategorizedTransaction to insert
      * @return an {@link Optional<CategorizedTransaction>} containing the inserted CategorizedTransaction, or
@@ -84,19 +103,31 @@ public class CategorizedTransactionDao {
      */
     public Optional<CategorizedTransaction> insert(CategorizedTransaction categorizedTransactionToInsert) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to insert CategorizedTransaction {}", categorizedTransactionToInsert);
-            final String insertStatement = "INSERT INTO CategorizedTransaction (type, date, amount, description, account_id, category_id) VALUES (?, ?, ?, ?, ?, ?);";
-            return t.insert(insertStatement, ps -> {
-                ps.setString(1, categorizedTransactionToInsert.getType().name());
-                ps.setDate(2, Date.valueOf(categorizedTransactionToInsert.getDate()));
-                ps.setDouble(3, categorizedTransactionToInsert.getAmount());
-                ps.setString(4, categorizedTransactionToInsert.getDescription());
-                ps.setLong(5, categorizedTransactionToInsert.getAccount().getId());
-                ps.setLong(6, categorizedTransactionToInsert.getCategory().getId());
-            }, categorizedTransactionDeserializer);
+            return insert(t, categorizedTransactionToInsert);
         } catch (SQLException e) {
             logger.error("Failed to insert CategorizedTransaction {}", categorizedTransactionToInsert, e);
             return Optional.empty();
         }
+    }
+
+    /**
+     * Inserts the specified {@link CategorizedTransaction} into the database
+     * @param t the {@link DatabaseTransaction} to perform this operation on
+     * @param categorizedTransactionToInsert the CategorizedTransaction to insert
+     * @return an {@link Optional<CategorizedTransaction>} containing the inserted CategorizedTransaction, or
+     *      {@link Optional#empty()} if the operation fails
+     * @throws SQLException if something goes wrong
+     */
+    public Optional<CategorizedTransaction> insert(DatabaseTransaction t, CategorizedTransaction categorizedTransactionToInsert) throws SQLException {
+        logger.debug("Attempting to insert CategorizedTransaction {}", categorizedTransactionToInsert);
+        final String insertStatement = "INSERT INTO CategorizedTransaction (type, date, amount, description, account_id, category_id) VALUES (?, ?, ?, ?, ?, ?);";
+        return t.insert(insertStatement, ps -> {
+            ps.setString(1, categorizedTransactionToInsert.getType().name());
+            ps.setDate(2, Date.valueOf(categorizedTransactionToInsert.getDate()));
+            ps.setDouble(3, categorizedTransactionToInsert.getAmount());
+            ps.setString(4, categorizedTransactionToInsert.getDescription());
+            ps.setLong(5, categorizedTransactionToInsert.getAccount().getId());
+            ps.setLong(6, categorizedTransactionToInsert.getCategory().getId());
+        }, categorizedTransactionDeserializer);
     }
 }

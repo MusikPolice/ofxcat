@@ -5,22 +5,12 @@ import java.nio.file.Path;
 
 public class PathUtils {
 
-    // TODO: allow home directory to be configured?
-
     /**
      * Returns the full path to the ~/.ofxcat directory
      */
     public Path getDataPath() {
         final String homeDirectory = System.getProperty("user.home");
         return join(homeDirectory, ".ofxcat");
-    }
-
-    /**
-     * Returns the full path to the ~/.ofxcat/transaction-categories.json file
-     * TODO: remove me
-     */
-    public Path getTransactionCategoryStorePath() {
-        return join(getDataPath().toString(), "transaction-categories.json");
     }
 
     public String getDatabaseConnectionString() {

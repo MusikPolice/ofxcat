@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-// TODO test me
 public class DatabaseTransaction implements Closeable {
 
     private final Connection connection;
@@ -156,8 +155,6 @@ public class DatabaseTransaction implements Closeable {
             return new SQLException("Failed to rollback transaction", ex);
         }
     }
-
-    // TODO add update(...) and delete(...) functions
 
     @Override
     public void close() {
