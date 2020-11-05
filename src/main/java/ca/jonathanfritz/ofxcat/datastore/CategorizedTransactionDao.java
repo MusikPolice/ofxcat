@@ -39,12 +39,14 @@ public class CategorizedTransactionDao {
             final float amount = resultSet.getFloat("amount");
             final String description = resultSet.getString("description");
             final String type = resultSet.getString("type");
+            final float balance = resultSet.getFloat("balance");
             final Transaction transaction = Transaction.newBuilder()
                     .setAccount(account)
                     .setDate(date.toLocalDate())
                     .setAmount(amount)
                     .setDescription(description)
                     .setType(Transaction.TransactionType.valueOf(type))
+                    .setBalance(balance)
                     .build();
 
             final long id = resultSet.getLong("id");
@@ -120,14 +122,15 @@ public class CategorizedTransactionDao {
      */
     public Optional<CategorizedTransaction> insert(DatabaseTransaction t, CategorizedTransaction categorizedTransactionToInsert) throws SQLException {
         logger.debug("Attempting to insert CategorizedTransaction {}", categorizedTransactionToInsert);
-        final String insertStatement = "INSERT INTO CategorizedTransaction (type, date, amount, description, account_id, category_id) VALUES (?, ?, ?, ?, ?, ?);";
+        final String insertStatement = "INSERT INTO CategorizedTransaction (type, date, amount, description, account_id, category_id, balance) VALUES (?, ?, ?, ?, ?, ?, ?);";
         return t.insert(insertStatement, ps -> {
             ps.setString(1, categorizedTransactionToInsert.getType().name());
             ps.setDate(2, Date.valueOf(categorizedTransactionToInsert.getDate()));
-            ps.setDouble(3, categorizedTransactionToInsert.getAmount());
+            ps.setFloat(3, categorizedTransactionToInsert.getAmount());
             ps.setString(4, categorizedTransactionToInsert.getDescription());
             ps.setLong(5, categorizedTransactionToInsert.getAccount().getId());
             ps.setLong(6, categorizedTransactionToInsert.getCategory().getId());
+            ps.setFloat(7, categorizedTransactionToInsert.getBalance());
         }, categorizedTransactionDeserializer);
     }
 }

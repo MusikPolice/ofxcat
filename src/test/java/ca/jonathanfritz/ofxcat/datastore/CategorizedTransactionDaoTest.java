@@ -42,10 +42,11 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // now we can create a CategorizedTransaction
         CategorizedTransaction categorizedTransaction = new CategorizedTransaction(Transaction.newBuilder()
                 .setAccount(account)
-                .setAmount(5.14F)
+                .setAmount(5.14f)
                 .setDate(LocalDate.now())
                 .setDescription("SAUCE BOSS")
                 .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(21.58f)
                 .build(), category);
         final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
         categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
@@ -82,6 +83,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
                 .setDate(LocalDate.now())
                 .setDescription("HORSE FEATHERS")
                 .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(34.21f)
                 .build();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {

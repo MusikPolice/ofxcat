@@ -1,0 +1,1 @@
+ALTER TABLE "CategorizedTransaction" ADD balance FLOAT;
