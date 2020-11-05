@@ -13,10 +13,12 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class OfxParser {
 
@@ -37,12 +39,18 @@ public class OfxParser {
     private static final String NAME = "NAME";          // transaction name - interchangeable with memo
     private static final String MEMO = "MEMO";          // transaction memo - interchangeable with name
 
+    // ledgerbalance elements
+    public static final String LEDGERBAL = "LEDGERBAL"; // start/end of ledger balance element for an account
+    public static final String BALAMT = "BALAMT";       // the balance of the account
+    public static final String DTASOF = "DTASOF";       // the date on which the balance was recorded
+
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final Logger logger = LoggerFactory.getLogger(OfxParser.class);
 
-    public Map<OfxAccount, Set<OfxTransaction>> parse(final InputStream inputStream) throws IOException, OFXParseException {
-        final Map<OfxAccount, Set<OfxTransaction>> transactions = new HashMap<>();
+    public List<OfxExport> parse(final InputStream inputStream) throws IOException, OFXParseException {
+        final Map<OfxAccount, List<OfxTransaction.TransactionBuilder>> transactions = new HashMap<>();
+        final Map<OfxAccount, OfxBalance.Builder> accountBalances = new HashMap<>();
 
         // no sense in making this a singleton, since this whole object is re-created every time the parse function is
         // called to avoid storing state in OfxParser
@@ -58,6 +66,10 @@ public class OfxParser {
             // for each account. We can attach the transactions for the account to this object
             OfxAccount currentAccount;
 
+            // after each BANKTRANLIST element, there's a LEDGERBAL element that contains the current balance for that
+            // account. We can use it to work backward and determine the account balance after each transaction took place
+            boolean isLedgerBalanceActive = false;
+
             // fired whenever a new ofx entity (an account or a transaction) starts
             public void startAggregate(String name) {
                 if (BANKACCTFROM.equalsIgnoreCase(name)) {
@@ -67,6 +79,8 @@ public class OfxParser {
                     if (currentAccount != null) {
                         transactionBuilder.setAccount(currentAccount);
                     }
+                } else if (LEDGERBAL.equalsIgnoreCase(name)) {
+                    isLedgerBalanceActive = true;
                 }
             }
 
@@ -90,9 +104,9 @@ public class OfxParser {
                         break;
                     case DTPOSTED:
                         try {
-                            // date format is 20181210120000[-5:EST], but date is always set to 120000, so we can just ignore it
+                            // date format is 20181210120000[-5:EST], but time is always set to 120000, so we can just ignore it
                             // and interpret the first 8 characters as a date
-                            final LocalDate localDate = LocalDate.parse(value.substring(0, 8), dateFormatter);
+                            final LocalDate localDate = parseDate(value);
                             transactionBuilder.setDate(localDate);
                             break;
                         } catch (DateTimeParseException ex) {
@@ -114,10 +128,44 @@ public class OfxParser {
                     case MEMO:
                         transactionBuilder.setMemo(value);
                         break;
+
+                    // ledgerbalance information
+                    case BALAMT:
+                        if (!isLedgerBalanceActive) {
+                            break;
+                        }
+
+                        try {
+                            final float amount = Float.parseFloat(value);
+                            if (accountBalances.containsKey(currentAccount)) {
+                                accountBalances.get(currentAccount).setAmount(amount);
+                            } else {
+                                accountBalances.put(currentAccount, OfxBalance.newBuilder().setAmount(amount));
+                            }
+                            break;
+                        } catch (NumberFormatException ex) {
+                            throw new OFXSyntaxException(String.format("Failed to parse BALAMT %s as float", value), ex);
+                        }
+                    case DTASOF:
+                        if (!isLedgerBalanceActive) {
+                            break;
+                        }
+                        try {
+                            final LocalDate localDate = parseDate(value);
+                            if (accountBalances.containsKey(currentAccount)) {
+                                accountBalances.get(currentAccount).setDate(localDate);
+                            } else {
+                                accountBalances.put(currentAccount, OfxBalance.newBuilder().setDate(localDate));
+                            }
+                            break;
+                        } catch (DateTimeParseException ex) {
+                            throw new OFXSyntaxException(String.format("Failed to parse DTASOF %s as LocalDate", value), ex);
+                        }
+
                     default:
                         // unhandled - there are lots of OFX elements that we don't use
+                    }
                 }
-            }
 
             // fired whenever the currently open ofx entity ends
             public void endAggregate(String name) {
@@ -125,15 +173,16 @@ public class OfxParser {
                     currentAccount = accountBuilder.build();
                     logger.debug("Parsed bank account information {}", currentAccount);
                 } else if (STMTTRN.equalsIgnoreCase(name)) {
-                    final OfxTransaction t = transactionBuilder.build();
                     if (transactions.containsKey(currentAccount)) {
-                        final Set<OfxTransaction> accountTransactions = new HashSet<>(transactions.get(currentAccount));
-                        accountTransactions.add(t);
-                        transactions.put(currentAccount, accountTransactions);
+                        transactions.put(currentAccount, Stream.concat(transactions.get(currentAccount).stream(),
+                                Stream.of(transactionBuilder)).collect(Collectors.toList()));
                     } else {
-                        transactions.put(currentAccount, Set.of(t));
+                        transactions.put(currentAccount, Collections.singletonList(transactionBuilder));
                     }
-                    logger.debug("Parsed transaction {}", t);
+                    logger.debug("Parsed transaction {}", transactionBuilder.build());
+                } else if (LEDGERBAL.equalsIgnoreCase(name)) {
+                    isLedgerBalanceActive = false;
+                    logger.debug("Recorded balance {} for account {}", accountBalances.get(currentAccount), currentAccount.getAccountId());
                 }
             }
 
@@ -143,6 +192,19 @@ public class OfxParser {
 
         // blocks until the entire ofx file has been processed
         ofxReader.parse(inputStream);
-        return transactions;
+
+        // bundle up the imported data for all accounts
+        return transactions.entrySet().stream()
+                .map(entry -> new OfxExport(entry.getKey(), accountBalances.get(entry.getKey()).build(),
+                        entry.getValue().stream()
+                            .map(OfxTransaction.TransactionBuilder::build)
+                            .collect(Collectors.toList()))
+                ).collect(Collectors.toList());
+    }
+
+    private LocalDate parseDate(String value) {
+        // date format is 20181210120000[-5:EST], but time is always set to 120000, so we can just ignore it
+        // and interpret the first 8 characters as a date
+        return LocalDate.parse(value.substring(0, 8), dateFormatter);
     }
 }

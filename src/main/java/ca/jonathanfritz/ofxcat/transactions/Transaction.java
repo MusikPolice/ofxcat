@@ -10,6 +10,7 @@ public class Transaction {
     private final float amount;
     private final String description;
     private final Account account;
+    private final float balance;
 
     protected Transaction(Builder builder) {
         type = builder.type;
@@ -17,6 +18,7 @@ public class Transaction {
         amount = builder.amount;
         description = builder.description;
         account = builder.account;
+        balance = builder.balance;
     }
 
     public TransactionType getType() {
@@ -39,6 +41,10 @@ public class Transaction {
         return account;
     }
 
+    public float getBalance() {
+        return balance;
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -47,6 +53,7 @@ public class Transaction {
                 ", amount=" + amount +
                 ", description='" + description + '\'' +
                 ", account=" + account +
+                ", balance=" + balance +
                 '}';
     }
 
@@ -55,7 +62,8 @@ public class Transaction {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transaction that = (Transaction) o;
-        return Double.compare(that.amount, amount) == 0 &&
+        return Float.compare(that.amount, amount) == 0 &&
+                Float.compare(that.balance, balance) == 0 &&
                 type == that.type &&
                 Objects.equals(date, that.date) &&
                 Objects.equals(description, that.description) &&
@@ -64,7 +72,7 @@ public class Transaction {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, date, amount, description, account);
+        return Objects.hash(type, date, amount, description, account, balance);
     }
 
     public static Builder newBuilder() {
@@ -78,6 +86,7 @@ public class Transaction {
         builder.amount = copy.getAmount();
         builder.description = copy.getDescription();
         builder.account = Account.newBuilder(copy.getAccount()).build();
+        builder.balance = copy.getBalance();
         return builder;
     }
 
@@ -88,6 +97,7 @@ public class Transaction {
         private float amount;
         private String description;
         private Account account;
+        private float balance;
 
         private Builder() {
         }
@@ -107,6 +117,10 @@ public class Transaction {
             return this;
         }
 
+        public float getAmount() {
+            return amount;
+        }
+
         public Builder setDescription(String description) {
             this.description = description;
             return this;
@@ -114,6 +128,11 @@ public class Transaction {
 
         public Builder setAccount(Account account) {
             this.account = account;
+            return this;
+        }
+
+        public Builder setBalance(float balance) {
+            this.balance = balance;
             return this;
         }
 

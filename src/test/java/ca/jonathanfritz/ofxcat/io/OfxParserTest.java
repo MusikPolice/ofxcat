@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 class OfxParserTest {
 
@@ -24,7 +24,7 @@ class OfxParserTest {
             .setAccountType("CHECKING")
             .setBankId("900000100")
             .build();
-    private static final Set<OfxTransaction> expectedAccount1Transactions = Set.of(
+    private static final List<OfxTransaction> expectedAccount1Transactions = Arrays.asList(
             OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-31.21f).setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY").setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-61.4f).setFitId("90000010020181210D02197E2FA27").setName("WILD WING").setMemo("IDP PURCHASE - 8381").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("ATM").setDate(december10th2018).setAmount(-360.0f).setFitId("90000010020181210D0219652EA07").setName("Withdrawal").setMemo("PTB WD --- KB681166").setAccount(expectedAccount1).build(),
@@ -32,6 +32,10 @@ class OfxParserTest {
             OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-7.08f).setFitId("90000010020181210D02192320AA7").setName("C-IDP PURCHASE-7123").setMemo("FARM BOY").setAccount(expectedAccount1).build(),
             OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-68.49f).setFitId("90000010020181210D02194C22AA7").setName("C-IDP PURCHASE-1229").setMemo("VALUMART").setAccount(expectedAccount1).build()
     );
+    private static final OfxBalance expectedAccount1Balance = OfxBalance.newBuilder()
+            .setDate(LocalDate.of(2019, 3, 19))
+            .setAmount(15125.81f)
+            .build();
 
     private static final LocalDate december17th2018 = LocalDate.of(2018, 12, 17);
     private static final OfxAccount expectedAccount2 = OfxAccount.newBuilder()
@@ -39,45 +43,52 @@ class OfxParserTest {
             .setAccountType("CHECKING")
             .setBankId("900000100")
             .build();
-    private static final Set<OfxTransaction> expectedAccount2Transactions = Set.of(
+    private static final List<OfxTransaction> expectedAccount2Transactions = Arrays.asList(
             OfxTransaction.newBuilder().setType("POS").setDate(december17th2018).setAmount(-241.94f).setFitId("90000010020181217C08184422CF1").setName("A AND M WOOD A").setMemo("IDP PURCHASE - 2835").setAccount(expectedAccount2).build(),
             OfxTransaction.newBuilder().setType("DEBIT").setDate(december17th2018).setAmount(-190.34f).setFitId("90000010020181217C0910F89BF59").setName("UTILITY BILL PMT").setMemo("UTILITIES").setAccount(expectedAccount2).build()
     );
+    private static final OfxBalance expectedAccount2Balance = OfxBalance.newBuilder()
+            .setDate(LocalDate.of(2019, 3, 19))
+            .setAmount(6239.75f)
+            .build();
 
     @Test
     void parseOneAccountTest() throws IOException, OFXParseException {
         final OfxParser ofxParser = new OfxParser();
-        final Map<OfxAccount, Set<OfxTransaction>> accountTransactions = ofxParser.parse(loadOfxFile(ONE_ACCOUNT_OFX));
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(ONE_ACCOUNT_OFX));
 
         // there should be one account that contains six transactions
-        MatcherAssert.assertThat(accountTransactions.size(), IsEqual.equalTo(1));
-        final Set<OfxTransaction> transactions = accountTransactions.get(expectedAccount1);
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(1));
+        final List<OfxTransaction> transactions = ofxExports.get(0).getTransactions().get(december10th2018);
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(6));
         MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
         MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
+        MatcherAssert.assertThat(ofxExports.get(0).getBalance(), IsEqual.equalTo(expectedAccount1Balance));
     }
 
     @Test
     void parseTwoAccountsTest() throws IOException, OFXParseException {
         final OfxParser ofxParser = new OfxParser();
-        final Map<OfxAccount, Set<OfxTransaction>> accountTransactions = ofxParser.parse(loadOfxFile(TWO_ACCOUNTS_OFX));
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(TWO_ACCOUNTS_OFX));
 
-        MatcherAssert.assertThat(accountTransactions.size(), IsEqual.equalTo(2));
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(2));
 
-        // one account contains six transactions
-        Set<OfxTransaction> transactions = accountTransactions.get(expectedAccount1);
-        MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(6));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
-        MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
-
-        // the other account contains two transactions
-        transactions = accountTransactions.get(expectedAccount2);
+        // one account contains two transactions
+        List<OfxTransaction> transactions = ofxExports.get(0).getTransactions().get(december17th2018);
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(2));
         MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount2)), Is.is(true));
         MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december17th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount2Transactions));
+        MatcherAssert.assertThat(ofxExports.get(0).getBalance(), IsEqual.equalTo(expectedAccount2Balance));
+
+        // the other account contains six transactions
+        transactions = ofxExports.get(1).getTransactions().get(december10th2018);
+        MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(6));
+        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
+        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
+        MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
+        MatcherAssert.assertThat(ofxExports.get(1).getBalance(), IsEqual.equalTo(expectedAccount1Balance));
     }
 
     private InputStream loadOfxFile(String filename) {

@@ -114,7 +114,7 @@ public class CLI {
      * Groups the specified transactions by category and displays the sum for each group to the terminal
      * TODO: break this down by year/month as well
      */
-    public void displayResults(Set<CategorizedTransaction> categorizedTransactions) {
+    public void displayResults(List<CategorizedTransaction> categorizedTransactions) {
         // if present, resetting to this bookmark will put the cursor in front of the "Categorized transaction as" message
         textIO.getTextTerminal().resetToBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
 
