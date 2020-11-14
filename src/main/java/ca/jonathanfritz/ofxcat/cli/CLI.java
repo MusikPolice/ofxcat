@@ -8,9 +8,13 @@ import ca.jonathanfritz.ofxcat.transactions.Category;
 import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
+import org.beryx.textio.InputReader;
 import org.beryx.textio.TextIO;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,6 +52,15 @@ public class CLI {
      */
     public void println(String line) {
         textIO.getTextTerminal().println(line);
+    }
+
+    /**
+     * Prints the specified line to the terminal and blocks until the user presses the enter key
+     */
+    public void waitForInput(String line) {
+        textIO.newGenericInputReader((Function<String, InputReader.ParseResult<Void>>) s ->
+                new InputReader.ParseResult<>(null)
+        ).read(line);
     }
 
     /**
@@ -108,38 +121,6 @@ public class CLI {
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(categorizedTransaction.getCategory().getName()));
 
         return categorizedTransaction;
-    }
-
-    /**
-     * Groups the specified transactions by category and displays the sum for each group to the terminal
-     * TODO: break this down by year/month as well
-     */
-    public void displayResults(List<CategorizedTransaction> categorizedTransactions) {
-        // if present, resetting to this bookmark will put the cursor in front of the "Categorized transaction as" message
-        textIO.getTextTerminal().resetToBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
-
-        // sum all transactions into buckets based on categorization
-        final Map<Category, Float> categorySums = new HashMap<>();
-        for (CategorizedTransaction categorizedTransaction : categorizedTransactions) {
-            final Category category = categorizedTransaction.getCategory();
-            if (categorySums.containsKey(category)) {
-                final float existing = categorySums.get(category);
-                categorySums.put(category, existing + categorizedTransaction.getAmount());
-            } else {
-                categorySums.put(category, categorizedTransaction.getAmount());
-            }
-        }
-
-        // print the results to the terminal
-        textIO.getTextTerminal().println("\nExpenses by Category:");
-        for(Map.Entry<Category, Float> entry : categorySums.entrySet()) {
-            textIO.getTextTerminal().print(String.format("%s: ", entry.getKey().getName()));
-            if (entry.getValue() >= 0) {
-                textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "$%.2f", Math.abs(entry.getValue()))));
-            } else {
-                textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "-$%.2f", Math.abs(entry.getValue()))));
-            }
-        }
     }
 
     private void printTransaction(Transaction transaction) {

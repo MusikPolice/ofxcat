@@ -6,6 +6,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -13,7 +14,6 @@ import ca.jonathanfritz.ofxcat.transactions.Account;
 import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.transactions.Transaction;
 import ca.jonathanfritz.ofxcat.utils.Accumulator;
-import com.webcohesion.ofx4j.OFXException;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class TransactionImportService {
         this.categorizedTransactionDao = categorizedTransactionDao;
     }
 
-    public void importTransactions(final File inputFile) throws OFXException {
+    public void importTransactions(final File inputFile) throws OfxCatException {
         cli.printWelcomeBanner();
         cli.println("Loading transactions from file:");
         cli.println("value", inputFile.toString());
@@ -61,20 +61,16 @@ public class TransactionImportService {
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
             ofxTransactions = ofxParser.parse(inputStream);
         } catch (FileNotFoundException e) {
-            throw new OFXException("File not found", e);
+            throw new OfxCatException("File not found", e);
         } catch (OFXParseException e) {
-            throw new OFXException("Failed to parse OFX file", e);
+            throw new OfxCatException("Failed to parse OFX file", e);
         } catch (IOException e) {
-            throw new OFXException("An unexpected exception occurred", e);
+            throw new OfxCatException("An unexpected exception occurred", e);
         }
 
         final List<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions);
-
-        // present the results in a pleasing manner
-        // TODO: instead, show stats about what was imported
-        cli.displayResults(categorizedTransactions);
-
-        System.out.printf("Finished processing %s%n", inputFile.toString());
+        cli.println(String.format("Successfully imported %d transactions", categorizedTransactions.size()));
+        cli.waitForInput("Press enter to exit");
     }
 
     List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
