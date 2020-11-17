@@ -12,6 +12,7 @@ import javax.inject.Inject;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,21 @@ public class AccountDao {
                     .setName(name)
                     .build());
         });
+    }
+
+    /**
+     * Gets all {@link Account}s from the database
+     * @return a {@link List<Account>}, or an empty list if no accounts exist
+     */
+    public List<Account> select() {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to select all accounts from the database");
+            final String selectStatement = "SELECT * FROM Account";
+            return t.query(selectStatement, accountDeserializer);
+        } catch (SQLException ex) {
+            logger.error("Failed to select all accounts from the database", ex);
+            return new ArrayList<>();
+        }
     }
 
     /**

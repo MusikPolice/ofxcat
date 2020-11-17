@@ -89,7 +89,7 @@ public class TransactionCategoryService {
      * Returns an alphabetically sorted list of all known category names
      */
     public List<String> getCategoryNames() {
-        return categoryDao.selectAll().stream()
+        return categoryDao.select().stream()
                 .map(Category::getName)
                 .distinct()
                 .sorted()

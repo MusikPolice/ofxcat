@@ -55,12 +55,10 @@ public class CLI {
     }
 
     /**
-     * Prints the specified line to the terminal and blocks until the user presses the enter key
+     * Prints the specified lines to the terminal, advancing to the next line after each
      */
-    public void waitForInput(String line) {
-        textIO.newGenericInputReader((Function<String, InputReader.ParseResult<Void>>) s ->
-                new InputReader.ParseResult<>(null)
-        ).read(line);
+    public void println(List<String> lines) {
+        textIO.getTextTerminal().println(lines);
     }
 
     /**
@@ -69,6 +67,15 @@ public class CLI {
      */
     public void println(String propertiesPrefix, String line) {
         textIO.getTextTerminal().executeWithPropertiesPrefix(propertiesPrefix, t -> t.println(line));
+    }
+
+    /**
+     * Prints the specified line to the terminal and blocks until the user presses the enter key
+     */
+    public void waitForInput(String line) {
+        textIO.newGenericInputReader((Function<String, InputReader.ParseResult<Void>>) s ->
+                new InputReader.ParseResult<>(null)
+        ).read(line);
     }
 
     /**

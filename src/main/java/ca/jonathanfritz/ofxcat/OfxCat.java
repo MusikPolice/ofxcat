@@ -5,13 +5,13 @@ import ca.jonathanfritz.ofxcat.cli.CLIModule;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
+import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.cli.*;
-import org.apache.commons.lang3.NotImplementedException;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +31,17 @@ public class OfxCat {
 
     private final Flyway flyway;
     private final TransactionImportService transactionImportService;
+    private final ReportingService reportingService;
     private final PathUtils pathUtils;
     private final CLI cli;
 
     private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(Flyway flyway, TransactionImportService transactionImportService, PathUtils pathUtils, CLI cli) {
+    OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService, PathUtils pathUtils, CLI cli) {
         this.flyway = flyway;
         this.transactionImportService = transactionImportService;
+        this.reportingService = reportingService;
         this.pathUtils = pathUtils;
         this.cli = cli;
     }
@@ -59,18 +61,15 @@ public class OfxCat {
     }
 
     private void reportTransactions(OfxCatOptions options) {
-        // TODO
-        throw new NotImplementedException("Not implemented");
+        reportingService.reportTransactions(options.startDate, options.endDate);
     }
 
     private void reportAccounts() {
-        // TODO
-        throw new NotImplementedException("Not implemented");
+        reportingService.reportAccounts();
     }
 
     private void reportCategories() {
-        // TODO
-        throw new NotImplementedException("Not implemented");
+        reportingService.reportCategories();
     }
 
     private void printHelp() {
@@ -106,6 +105,7 @@ public class OfxCat {
                             ofxCat.reportAccounts();
                             break;
                         case CATEGORIES:
+                            // TODO: need a way to edit categories and category descriptions
                             ofxCat.reportCategories();
                             break;
                     }

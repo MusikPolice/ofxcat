@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
-import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.transactions.Category;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -74,7 +73,7 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         final Category insertedCategory = insertedCategoryOptional.get();
 
         // get the inserted object by name - this is a second transaction that takes place after the first is committed
-        final Optional<Category> selectedCategoryOptional = categoryDao.selectByName(categoryName);
+        final Optional<Category> selectedCategoryOptional = categoryDao.select(categoryName);
         Assertions.assertTrue(selectedCategoryOptional.isPresent());
         final Category selectedCategory = selectedCategoryOptional.get();
 
@@ -89,7 +88,7 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         final Category category1 = categoryDao.insert(new Category("The Pen is Mightier")).get();
         final Category category2 = categoryDao.insert(new Category("Japan US Relations")).get();
 
-        final List<Category> categories = categoryDao.selectAll();
+        final List<Category> categories = categoryDao.select();
         Assertions.assertEquals(2, categories.size());
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category1)));
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category2)));

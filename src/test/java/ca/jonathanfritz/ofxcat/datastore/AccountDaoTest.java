@@ -1,12 +1,13 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
-import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.transactions.Account;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 class AccountDaoTest extends AbstractDatabaseTest {
@@ -38,6 +39,26 @@ class AccountDaoTest extends AbstractDatabaseTest {
         final Account foundAccount = accountDao.select(insertedAccount.getId()).get();
         Assertions.assertNotSame(foundAccount, insertedAccount);
         Assertions.assertEquals(foundAccount, insertedAccount);
+    }
+
+    @Test
+    public void selectAllTest() {
+        // create some accounts
+        final AccountDao accountDao = new AccountDao(connection);
+        final List<Account> expected = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            final Account accountToInsert = Account.newBuilder()
+                    .setBankId(UUID.randomUUID().toString())
+                    .setAccountId(UUID.randomUUID().toString())
+                    .setAccountType(UUID.randomUUID().toString())
+                    .setName(UUID.randomUUID().toString())
+                    .build();
+            expected.add(accountDao.insert(accountToInsert).get());
+        }
+
+        // get the accounts
+        final List<Account> actual = accountDao.select();
+        Assertions.assertEquals(expected, actual);
     }
 
     @Test

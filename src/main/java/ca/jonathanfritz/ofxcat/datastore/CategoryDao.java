@@ -64,13 +64,13 @@ public class CategoryDao {
      * @return an {@link Optional<Category>} containing the specified Category, or {@link Optional#empty()} if it does
      *      not exist
      */
-    public Optional<Category> selectByName(String name) {
+    public Optional<Category> select(String name) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            return selectByName(t, name);
+            return select(t, name);
         }
     }
 
-    Optional<Category> selectByName(DatabaseTransaction t, String name) {
+    Optional<Category> select(DatabaseTransaction t, String name) {
         try {
             logger.debug("Attempting to query Category with name {}", name);
             final String selectStatement = "SELECT * FROM Category WHERE upper(name) = ?";
@@ -86,7 +86,7 @@ public class CategoryDao {
      * Selects all {@link Category} objects from the database
      * @return a {@link List<Category>} containing the results, or an empty list if there are no results
      */
-    public List<Category> selectAll() {
+    public List<Category> select() {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to select all Category objects");
             final String selectStatement = "SELECT * FROM Category;";

@@ -49,7 +49,7 @@ public class DescriptionCategoryDao {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // make sure that the category in question exists
             logger.debug("Attempting to find existing Category with name {}", descriptionCategoryToInsert.getCategory().getName());
-            final Category category = categoryDao.selectByName(t, descriptionCategoryToInsert.getCategory().getName())
+            final Category category = categoryDao.select(t, descriptionCategoryToInsert.getCategory().getName())
                     .or(() -> {
                         logger.debug("Implicitly creating Category with name {}", descriptionCategoryToInsert.getCategory().getName());
                         return categoryDao.insert(t, descriptionCategoryToInsert.getCategory());
