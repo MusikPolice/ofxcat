@@ -73,8 +73,16 @@ public class OfxCat {
     }
 
     private void printHelp() {
-        // TODO: actually print help docs
-        cli.println("error", "HELP!");
+        cli.println(Arrays.asList(
+                "Usage: ofxcat import [FILENAME]",
+                "\tImports the transactions in the specified *.ofx file",
+                "Usage: ofxcat get accounts",
+                "\tPrints a list of known accounts in CSV format",
+                "Usage: ofxcat get categories",
+                "\tPrints a list of known transaction categories in CSV format",
+                "Usage: ofxcat get transactions [START DATE] [END DATE]",
+                "\tPrints the amount spent in each known transaction category between the specified dates inclusive"
+        ));
     }
 
     private void printError(String message) {
