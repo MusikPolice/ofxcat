@@ -12,6 +12,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.StringUtils;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,9 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
-import java.util.Date;
 
 /**
  * The entrypoint to the application
@@ -74,22 +75,23 @@ public class OfxCat {
 
     private void printHelp() {
         cli.println(Arrays.asList(
-                "Usage: ofxcat import [FILENAME]",
-                "\tImports the transactions in the specified *.ofx file",
-                "Usage: ofxcat get accounts",
-                "\tPrints a list of known accounts in CSV format",
-                "Usage: ofxcat get categories",
-                "\tPrints a list of known transaction categories in CSV format",
-                "Usage: ofxcat get transactions [START DATE] [END DATE]",
-                "\tPrints the amount spent in each known transaction category between the specified dates inclusive"
+                "ofxcat import [FILENAME]",
+                "   Imports the transactions in the specified *.ofx file",
+                "ofxcat get accounts",
+                "   Prints a list of known accounts in CSV format",
+                "ofxcat get categories",
+                "   Prints a list of known transaction categories in CSV format",
+                "ofxcat get transactions --start-date=[START DATE] [OPTIONS]",
+                "   Prints the amount spent in each known transaction category",
+                "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
+                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
+                "               Defaults to today if not specified",
+                "ofxcat help",
+                "   Displays this help text"
         ));
     }
 
-    private void printError(String message) {
-        cli.println("error", message);
-    }
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws OfxCatException {
         final PathUtils pathUtils = new PathUtils();
         final OfxCat ofxCat = initializeApplication(pathUtils);
 
@@ -107,6 +109,7 @@ public class OfxCat {
                     // if mode is GET, determine which concern needs to be got
                     switch (getConcern(args)) {
                         case TRANSACTIONS:
+                            // TODO: add a way to export actual transactions, not just category sums
                             ofxCat.reportTransactions(getOptions(args));
                             break;
                         case ACCOUNTS:
@@ -123,18 +126,9 @@ public class OfxCat {
                     break;
             }
         } catch (OfxCatException ex) {
-            ofxCat.printError(ex.getMessage());
             ofxCat.printHelp();
+            throw ex;
         }
-    }
-
-    private static LocalDate toLocalDate(Date dateToConvert) {
-        if (dateToConvert == null) {
-            return null;
-        }
-        return dateToConvert.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
     }
 
     private static OfxCat initializeApplication(PathUtils pathUtils) {
@@ -158,8 +152,8 @@ public class OfxCat {
         IMPORT,
         GET,
         HELP;
-    }
 
+    }
     private static Concern getConcern(String[] args) {
         if (args.length < 2) {
             throw new RuntimeException("Too few arguments specified");
@@ -173,7 +167,7 @@ public class OfxCat {
     private enum Concern {
         TRANSACTIONS,
         ACCOUNTS,
-        CATEGORIES
+        CATEGORIES;
     }
 
     private static OfxCatOptions getOptions(String[] args) throws CliException {
@@ -185,7 +179,6 @@ public class OfxCat {
                     .longOpt("start-date")
                     .desc("Start date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
-                    .type(LocalDate.class)
                     .required(true)
                     .build());
             options.addOption(Option.builder()
@@ -193,17 +186,34 @@ public class OfxCat {
                     .longOpt("end-date")
                     .desc("End date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
-                    .type(LocalDate.class)
                     .required(false)
                     .build());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
-            final Date startDate = (Date) commandLine.getParsedOptionValue("s");
-            final Date endDate = (Date) commandLine.getParsedOptionValue("e");
-            return new OfxCatOptions(toLocalDate(startDate), toLocalDate(endDate));
+            final LocalDate startDate = toLocalDate(commandLine.getOptionValue("start-date"));
+            final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
+            return new OfxCatOptions(startDate, endDate);
         } catch (ParseException e) {
             throw new CliException("Failed to parse options", e);
+        }
+    }
+
+    private static LocalDate toLocalDate(String dateToConvert, LocalDate defaultValue) {
+        if (StringUtils.isBlank(dateToConvert)) {
+            return defaultValue;
+        }
+        return toLocalDate(dateToConvert);
+    }
+
+    private static LocalDate toLocalDate(String dateToConvert) {
+        if (StringUtils.isBlank(dateToConvert)) {
+            throw new IllegalArgumentException("dateToConvert is null or blank");
+        }
+        try {
+            return LocalDate.parse(dateToConvert, DateTimeFormatter.ISO_DATE);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Failed to parse date string " + dateToConvert, ex);
         }
     }
 
