@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 
 import java.util.Arrays;
 
@@ -31,8 +31,8 @@ public interface TransactionCleaner {
     Transaction.Builder clean(OfxTransaction ofxTransaction);
 
     /**
-     * Matches the {@link OfxTransaction#getType()} field with a known {@link ca.jonathanfritz.ofxcat.transactions.Transaction.TransactionType}.
-     * If there is no field match, {@link ca.jonathanfritz.ofxcat.transactions.Transaction.TransactionType#OTHER} is returned.
+     * Matches the {@link OfxTransaction#getType()} field with a known {@link Transaction.TransactionType}.
+     * If there is no field match, {@link Transaction.TransactionType#OTHER} is returned.
      */
     default Transaction.TransactionType categorizeTransactionType(final OfxTransaction ofxTransaction) {
         return Arrays.stream(Transaction.TransactionType.values())

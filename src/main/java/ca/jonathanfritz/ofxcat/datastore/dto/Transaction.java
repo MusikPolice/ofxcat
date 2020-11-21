@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.transactions;
+package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import java.time.LocalDate;
 import java.util.Objects;

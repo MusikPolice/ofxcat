@@ -1,11 +1,11 @@
-package ca.jonathanfritz.ofxcat.transactions;
+package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
 
 import java.util.Objects;
 
 /**
- * Represents the relationship between a {@link ca.jonathanfritz.ofxcat.transactions.Transaction#description} string and
+ * Represents the relationship between a {@link Transaction#description} string and
  * a {@link Category} in the database
  */
 public class DescriptionCategory implements Entity {

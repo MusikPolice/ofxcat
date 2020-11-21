@@ -2,10 +2,10 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Account;
-import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Category;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

@@ -4,8 +4,9 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.transactions.Account;
-import ca.jonathanfritz.ofxcat.transactions.Category;
+import ca.jonathanfritz.ofxcat.datastore.GroupBy;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import com.google.common.collect.Streams;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
@@ -35,6 +36,9 @@ public class ReportingService {
     }
 
     public void reportTransactions(LocalDate startDate, LocalDate endDate) {
+
+        categorizedTransactionDao.selectGroupByCategory(startDate, endDate);
+
         // TODO
         throw new NotImplementedException("Not implemented");
     }

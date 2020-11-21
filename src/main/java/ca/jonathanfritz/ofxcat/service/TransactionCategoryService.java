@@ -2,10 +2,10 @@ package ca.jonathanfritz.ofxcat.service;
 
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
-import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Category;
-import ca.jonathanfritz.ofxcat.transactions.DescriptionCategory;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.inject.Inject;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import org.slf4j.Logger;

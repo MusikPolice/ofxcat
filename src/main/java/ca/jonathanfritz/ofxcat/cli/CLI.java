@@ -2,10 +2,10 @@ package ca.jonathanfritz.ofxcat.cli;
 
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
-import ca.jonathanfritz.ofxcat.transactions.Account;
-import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Category;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;

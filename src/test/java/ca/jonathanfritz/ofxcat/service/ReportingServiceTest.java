@@ -3,8 +3,8 @@ package ca.jonathanfritz.ofxcat.service;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.transactions.Account;
-import ca.jonathanfritz.ofxcat.transactions.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 

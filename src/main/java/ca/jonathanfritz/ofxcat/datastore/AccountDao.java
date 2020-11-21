@@ -4,7 +4,7 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import ca.jonathanfritz.ofxcat.transactions.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

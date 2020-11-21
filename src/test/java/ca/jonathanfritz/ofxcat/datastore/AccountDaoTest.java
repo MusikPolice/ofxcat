@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
-import ca.jonathanfritz.ofxcat.transactions.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

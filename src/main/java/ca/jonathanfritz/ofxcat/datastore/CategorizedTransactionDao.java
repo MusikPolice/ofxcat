@@ -1,10 +1,10 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.*;
-import ca.jonathanfritz.ofxcat.transactions.Account;
-import ca.jonathanfritz.ofxcat.transactions.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Category;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

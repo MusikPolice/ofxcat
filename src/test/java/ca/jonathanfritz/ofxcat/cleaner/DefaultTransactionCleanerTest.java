@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
-import ca.jonathanfritz.ofxcat.transactions.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
