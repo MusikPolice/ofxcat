@@ -4,17 +4,17 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.GroupBy;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import com.google.common.collect.Streams;
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,12 +35,27 @@ public class ReportingService {
         this.cli = cli;
     }
 
+    /**
+     * Prints out a CSV list of categories and the total amount spent in each between the specified dates
+     * TODO: add a table-formatted option
+     */
     public void reportTransactions(LocalDate startDate, LocalDate endDate) {
+        final Map<Category, Float> transactions = categorizedTransactionDao.selectGroupByCategory(startDate, endDate).entrySet().stream()
+                .map(entry -> Pair.of(
+                        entry.getKey(),
+                        entry.getValue().stream()
+                                .reduce(0f, (sum, t) -> sum + t.getAmount(), Float::sum))
+                )
+                .collect(Collectors.toMap(Pair::getKey, Pair::getValue, Float::sum));
 
-        categorizedTransactionDao.selectGroupByCategory(startDate, endDate);
-
-        // TODO
-        throw new NotImplementedException("Not implemented");
+        // print categories sorted by total amount spent descending
+        cli.println(Streams.concat(
+                Stream.of("Category,Amount Spent"),
+                transactions.entrySet().stream()
+                        .sorted(Map.Entry.comparingByValue((sum1, sum2) -> sum1.compareTo(sum2) * -1))
+                        .map(entry -> String.format("%s,$%.2f", entry.getKey().getName(), entry.getValue()))
+            ).collect(Collectors.toList())
+        );
     }
 
     /**

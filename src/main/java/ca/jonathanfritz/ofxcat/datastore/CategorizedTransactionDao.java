@@ -1,17 +1,25 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
-import ca.jonathanfritz.ofxcat.datastore.utils.*;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
+import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
+import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
+import com.google.common.collect.Streams;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.util.List;
-import java.util.Optional;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CategorizedTransactionDao {
 
@@ -69,6 +77,26 @@ public class CategorizedTransactionDao {
         } catch (SQLException e) {
             logger.error("Failed to query Transaction with id {}", id, e);
             return Optional.empty();
+        }
+    }
+
+    public Map<Category, List<CategorizedTransaction>> selectGroupByCategory(LocalDate startDate, LocalDate endDate) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to get transactions between {} and {} grouped by category", startDate, endDate);
+            final String query = "SELECT * FROM CategorizedTransaction WHERE date >= ? AND date <= ?";
+            final List<CategorizedTransaction> results = t.query(query, ps -> {
+                ps.setDate(1, Date.valueOf(startDate));
+                ps.setDate(2, Date.valueOf(endDate));
+            }, categorizedTransactionDeserializer);
+            return results.stream()
+                    .collect(Collectors.toMap(
+                            CategorizedTransaction::getCategory,
+                            Collections::singletonList,
+                            (l1, l2) -> Streams.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
+                    );
+        } catch (SQLException e) {
+            logger.error("Failed to get transactions between {} and {} grouped by category", startDate, endDate, e);
+            return new HashMap<>();
         }
     }
 

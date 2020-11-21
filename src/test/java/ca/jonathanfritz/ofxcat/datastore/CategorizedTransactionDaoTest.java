@@ -1,18 +1,18 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
-import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.*;
 
 class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
 
@@ -57,6 +57,69 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // use the id to find it
         final CategorizedTransaction foundCategorizedTransaction = categorizedTransactionDao.select(categorizedTransaction.getId()).get();
         Assertions.assertEquals(categorizedTransaction, foundCategorizedTransaction);
+    }
+
+    @Test
+    void selectGroupByCategoryTest() throws SQLException {
+        // need two categories
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        Category groceries = new Category("GROCERIES");
+        groceries = categoryDao.insert(groceries).get();
+        Category restaurants = new Category("RESTAURANTS");
+        restaurants = categoryDao.insert(restaurants).get();
+
+        // need an account
+        final AccountDao accountDao = new AccountDao(connection);
+        Account account = Account.newBuilder()
+                .setName(UUID.randomUUID().toString())
+                .setAccountType("CHECKING")
+                .setAccountId(UUID.randomUUID().toString())
+                .setBankId(UUID.randomUUID().toString())
+                .build();
+        account = accountDao.insert(account).get();
+
+        // now we can create some CategorizedTransactions
+        final CategorizedTransactionDao transactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+        final LocalDate now = LocalDate.now();
+        CategorizedTransaction quickieMart = new CategorizedTransaction(Transaction.newBuilder()
+                .setAccount(account)
+                .setAmount(10.72f)
+                .setDate(now.minusDays(3))
+                .setDescription("QUICKIE MART")
+                .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(21.58f)
+                .build(), groceries);
+        quickieMart = transactionDao.insert(quickieMart).get();
+        CategorizedTransaction tastyMart = new CategorizedTransaction(Transaction.newBuilder()
+                .setAccount(account)
+                .setAmount(15.31f)
+                .setDate(now.minusDays(2))
+                .setDescription("TASTY MART")
+                .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(6.27f)
+                .build(), groceries);
+        tastyMart = transactionDao.insert(tastyMart).get();
+        CategorizedTransaction monksCafe = new CategorizedTransaction(Transaction.newBuilder()
+                .setAccount(account)
+                .setAmount(2.50f)
+                .setDate(now.minusDays(1))
+                .setDescription("MONKS CAFE")
+                .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(3.77f)
+                .build(), restaurants);
+        monksCafe = transactionDao.insert(monksCafe).get();
+
+        // now we can get all transactions grouped by category
+        Map<Category, List<CategorizedTransaction>> transactions = transactionDao.selectGroupByCategory(now.minusDays(4), now);
+        Assertions.assertEquals(transactions.keySet(), Set.of(restaurants, groceries));
+        Assertions.assertEquals(transactions.get(groceries), Arrays.asList(quickieMart, tastyMart));
+        Assertions.assertEquals(transactions.get(restaurants), Collections.singletonList(monksCafe));
+
+        // adjusting the date range excludes some transactions
+        transactions = transactionDao.selectGroupByCategory(now.minusDays(2), now);
+        Assertions.assertEquals(transactions.keySet(), Set.of(restaurants, groceries));
+        Assertions.assertEquals(transactions.get(groceries), Collections.singletonList(tastyMart));
+        Assertions.assertEquals(transactions.get(restaurants), Collections.singletonList(monksCafe));
     }
 
     @Test
