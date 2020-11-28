@@ -3,7 +3,6 @@ package ca.jonathanfritz.ofxcat.datastore;
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,12 +10,6 @@ import java.util.List;
 import java.util.Optional;
 
 class DescriptionCategoryDaoTest extends AbstractDatabaseTest {
-
-    @AfterEach
-    void cleanup() {
-        // drop all tables and re-init the schema after each test to avoid conflicts
-        cleanDatabase();
-    }
 
     @Test
     void insertWithNewCategorySuccessTest() {

@@ -2,7 +2,6 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -11,11 +10,6 @@ import java.util.List;
 import java.util.UUID;
 
 class AccountDaoTest extends AbstractDatabaseTest {
-
-    @AfterEach
-    void cleanup() {
-        cleanDatabase();
-    }
 
     @Test
     public void insertSuccessTest() {

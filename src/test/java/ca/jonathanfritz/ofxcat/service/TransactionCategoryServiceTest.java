@@ -5,7 +5,6 @@ import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -25,11 +24,6 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         final CategoryDao categoryDao = new CategoryDao(connection);
         final DescriptionCategoryDao descriptionCategoryDao = new DescriptionCategoryDao(connection, categoryDao);
         transactionCategoryService = new TransactionCategoryService(categoryDao, descriptionCategoryDao);
-    }
-
-    @AfterEach
-    void cleanup() {
-        cleanDatabase();
     }
 
     @Test

@@ -6,7 +6,6 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,12 +14,6 @@ import java.time.LocalDate;
 import java.util.*;
 
 class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
-
-    @AfterEach
-    void cleanup() {
-        // drop all tables and re-init the schema after each test to avoid conflicts
-        cleanDatabase();
-    }
 
     @Test
     void insertSelectSuccessTest() {

@@ -4,7 +4,7 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
 
 import java.sql.Connection;
 
@@ -16,8 +16,7 @@ public abstract class AbstractDatabaseTest {
     protected static Connection connection;
     private static Flyway flyway;
 
-    @BeforeAll
-    static void setup() {
+    public AbstractDatabaseTest() {
         // get a connection to an in-memory database for child classes to use
         final Injector injector = Guice.createInjector(new DatastoreModule());
         connection = injector.getInstance(Connection.class);
@@ -27,11 +26,8 @@ public abstract class AbstractDatabaseTest {
         flyway.migrate();
     }
 
-    /**
-     * Drops all data in the database and re-initializes the database schema.
-     * Useful for tests that rely on having empty tables
-     */
-    protected void cleanDatabase() {
+    @AfterEach
+    protected void cleanup() {
         flyway.clean();
         flyway.migrate();
     }
