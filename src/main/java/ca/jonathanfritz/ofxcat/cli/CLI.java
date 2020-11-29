@@ -1,11 +1,11 @@
 package ca.jonathanfritz.ofxcat.cli;
 
-import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.io.OfxAccount;
+import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;
@@ -14,7 +14,6 @@ import org.beryx.textio.TextIO;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -73,9 +72,7 @@ public class CLI {
      * Prints the specified line to the terminal and blocks until the user presses the enter key
      */
     public void waitForInput(String line) {
-        textIO.newGenericInputReader((Function<String, InputReader.ParseResult<Void>>) s ->
-                new InputReader.ParseResult<>(null)
-        ).read(line);
+        textIO.newGenericInputReader(s -> new InputReader.ParseResult<>("")).read(line);
     }
 
     /**
@@ -128,6 +125,10 @@ public class CLI {
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(categorizedTransaction.getCategory().getName()));
 
         return categorizedTransaction;
+    }
+
+    public void exit() {
+        textIO.dispose();
     }
 
     private void printTransaction(Transaction transaction) {

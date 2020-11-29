@@ -71,8 +71,10 @@ public class TransactionImportService {
         final List<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions);
         cli.println(String.format("Successfully imported %d transactions", categorizedTransactions.size()));
         cli.waitForInput("Press enter to exit");
+        cli.exit();
     }
 
+    // TODO: return number of ignored duplicate transactions so that this info can be displayed in UI
     List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
         final List<CategorizedTransaction> categorizedTransactions = new ArrayList<>();
         for (OfxExport ofxExport : ofxExports) {

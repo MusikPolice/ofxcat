@@ -17,7 +17,8 @@ Build with maven:
 mvn clean install
 ```
 
-## Importing Transactions
+## Using the application
+### Importing Transactions
 This utility can import any transactions that were exported from your banking institution in the Open Financial Exchange (OFX) format.
 
 The method for exporting transactions differs between each banking institution, but in general, the goal is to download an `*.ofx` file that contains transactions from all of your accounts. 
@@ -25,7 +26,7 @@ The method for exporting transactions differs between each banking institution, 
 
 Once you have exported your transactions, the `.ofx` file can be imported from the command line:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar --file mytransactions.ofx
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar import transactions mytransactions.ofx
 ``` 
 
 `ofxcat` attempts to automatically categorize newly imported transactions based on their description (typically the name of the vendor that debited or credited your account).
@@ -43,6 +44,28 @@ If the transaction description does not match any existing categories, the tool 
 Transaction descriptions are compared using fuzzy string matching, allowing `ofxcat` to categorize transactions based on vendor names that differ only slightly.
 
 For example, if you typically do groceries at Megamart #123, but occasionally visit Megamart #125, `ofxcat` will recognize that both transactions belong to the `GROCERIES` category.
+
+### Viewing Expenditures by Category
+Once you have categorized some transactions, you can find out where your money is going by looking at how much is spent per category over a given period of time:
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get transactions --start-date=2020-12-01 --end-date=2020-12-31
+```
+This will return a list of categories along with the total amount spent in each during the specified time period. 
+
+Plug this data into your budget spreadsheet, and you have the power to plan for the future!
+![Exported transactions](images/ofxcat-export-category-expenditures.png)
+
+## Storage and Logging
+`ofxcat` stores imported transactions in an SQLite3 database located in `~/.ofx/ofxcat.db`. Similarly, the log file is located at `~/.ofx/ofxcat.log`. 
+
+Due to the nature of the application, both files may include sensitive information about your transaction history, and should be appropriately protected.
+
+### Getting Help
+If you get stuck, check the docs:
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar help
+```
+If that doesn't work, create an issue, and I'll do my best to help you out as soon as possible.
 
 ## Contributing
 
