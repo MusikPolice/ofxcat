@@ -11,10 +11,10 @@ import me.xdrop.fuzzywuzzy.FuzzySearch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TransactionCategoryService {
 
@@ -48,13 +48,21 @@ public class TransactionCategoryService {
      * {@link Category} if one exists whose name exactly matches the specified transaction's description.
      */
     public Optional<CategorizedTransaction> getCategoryExact(Transaction transaction) {
-        final Map<String, Category> descriptionCategories = descriptionCategoryDao.selectAll().stream()
-                .collect(Collectors.toMap(DescriptionCategory::getDescription, DescriptionCategory::getCategory));
+        // get all description categories and transform to a map keyed on description string
+        final Map<String, List<Category>> descriptionCategories = descriptionCategoryDao.selectAll().stream()
+                .collect(Collectors.toMap(DescriptionCategory::getDescription,
+                        dc -> Collections.singletonList(dc.getCategory()),
+                        (l1, l2) -> Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
+                );
 
+        // a description string can be linked to multiple categories, but if this is the case, then we can't automatically
+        // match and must fall back to a fuzzy match routine
         return descriptionCategories.entrySet()
                 .parallelStream()
                 .filter(es -> es.getKey().equalsIgnoreCase(transaction.getDescription()))
                 .map(Map.Entry::getValue)
+                .filter(categories -> categories.size() == 1)
+                .map(categories -> categories.get(0))
                 .findFirst()
                 .map(category -> new CategorizedTransaction(transaction, category));
     }
@@ -70,8 +78,13 @@ public class TransactionCategoryService {
     public List<Category> getCategoryFuzzy(Transaction transaction, int limit) {
         // TODO: is 80% match good enough? - make this configurable
         logger.debug("Fuzzy category matches for transaction description \"{}\":", transaction.getDescription());
-        final Map<String, Category> descriptionCategories = descriptionCategoryDao.selectAll().stream()
-                .collect(Collectors.toMap(DescriptionCategory::getDescription, DescriptionCategory::getCategory));
+
+        // get all description categories and transform to a map keyed on description string
+        final Map<String, List<Category>> descriptionCategories = descriptionCategoryDao.selectAll().stream()
+                .collect(Collectors.toMap(DescriptionCategory::getDescription,
+                        dc -> Collections.singletonList(dc.getCategory()),
+                        (l1, l2) -> Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
+                );
 
         return FuzzySearch.extractSorted(transaction.getDescription(), descriptionCategories.keySet(), 80)
                 .stream()
@@ -80,6 +93,7 @@ public class TransactionCategoryService {
                     logger.debug("{}: {}", er.getString(), er.getScore());
                     return descriptionCategories.get(er.getString());
                 })
+                .flatMap((Function<List<Category>, Stream<Category>>) Collection::stream)
                 .distinct()
                 .limit(limit)
                 .collect(Collectors.toList());
