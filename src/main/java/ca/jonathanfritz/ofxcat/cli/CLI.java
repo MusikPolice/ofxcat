@@ -14,6 +14,7 @@ import org.beryx.textio.TextIO;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,6 +23,7 @@ public class CLI {
 
     private static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
+    private final TextIOWrapper textIOWrapper;
     private final TransactionCategoryService transactionCategoryService;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
@@ -29,8 +31,9 @@ public class CLI {
     private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
-    public CLI(TextIO textIO, TransactionCategoryService transactionCategoryService) {
+    public CLI(TextIO textIO, TextIOWrapper textIOWrapper, TransactionCategoryService transactionCategoryService) {
         this.textIO = textIO;
+        this.textIOWrapper = textIOWrapper;
         this.transactionCategoryService = transactionCategoryService;
     }
 
@@ -153,17 +156,15 @@ public class CLI {
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->t.println(transaction.getDescription()));
     }
 
-    private CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
+    CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
         final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(transaction, 5);
         if (fuzzyMatches.isEmpty()) {
             // no fuzzy match - add a new category
             return addNewCategory(transaction);
         } else if (fuzzyMatches.size() == 1) {
             // exactly one potential match - prompt user to confirm
-            final boolean transactionBelongsToCategory = textIO.newBooleanInputReader()
-                    .withDefaultValue(true)
-                    .read(String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName()));
-            if (transactionBelongsToCategory) {
+            final String prompt = String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName());
+            if (textIOWrapper.promptYesNo(prompt)) {
                 return transactionCategoryService.put(transaction, fuzzyMatches.get(0));
             } else {
                 // false positive - add a new category for the transaction
@@ -177,16 +178,17 @@ public class CLI {
                 Arrays.stream(new String[]{CHOOSE_ANOTHER_CATEGORY_PROMPT})
             )
             .collect(Collectors.toList());
-        final String input = textIO.newStringInputReader()
-                .withNumberedPossibleValues(potentialCategories)
-                .read("\nSelect an existing category for the transaction:");
+        final String choice = textIOWrapper.promptChooseString("\nSelect an existing category for the transaction:", potentialCategories);
 
         // associate the transaction with the selected category, or prompt the user to add a new category if none was selected
-        return fuzzyMatches.stream()
-                .filter(pc -> pc.getName().equalsIgnoreCase(input))
-                .findFirst()
-                .map(selectedCategory -> transactionCategoryService.put(transaction, selectedCategory))
-                .orElse(addNewCategory(transaction));
+        final Optional<Category> selectedCategory = fuzzyMatches.stream()
+                .filter(pc -> pc.getName().equalsIgnoreCase(choice))
+                .findFirst();
+        if (selectedCategory.isPresent()) {
+            return transactionCategoryService.put(transaction, selectedCategory.get());
+        } else {
+            return addNewCategory(transaction);
+        }
     }
 
     private CategorizedTransaction addNewCategory(Transaction transaction) {
