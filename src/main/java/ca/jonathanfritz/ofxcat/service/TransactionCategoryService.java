@@ -58,7 +58,7 @@ public class TransactionCategoryService {
         // a description string can be linked to multiple categories, but if this is the case, then we can't automatically
         // match and must fall back to a fuzzy match routine
         return descriptionCategories.entrySet()
-                .parallelStream()
+                .stream()
                 .filter(es -> es.getKey().equalsIgnoreCase(transaction.getDescription()))
                 .map(Map.Entry::getValue)
                 .filter(categories -> categories.size() == 1)

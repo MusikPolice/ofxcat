@@ -182,7 +182,7 @@ public class CLI {
                 .read("\nSelect an existing category for the transaction:");
 
         // associate the transaction with the selected category, or prompt the user to add a new category if none was selected
-        return fuzzyMatches.parallelStream()
+        return fuzzyMatches.stream()
                 .filter(pc -> pc.getName().equalsIgnoreCase(input))
                 .findFirst()
                 .map(selectedCategory -> transactionCategoryService.put(transaction, selectedCategory))
@@ -208,7 +208,7 @@ public class CLI {
                 .read("\nSelect an existing category for transaction:");
 
         // if their choice matches an existing category name, return that category
-        final String categoryName = existingCategoryNames.parallelStream()
+        final String categoryName = existingCategoryNames.stream()
                 .filter(pc -> pc.equalsIgnoreCase(input))
                 .findFirst()
                 .orElseGet(this::promptForNewCategoryName);

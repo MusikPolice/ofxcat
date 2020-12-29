@@ -17,6 +17,7 @@ import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -59,6 +60,20 @@ public class OfxCat {
             throw new CliException("Import file path either does not exist or cannot be read");
         }
         transactionImportService.importTransactions(pathToImportFile.toFile());
+
+        try {
+            // copy the imported file to the data directory so that we have a record of everything that has been imported
+            final Path backupPath = pathUtils.getImportedFilesPath().resolve(pathToImportFile.getFileName());
+            if (!Files.isDirectory(backupPath.getParent())) {
+                Files.createDirectories(backupPath.getParent());
+            }
+            Files.copy(pathToImportFile, backupPath);
+        } catch (IOException ex) {
+            throw new CliException("Failed to copy imported file to data directory", ex);
+        }
+
+        cli.waitForInput("Press enter to exit");
+        cli.exit();
     }
 
     private void reportTransactions(OfxCatOptions options) {

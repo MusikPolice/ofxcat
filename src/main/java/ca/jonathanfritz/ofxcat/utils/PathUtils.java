@@ -13,6 +13,10 @@ public class PathUtils {
         return join(homeDirectory, ".ofxcat");
     }
 
+    public Path getImportedFilesPath() {
+        return getDataPath().resolve("imported");
+    }
+
     public String getDatabaseConnectionString() {
         return String.format("%s%s","jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
     }
