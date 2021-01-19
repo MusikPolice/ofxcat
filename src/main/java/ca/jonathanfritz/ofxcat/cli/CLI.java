@@ -78,6 +78,10 @@ public class CLI {
         textIO.newGenericInputReader(s -> new InputReader.ParseResult<>("")).read(line);
     }
 
+    public boolean promptYesNo(String prompt) {
+        return textIOWrapper.promptYesNo(prompt);
+    }
+
     /**
      * Converts the provided {@link OfxAccount} into an instance of {@link Account}, prompting the user to assign a
      * human readable friendly name along the way
@@ -157,6 +161,9 @@ public class CLI {
     }
 
     CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
+
+        // TODO: load fuzzy matches from categorized transactions, rank them higher than the actual fuzzy matches
+
         final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(transaction, 5);
         if (fuzzyMatches.isEmpty()) {
             // no fuzzy match - add a new category

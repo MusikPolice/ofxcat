@@ -72,6 +72,14 @@ public class OfxCat {
             throw new CliException("Failed to copy imported file to data directory", ex);
         }
 
+        if (cli.promptYesNo(String.format("Delete import file %s?", path))) {
+            try {
+                Files.delete(pathToImportFile);
+            } catch (IOException ex) {
+                throw new CliException("Failed to delete import file", ex);
+            }
+        }
+
         cli.waitForInput("Press enter to exit");
         cli.exit();
     }

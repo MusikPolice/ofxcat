@@ -81,7 +81,11 @@ public class TransactionImportService {
                     .or(() -> accountDao.insert(cli.assignAccountName(ofxExport.getAccount())))
                     .orElseThrow(() -> new RuntimeException(String.format("Failed to find or create account %s", ofxExport)));
 
-            // clean up the transaction object and associate it with the account
+            // an ofx file contains the account balance after all included transactions were processed, but does not
+            // include the initial account balance or the account balance after each individual transaction was processed.
+            // we can determine the initial account balance by summing up the amount of all transactions and subtracting
+            // that value from the final account balance. This can then be used to determine the account balance after
+            // each transaction was applied.
             logger.info("Processing transactions for Account {}", account);
             final float totalTransactionAmount = ofxExport.getTransactions().values().stream()
                     .flatMap((Function<List<OfxTransaction>, Stream<OfxTransaction>>) Collection::stream)
