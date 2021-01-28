@@ -1,8 +1,11 @@
 package ca.jonathanfritz.ofxcat.service;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
+import ca.jonathanfritz.ofxcat.datastore.AccountDao;
+import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
@@ -11,44 +14,77 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
+    private final AccountDao accountDao;
+    private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionCategoryService transactionCategoryService;
+
+    private Account testAccount;
 
     public TransactionCategoryServiceTest() {
         final CategoryDao categoryDao = new CategoryDao(connection);
         final DescriptionCategoryDao descriptionCategoryDao = new DescriptionCategoryDao(connection, categoryDao);
-        transactionCategoryService = new TransactionCategoryService(categoryDao, descriptionCategoryDao);
+        accountDao = new AccountDao(connection);
+        categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+        transactionCategoryService = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection);
     }
 
     @BeforeEach
     void populateTestData() {
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Beats 'R Us").build(), new Category("Music"));
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Fleets 'R Us").build(), new Category("Vehicles"));
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Toys 'R Us").build(), new Category("Shopping"));
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Boys 'R Us").build(), new Category("Dating"));
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Kois 'R Us").build(), new Category("Pets"));
+        final Account account = Account.newBuilder()
+                .setAccountNumber(UUID.randomUUID().toString())
+                .setName(UUID.randomUUID().toString())
+                .build();
+        testAccount = accountDao.insert(account).get();
+
+        insertTransaction(testAccount, "Beats 'R Us", "Music");
+        insertTransaction(testAccount, "Fleets 'R Us", "Vehicles");
+        insertTransaction(testAccount, "Toys 'R Us", "Shopping");
+        insertTransaction(testAccount, "Boys 'R Us", "Dating");
+        insertTransaction(testAccount, "Kois 'R Us", "Pets");
 
         // one of the descriptions is linked to two categories
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Meats 'R Us").build(), new Category("Restaurants"));
-        transactionCategoryService.put(Transaction.newBuilder().setDescription("Meats 'R Us").build(), new Category("Groceries"));
+        insertTransaction(testAccount, "Meats 'R Us", "Restaurants");
+        insertTransaction(testAccount, "Meats 'R Us", "Groceries");
+    }
+
+    private void insertTransaction(Account account, String description, String categoryName) {
+        final Transaction transaction = Transaction.newBuilder()
+                .setAccount(account)
+                .setDescription(description)
+                .setDate(LocalDate.now())
+                .setType(Transaction.TransactionType.DEBIT)
+                .build();
+        final Category category = new Category(categoryName);
+        CategorizedTransaction categorizedTransaction = transactionCategoryService.put(transaction, category);
+        categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
     }
 
     @Test
     void getCategoryExactOneMatchTest() {
         // get exact matches for a new transaction
         Transaction newTransaction = Transaction.newBuilder()
+                .setAccount(testAccount)
                 .setDescription("Beats 'R Us")
                 .setAmount(8.14f)
                 .setDate(LocalDate.now())
                 .setType(Transaction.TransactionType.DEBIT)
                 .build();
+
+        final List<Account> accounts = accountDao.select();
+        final List<CategorizedTransaction> transactions = categorizedTransactionDao.selectGroupByCategory(LocalDate.now().minusDays(1), LocalDate.now().plusDays(1)).values().stream().reduce(new ArrayList<>(), new BinaryOperator<List<CategorizedTransaction>>() {
+            @Override
+            public List<CategorizedTransaction> apply(List<CategorizedTransaction> categorizedTransactions, List<CategorizedTransaction> categorizedTransactions2) {
+                return Stream.concat(categorizedTransactions.stream(), categorizedTransactions2.stream()).collect(Collectors.toList());
+            }
+        });
+
         final Optional<CategorizedTransaction> categorized = transactionCategoryService.getCategoryExact(newTransaction);
         Assertions.assertNotNull(categorized.get().getCategory().getId());
         Assertions.assertEquals("MUSIC", categorized.get().getCategory().getName());
@@ -62,6 +98,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     void getCategoryExactNoMatchTest() {
         // get exact matches for a new transaction
         Transaction newTransaction = Transaction.newBuilder()
+                .setAccount(testAccount)
                 .setDescription("Beets 'R Us")
                 .setAmount(8.14f)
                 .setDate(LocalDate.now())
@@ -75,6 +112,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     void getCategoryExactMultipleMatchTest() {
         // get exact matches for a new transaction
         Transaction newTransaction = Transaction.newBuilder()
+                .setAccount(testAccount)
                 .setDescription("Meats 'R Us")
                 .setAmount(8.14f)
                 .setDate(LocalDate.now())

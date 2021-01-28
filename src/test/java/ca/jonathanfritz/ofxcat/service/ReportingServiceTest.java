@@ -31,7 +31,7 @@ class ReportingServiceTest {
         when(mockAccountDao.select()).thenReturn(Collections.singletonList(
                 Account.newBuilder()
                         .setName(accountName)
-                        .setAccountId(accountId)
+                        .setAccountNumber(accountId)
                         .setBankId(bankId)
                         .setAccountType(accountType)
                         .build()

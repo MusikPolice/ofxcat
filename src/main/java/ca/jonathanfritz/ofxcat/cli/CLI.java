@@ -102,7 +102,7 @@ public class CLI {
 
         // create the account object
         return Account.newBuilder()
-                .setAccountId(ofxAccount.getAccountId())
+                .setAccountNumber(ofxAccount.getAccountId())
                 .setBankId(ofxAccount.getBankId())
                 .setAccountType(ofxAccount.getAccountType())
                 .setName(accountName)

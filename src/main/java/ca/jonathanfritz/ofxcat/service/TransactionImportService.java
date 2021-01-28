@@ -92,7 +92,7 @@ public class TransactionImportService {
                     .map(OfxTransaction::getAmount)
                     .reduce(0F, Float::sum, Float::sum);
             final Float initialBalance = ofxExport.getBalance().getAmount() - totalTransactionAmount;
-            logger.debug("Initial balance for Account {} was {}", account.getAccountId(), initialBalance);
+            logger.debug("Initial balance for Account {} was {}", account.getAccountNumber(), initialBalance);
 
             // sorts transactions by date, transforms them into our internal representation, sets the resulting account
             // balance on each, and associates each with an account
@@ -104,7 +104,7 @@ public class TransactionImportService {
                     .map(transactionCleaner::clean)
                     .map(builder -> builder.setBalance(currentBalance.add(builder.getAmount())))
                     .map(builder -> builder.setAccount(account).build());
-            logger.debug("Final balance for Account {} was {}", account.getAccountId(), currentBalance.getCurrentValue());
+            logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), currentBalance.getCurrentValue());
 
             // filter out duplicates, categorize transactions, and insert them into the database
             transactionStream.forEach(transaction -> {

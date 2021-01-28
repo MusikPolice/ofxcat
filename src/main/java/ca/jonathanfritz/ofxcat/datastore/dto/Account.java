@@ -8,14 +8,14 @@ public class Account implements Entity {
 
     private final Long id;
     private final String bankId;
-    private final String accountId;
+    private final String accountNumber;
     private final String accountType;
     private final String name;
 
     private Account(Builder builder) {
         id = builder.id;
         bankId = builder.bankId;
-        accountId = builder.accountId;
+        accountNumber = builder.accountNumber;
         accountType = builder.accountType;
         name = builder.name;
     }
@@ -29,8 +29,8 @@ public class Account implements Entity {
         return bankId;
     }
 
-    public String getAccountId() {
-        return accountId;
+    public String getAccountNumber() {
+        return accountNumber;
     }
 
     public String getAccountType() {
@@ -47,7 +47,7 @@ public class Account implements Entity {
         if (o == null || getClass() != o.getClass()) return false;
         Account account = (Account) o;
         return Objects.equals(bankId, account.bankId) &&
-                Objects.equals(accountId, account.accountId) &&
+                Objects.equals(accountNumber, account.accountNumber) &&
                 Objects.equals(accountType, account.accountType) &&
                 Objects.equals(name, account.name) &&
                 Objects.equals(id, account.id);
@@ -55,14 +55,14 @@ public class Account implements Entity {
 
     @Override
     public int hashCode() {
-        return Objects.hash(bankId, accountId, accountType, name, id);
+        return Objects.hash(bankId, accountNumber, accountType, name, id);
     }
 
     @Override
     public String toString() {
         return "Account{" +
                 "bankId='" + bankId + '\'' +
-                ", accountId='" + accountId + '\'' +
+                ", accountNumber='" + accountNumber + '\'' +
                 ", accountType='" + accountType + '\'' +
                 ", name='" + name + '\'' +
                 ", id=" + id +
@@ -78,7 +78,7 @@ public class Account implements Entity {
         if (copy != null) {
             builder.id = copy.getId();
             builder.bankId = copy.getBankId();
-            builder.accountId = copy.getAccountId();
+            builder.accountNumber = copy.getAccountNumber();
             builder.accountType = copy.getAccountType();
             builder.name = copy.getName();
         }
@@ -88,7 +88,7 @@ public class Account implements Entity {
     public static final class Builder {
         private Long id;
         private String bankId;
-        private String accountId;
+        private String accountNumber;
         private String accountType;
         private String name;
 
@@ -105,8 +105,8 @@ public class Account implements Entity {
             return this;
         }
 
-        public Builder setAccountId(String accountId) {
-            this.accountId = accountId;
+        public Builder setAccountNumber(String accountNumber) {
+            this.accountNumber = accountNumber;
             return this;
         }
 

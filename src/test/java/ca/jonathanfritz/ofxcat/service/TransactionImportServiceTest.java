@@ -75,7 +75,7 @@ class TransactionImportServiceTest {
         final String accountName = "Some Account";
         final Account account = Account.newBuilder()
                 .setAccountType(ofxAccount.getAccountType())
-                .setAccountId(ofxAccount.getAccountId())
+                .setAccountNumber(ofxAccount.getAccountId())
                 .setBankId(ofxAccount.getBankId())
                 .setName(accountName)
                 .build();
@@ -153,7 +153,7 @@ class TransactionImportServiceTest {
         final String accountName = "Some Account";
         final Account account = Account.newBuilder()
                 .setAccountType(ofxAccount.getAccountType())
-                .setAccountId(ofxAccount.getAccountId())
+                .setAccountNumber(ofxAccount.getAccountId())
                 .setBankId(ofxAccount.getBankId())
                 .setName(accountName)
                 .build();
@@ -214,7 +214,7 @@ class TransactionImportServiceTest {
         final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
         when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.of(Account.newBuilder()
                 .setId(1L)
-                .setAccountId(accountId)
+                .setAccountNumber(accountId)
                 .setBankId(bankId)
                 .setAccountType("Savings")
                 .setName("Savings")
@@ -289,7 +289,7 @@ class TransactionImportServiceTest {
         final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
         when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.of(Account.newBuilder()
                 .setId(1L)
-                .setAccountId(accountId)
+                .setAccountNumber(accountId)
                 .setBankId(bankId)
                 .setAccountType("Savings")
                 .setName("Savings")
@@ -345,7 +345,7 @@ class TransactionImportServiceTest {
         final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
         when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.of(Account.newBuilder()
                 .setId(1L)
-                .setAccountId(accountId)
+                .setAccountNumber(accountId)
                 .setBankId(bankId)
                 .setAccountType("Savings")
                 .setName("Savings")
@@ -423,7 +423,7 @@ class TransactionImportServiceTest {
         final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
         when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.of(Account.newBuilder()
                 .setId(1L)
-                .setAccountId(accountId)
+                .setAccountNumber(accountId)
                 .setBankId(bankId)
                 .setAccountType("Savings")
                 .setName("Savings")

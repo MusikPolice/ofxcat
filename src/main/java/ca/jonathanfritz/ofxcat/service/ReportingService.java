@@ -67,7 +67,7 @@ public class ReportingService {
         cli.println(Streams.concat(
                 Stream.of("Account Name,Account Number,Bank Id,Account Type"),
                 accounts.stream()
-                .map(a -> String.format("%s,%s,%s,%s", a.getName(), a.getAccountId(), a.getBankId(), a.getAccountType()))
+                .map(a -> String.format("%s,%s,%s,%s", a.getName(), a.getAccountNumber(), a.getBankId(), a.getAccountType()))
             )
             .collect(Collectors.toList()));
     }

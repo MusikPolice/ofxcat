@@ -27,7 +27,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         Account account = Account.newBuilder()
                 .setName(UUID.randomUUID().toString())
                 .setAccountType("VISA")
-                .setAccountId(UUID.randomUUID().toString())
+                .setAccountNumber(UUID.randomUUID().toString())
                 .setBankId(UUID.randomUUID().toString())
                 .build();
         account = accountDao.insert(account).get();
@@ -66,7 +66,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         Account account = Account.newBuilder()
                 .setName(UUID.randomUUID().toString())
                 .setAccountType("CHECKING")
-                .setAccountId(UUID.randomUUID().toString())
+                .setAccountNumber(UUID.randomUUID().toString())
                 .setBankId(UUID.randomUUID().toString())
                 .build();
         account = accountDao.insert(account).get();
@@ -127,7 +127,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         Account account = Account.newBuilder()
                 .setName(UUID.randomUUID().toString())
                 .setAccountType("VISA")
-                .setAccountId(UUID.randomUUID().toString())
+                .setAccountNumber(UUID.randomUUID().toString())
                 .setBankId(UUID.randomUUID().toString())
                 .build();
         account = accountDao.insert(account).get();
@@ -151,6 +151,52 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
             CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, category);
             categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
             Assertions.assertTrue(categorizedTransactionDao.isDuplicate(t, transaction));
+        }
+    }
+
+    @Test
+    void findByDescriptionAndAccountIdSuccessTest() throws SQLException {
+        // need a category
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        Category category = new Category("EXCLAMATIONS OF DISBELIEF");
+        category = categoryDao.insert(category).get();
+
+        // need an account
+        final AccountDao accountDao = new AccountDao(connection);
+        Account account = Account.newBuilder()
+                .setName(UUID.randomUUID().toString())
+                .setAccountType("VISA")
+                .setAccountNumber(UUID.randomUUID().toString())
+                .setBankId(UUID.randomUUID().toString())
+                .build();
+        account = accountDao.insert(account).get();
+
+        // we can use them to create a transaction
+        final Transaction transaction = Transaction.newBuilder()
+                .setAccount(account)
+                .setAmount(6.17F)
+                .setDate(LocalDate.now())
+                .setDescription("CRIPES")
+                .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(34.21f)
+                .build();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            final Transaction target = Transaction.newBuilder()
+                    .setAccount(account)
+                    .setDescription(transaction.getDescription())
+                    .build();
+
+            // a similar transaction will not be found because we haven't inserted the target yet
+            final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+            Assertions.assertTrue(categorizedTransactionDao.findByDescriptionAndAccountNumber(t, target).isEmpty());
+
+            // now we can insert the transaction, and then get it back when querying with a similar transaction
+            CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, category);
+            categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
+            final List<CategorizedTransaction> found = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, target);
+            Assertions.assertEquals(1, found.size());
+            Assertions.assertEquals(categorizedTransaction, found.get(0));
         }
     }
 }

@@ -37,7 +37,7 @@ public class AccountDao {
             accounts.add(Account.newBuilder()
                     .setId(id)
                     .setBankId(bankNumber)
-                    .setAccountId(accountNumber)
+                    .setAccountNumber(accountNumber)
                     .setAccountType(accountType)
                     .setName(name)
                     .build());
@@ -113,7 +113,7 @@ public class AccountDao {
             final String insertStatement = "INSERT INTO Account (bank_number, account_number, account_type, name) VALUES (?, ?, ?, ?);";
             return t.insert(insertStatement, ps -> {
                 ps.setString(1, accountToInsert.getBankId());
-                ps.setString(2, accountToInsert.getAccountId());
+                ps.setString(2, accountToInsert.getAccountNumber());
                 ps.setString(3, accountToInsert.getAccountType());
                 ps.setString(4, accountToInsert.getName());
             }, accountDeserializer);

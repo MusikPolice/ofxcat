@@ -1,16 +1,21 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import com.google.inject.Inject;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,13 +25,17 @@ public class TransactionCategoryService {
 
     private final CategoryDao categoryDao;
     private final DescriptionCategoryDao descriptionCategoryDao;
+    private final CategorizedTransactionDao categorizedTransactionDao;
+    private final Connection connection;
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionCategoryService.class);
 
     @Inject
-    public TransactionCategoryService(CategoryDao categoryDao, DescriptionCategoryDao descriptionCategoryDao) {
+    public TransactionCategoryService(CategoryDao categoryDao, DescriptionCategoryDao descriptionCategoryDao, CategorizedTransactionDao categorizedTransactionDao, Connection connection) {
         this.categoryDao = categoryDao;
         this.descriptionCategoryDao = descriptionCategoryDao;
+        this.categorizedTransactionDao = categorizedTransactionDao;
+        this.connection = connection;
     }
 
     /**
@@ -44,27 +53,77 @@ public class TransactionCategoryService {
     }
 
     /**
-     * Converts the specified {@link Transaction} into an instance of {@link CategorizedTransaction}, assigning a
-     * {@link Category} if one exists whose name exactly matches the specified transaction's description.
+     * Converts the specified {@link Transaction} into a {@link CategorizedTransaction} by searching for previously
+     * categorized transactions that share an account number and transaction description. If one or more are found that
+     * are all associated with a single category, that category is assigned to the specified transaction. This is useful
+     * for categorizing recurring purchases from the same vendor, like a monthly mortgage payment or weekly grocery
+     * purchase.
+     * @param transaction the Transaction to categorize
+     * @return an {@link Optional<CategorizedTransaction>} if a previously categorized transaction exists that matches
+     * the specified transaction, else {@link Optional#empty()}
      */
     public Optional<CategorizedTransaction> getCategoryExact(Transaction transaction) {
-        // get all description categories and transform to a map keyed on description string
-        final Map<String, List<Category>> descriptionCategories = descriptionCategoryDao.selectAll().stream()
-                .collect(Collectors.toMap(DescriptionCategory::getDescription,
-                        dc -> Collections.singletonList(dc.getCategory()),
-                        (l1, l2) -> Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
-                );
+        if (transaction.getAccount() == null || StringUtils.isBlank(transaction.getAccount().getAccountNumber())) {
+            logger.warn("Specified transaction {} does not have an account number. Cannot search for similar transactions", transaction);
+            return Optional.empty();
+        }
 
-        // a description string can be linked to multiple categories, but if this is the case, then we can't automatically
-        // match and must fall back to a fuzzy match routine
-        return descriptionCategories.entrySet()
-                .stream()
-                .filter(es -> es.getKey().equalsIgnoreCase(transaction.getDescription()))
-                .map(Map.Entry::getValue)
-                .filter(categories -> categories.size() == 1)
-                .map(categories -> categories.get(0))
-                .findFirst()
-                .map(category -> new CategorizedTransaction(transaction, category));
+        final String withAccountIdAndDescription = String.format("with accountNumber %s and description %s",
+                transaction.getAccount().getAccountNumber(), transaction.getDescription());
+
+        // find previously categorized transactions with the same accountId and description
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.info("Attempting to find previously categorized transactions {}", withAccountIdAndDescription);
+            final List<CategorizedTransaction> existing = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction);
+            if (existing.isEmpty()) {
+                // no similar transactions found
+                logger.debug("No previously categorized transactions {} were found", withAccountIdAndDescription);
+                return Optional.empty();
+            }
+
+            // if all of the matches share a category, we can use it
+            Optional<Category> potentialCategory = getSharedCategoryFromTransactions(existing);
+            if (potentialCategory.isPresent()) {
+                logger.debug("All previously categorized transactions {} were categorized as {}", withAccountIdAndDescription, potentialCategory.get());
+                return Optional.of(new CategorizedTransaction(transaction, potentialCategory.get()));
+            }
+
+            // matches belong to disparate categories
+            // let's see if some subset of them also match on amount (ex. mortgage payments)
+            final List<CategorizedTransaction> amountMatches = existing.stream()
+                    .filter(ct -> Math.floor(ct.getAmount()) == Math.floor(transaction.getAmount()))
+                    .collect(Collectors.toList());
+            if (amountMatches.isEmpty()) {
+                logger.debug("The previously categorized transactions {} were all for different amounts", withAccountIdAndDescription);
+                return Optional.empty();
+            }
+
+            // as above, if all of the matches share a category, we can use it
+            potentialCategory = getSharedCategoryFromTransactions(amountMatches);
+            if (potentialCategory.isPresent()) {
+                logger.debug("All previously categorized transactions {} were for ${}, and were categorized as {}",
+                        withAccountIdAndDescription, amountMatches.get(0).getAmount(), potentialCategory.get());
+                return Optional.of(new CategorizedTransaction(transaction, potentialCategory.get()));
+            }
+
+            logger.info("Failed to match incoming transaction to previously categorized transactions");
+            return Optional.empty();
+
+        } catch (SQLException ex) {
+            logger.error("Failed to find exact match for transaction", ex);
+            return Optional.empty();
+        }
+    }
+
+    private Optional<Category> getSharedCategoryFromTransactions(List<CategorizedTransaction> existing) {
+        final Category potentialCategory = existing.get(0).getCategory();
+        boolean allSameCategory = existing.stream()
+                .allMatch(ct -> ct.getCategory() == potentialCategory);
+        if (allSameCategory) {
+            return Optional.of(potentialCategory);
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**

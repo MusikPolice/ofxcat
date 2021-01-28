@@ -67,7 +67,9 @@ public class OfxCat {
             if (!Files.isDirectory(backupPath.getParent())) {
                 Files.createDirectories(backupPath.getParent());
             }
-            Files.copy(pathToImportFile, backupPath);
+            if (!Files.exists(backupPath)) {
+                Files.copy(pathToImportFile, backupPath);
+            }
         } catch (IOException ex) {
             throw new CliException("Failed to copy imported file to data directory", ex);
         }

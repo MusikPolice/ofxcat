@@ -15,7 +15,7 @@ class AccountDaoTest extends AbstractDatabaseTest {
     public void insertSuccessTest() {
         final Account accountToInsert = Account.newBuilder()
                 .setBankId(UUID.randomUUID().toString())
-                .setAccountId(UUID.randomUUID().toString())
+                .setAccountNumber(UUID.randomUUID().toString())
                 .setAccountType("Savings")
                 .setName("Rainy Day Fund")
                 .build();
@@ -25,7 +25,7 @@ class AccountDaoTest extends AbstractDatabaseTest {
         final Account insertedAccount = accountDao.insert(accountToInsert).get();
         Assertions.assertNotNull(insertedAccount.getId());
         Assertions.assertEquals(accountToInsert.getBankId(), insertedAccount.getBankId());
-        Assertions.assertEquals(accountToInsert.getAccountId(), insertedAccount.getAccountId());
+        Assertions.assertEquals(accountToInsert.getAccountNumber(), insertedAccount.getAccountNumber());
         Assertions.assertEquals(accountToInsert.getAccountType(), insertedAccount.getAccountType());
         Assertions.assertEquals(accountToInsert.getName(), insertedAccount.getName());
 
@@ -43,7 +43,7 @@ class AccountDaoTest extends AbstractDatabaseTest {
         for (int i = 0; i < 5; i++) {
             final Account accountToInsert = Account.newBuilder()
                     .setBankId(UUID.randomUUID().toString())
-                    .setAccountId(UUID.randomUUID().toString())
+                    .setAccountNumber(UUID.randomUUID().toString())
                     .setAccountType(UUID.randomUUID().toString())
                     .setName(UUID.randomUUID().toString())
                     .build();
@@ -59,7 +59,7 @@ class AccountDaoTest extends AbstractDatabaseTest {
     public void selectByAccountIdSuccessTest() {
         final Account accountToInsert = Account.newBuilder()
                 .setBankId(UUID.randomUUID().toString())
-                .setAccountId(UUID.randomUUID().toString())
+                .setAccountNumber(UUID.randomUUID().toString())
                 .setAccountType("Nest Egg")
                 .setName("All My Monies")
                 .build();
@@ -69,7 +69,7 @@ class AccountDaoTest extends AbstractDatabaseTest {
         final Account insertedAccount = accountDao.insert(accountToInsert).get();
 
         // get it back
-        final Account foundAccount = accountDao.selectByAccountNumber(accountToInsert.getAccountId()).get();
+        final Account foundAccount = accountDao.selectByAccountNumber(accountToInsert.getAccountNumber()).get();
         Assertions.assertEquals(foundAccount, insertedAccount);
     }
 }
