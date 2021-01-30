@@ -38,16 +38,31 @@ public class TransactionCategoryService {
         this.connection = connection;
     }
 
+    public CategorizedTransaction put(Transaction newTransaction, Category newCategory) {
+        try (final DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return put(t, newTransaction, newCategory);
+        } catch (SQLException ex) {
+            logger.error("Failed to insert categorized transaction",ex);
+            return null;
+        }
+    }
+
     /**
      * Maps the specified transaction's description to the specified category
      */
-    public CategorizedTransaction put(Transaction newTransaction, Category newCategory) {
+    public CategorizedTransaction put(DatabaseTransaction t, Transaction newTransaction, Category newCategory) throws SQLException {
         // if a DescriptionCategory with the specified description and category exists, use it. Otherwise, insert one
-        final DescriptionCategory descriptionCategory = descriptionCategoryDao.selectByDescriptionAndCategory(newTransaction.getDescription(), newCategory)
+        final DescriptionCategory descriptionCategory = descriptionCategoryDao.selectByDescriptionAndCategory(t, newTransaction.getDescription(), newCategory)
                 .or(() -> {
                     logger.debug("Implicitly creating DescriptionCategory with description {} and Category {}", newTransaction.getDescription(), newCategory);
-                    return descriptionCategoryDao.insert(new DescriptionCategory(newTransaction.getDescription(), newCategory));
-                }).get();
+                    try {
+                        return descriptionCategoryDao.insert(t, new DescriptionCategory(newTransaction.getDescription(), newCategory));
+                    } catch (SQLException ex) {
+                        logger.error("Failed to insert into descriptionCategoryDao", ex);
+                        return Optional.empty();
+                    }
+                })
+                .orElseThrow(() -> new SQLException("Failed to put categorized transaction"));
 
         return new CategorizedTransaction(newTransaction, descriptionCategory.getCategory());
     }
@@ -62,7 +77,7 @@ public class TransactionCategoryService {
      * @return an {@link Optional<CategorizedTransaction>} if a previously categorized transaction exists that matches
      * the specified transaction, else {@link Optional#empty()}
      */
-    public Optional<CategorizedTransaction> getCategoryExact(Transaction transaction) {
+    public Optional<CategorizedTransaction> getCategoryExact(DatabaseTransaction t, Transaction transaction) {
         if (transaction.getAccount() == null || StringUtils.isBlank(transaction.getAccount().getAccountNumber())) {
             logger.warn("Specified transaction {} does not have an account number. Cannot search for similar transactions", transaction);
             return Optional.empty();
@@ -72,7 +87,7 @@ public class TransactionCategoryService {
                 transaction.getAccount().getAccountNumber(), transaction.getDescription());
 
         // find previously categorized transactions with the same accountId and description
-        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+        try {
             logger.info("Attempting to find previously categorized transactions {}", withAccountIdAndDescription);
             final List<CategorizedTransaction> existing = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction);
             if (existing.isEmpty()) {
@@ -134,28 +149,33 @@ public class TransactionCategoryService {
      * @param limit the max number of potential categories to return
      * @return a list of potential {@link Category} matches, sorted by relevance descending
      */
-    public List<Category> getCategoryFuzzy(Transaction transaction, int limit) {
+    public List<Category> getCategoryFuzzy(DatabaseTransaction t, Transaction transaction, int limit) {
         // TODO: is 80% match good enough? - make this configurable
         logger.debug("Fuzzy category matches for transaction description \"{}\":", transaction.getDescription());
 
         // get all description categories and transform to a map keyed on description string
-        final Map<String, List<Category>> descriptionCategories = descriptionCategoryDao.selectAll().stream()
-                .collect(Collectors.toMap(DescriptionCategory::getDescription,
-                        dc -> Collections.singletonList(dc.getCategory()),
-                        (l1, l2) -> Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
-                );
+        try {
+            final Map<String, List<Category>> descriptionCategories = descriptionCategoryDao.selectAll(t).stream()
+                    .collect(Collectors.toMap(DescriptionCategory::getDescription,
+                            dc -> Collections.singletonList(dc.getCategory()),
+                            (l1, l2) -> Stream.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
+                    );
 
-        return FuzzySearch.extractSorted(transaction.getDescription(), descriptionCategories.keySet(), 80)
-                .stream()
-                .sorted((o1, o2) -> o2.getScore() - o1.getScore()) // sort descending
-                .map(er -> {
-                    logger.debug("{}: {}", er.getString(), er.getScore());
-                    return descriptionCategories.get(er.getString());
-                })
-                .flatMap((Function<List<Category>, Stream<Category>>) Collection::stream)
-                .distinct()
-                .limit(limit)
-                .collect(Collectors.toList());
+            return FuzzySearch.extractSorted(transaction.getDescription(), descriptionCategories.keySet(), 80)
+                    .stream()
+                    .sorted((o1, o2) -> o2.getScore() - o1.getScore()) // sort descending
+                    .map(er -> {
+                        logger.debug("{}: {}", er.getString(), er.getScore());
+                        return descriptionCategories.get(er.getString());
+                    })
+                    .flatMap((Function<List<Category>, Stream<Category>>) Collection::stream)
+                    .distinct()
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } catch (SQLException e) {
+            logger.error("Failed to get all description categories", e);
+            return new ArrayList<>();
+        }
     }
 
     /**

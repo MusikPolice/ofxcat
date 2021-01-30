@@ -148,8 +148,8 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
             Assertions.assertFalse(categorizedTransactionDao.isDuplicate(t, transaction));
 
             // now we can insert the transaction, and assert that it is a duplicate since it exists
-            CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, category);
-            categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
+            final CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, category);
+            categorizedTransactionDao.insert(t, categorizedTransaction).get();
             Assertions.assertTrue(categorizedTransactionDao.isDuplicate(t, transaction));
         }
     }

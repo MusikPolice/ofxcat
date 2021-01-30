@@ -4,6 +4,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Inject;
@@ -11,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;
 import org.beryx.textio.TextIO;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -109,16 +111,13 @@ public class CLI {
                 .build();
     }
 
-    public CategorizedTransaction categorizeTransaction(Transaction transaction) {
+    public void printFoundNewTransaction(Transaction transaction) {
         textIO.getTextTerminal().setBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
         textIO.getTextTerminal().println("\nFound new transaction:");
         printTransaction(transaction);
+    }
 
-        // try to automatically categorize the transaction
-        // fall back to prompting the user for a category if an exact match cannot be found
-        final CategorizedTransaction categorizedTransaction = transactionCategoryService.getCategoryExact(transaction)
-                .orElse(categorizeTransactionFuzzy(transaction));
-
+    public void printTransactionCategorizedAs(final Category category) {
         // return the cursor to the bookmark that we set before starting the categorization process
         // this will be replaced by a println(...) if not supported in the current terminal
         textIO.getTextTerminal().resetToBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
@@ -129,9 +128,7 @@ public class CLI {
         textIO.getTextTerminal().setBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
 
         textIO.getTextTerminal().print("\nCategorized transaction as ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(categorizedTransaction.getCategory().getName()));
-
-        return categorizedTransaction;
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(category.getName()));
     }
 
     public void exit() {
@@ -164,11 +161,11 @@ public class CLI {
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getAccount().getName()));
     }
 
-    CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
+    public CategorizedTransaction categorizeTransactionFuzzy(DatabaseTransaction t, Transaction transaction) throws SQLException {
 
         // TODO: load fuzzy matches from categorized transactions, rank them higher than the actual fuzzy matches
 
-        final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(transaction, 5);
+        final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(t, transaction, 5);
         if (fuzzyMatches.isEmpty()) {
             // no fuzzy match - add a new category
             return addNewCategory(transaction);
@@ -176,7 +173,7 @@ public class CLI {
             // exactly one potential match - prompt user to confirm
             final String prompt = String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName());
             if (textIOWrapper.promptYesNo(prompt)) {
-                return transactionCategoryService.put(transaction, fuzzyMatches.get(0));
+                return transactionCategoryService.put(t, transaction, fuzzyMatches.get(0));
             } else {
                 // false positive - add a new category for the transaction
                 return addNewCategory(transaction);
@@ -196,7 +193,7 @@ public class CLI {
                 .filter(pc -> pc.getName().equalsIgnoreCase(choice))
                 .findFirst();
         if (selectedCategory.isPresent()) {
-            return transactionCategoryService.put(transaction, selectedCategory.get());
+            return transactionCategoryService.put(t, transaction, selectedCategory.get());
         } else {
             return addNewCategory(transaction);
         }

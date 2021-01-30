@@ -111,7 +111,7 @@ public class CategorizedTransactionDao {
         logger.debug("Attempting to determine if {} is a duplicate", transaction);
         final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE " +
                 "date = ? AND " +
-                "amount = ? AND " +
+                "amount = ROUND(?,2) AND " +
                 "description = ? AND " +
                 "account_id = ?;";
 

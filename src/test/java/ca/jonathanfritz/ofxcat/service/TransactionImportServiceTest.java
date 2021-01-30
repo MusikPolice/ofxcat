@@ -54,16 +54,18 @@ class TransactionImportServiceTest {
 
         // every transaction is sorted into the same category
         final Category category = new Category(UUID.randomUUID().toString());
-        final CLI mockCli = Mockito.mock(CLI.class);
-        when(mockCli.categorizeTransaction(any(Transaction.class))).thenAnswer((Answer<CategorizedTransaction>) invocation -> {
-            final Transaction t = (Transaction) invocation.getArguments()[0];
-            Assertions.assertEquals(transaction.getName().toUpperCase(), t.getDescription()); // default cleaner capitalizes this field
-            Assertions.assertEquals(transaction.getDate(), t.getDate());
-            Assertions.assertEquals(transaction.getAmount(), t.getAmount());
-            Assertions.assertEquals(transaction.getAccount(), ofxAccount);
-            Assertions.assertEquals(accountBalance.getAmount(), t.getBalance());
-            return new CategorizedTransaction(t, category);
-        });
+        final TransactionCategoryService mockTransactionCategoryService = Mockito.mock(TransactionCategoryService.class);
+        when(mockTransactionCategoryService.getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class)))
+            .thenAnswer((Answer<Optional<CategorizedTransaction>>) invocation -> {
+                final Transaction t = (Transaction) invocation.getArguments()[1];
+                Assertions.assertEquals(transaction.getName().toUpperCase(), t.getDescription()); // default cleaner capitalizes this field
+                Assertions.assertEquals(transaction.getDate(), t.getDate());
+                Assertions.assertEquals(transaction.getAmount(), t.getAmount());
+                Assertions.assertEquals(transaction.getAccount(), ofxAccount);
+                Assertions.assertEquals(accountBalance.getAmount(), t.getBalance());
+                return Optional.of(new CategorizedTransaction(t, category));
+            }
+        );
 
         // there is only one transaction, but it belongs to an unknown account
         final List<OfxTransaction> transactions = Collections.singletonList(transaction);
@@ -79,6 +81,7 @@ class TransactionImportServiceTest {
                 .setBankId(ofxAccount.getBankId())
                 .setName(accountName)
                 .build();
+        final CLI mockCli = Mockito.mock(CLI.class);
         when(mockCli.assignAccountName(ofxAccount)).thenReturn(account);
         when(mockAccountDao.insert(account)).thenReturn(Optional.of(account));
 
@@ -105,7 +108,7 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao);
+        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, mockTransactionCategoryService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
 
         Assertions.assertEquals(1, categorizedTransactions.size());
@@ -117,13 +120,13 @@ class TransactionImportServiceTest {
         Assertions.assertEquals(transaction.getAccount(), ofxAccount);
         Assertions.assertEquals(accountBalance.getAmount(), categorizedTransaction.getBalance());
 
-        Mockito.verify(mockCli, times(1)).categorizeTransaction(any(Transaction.class));
+        Mockito.verify(mockTransactionCategoryService, times(1)).getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class));
         Mockito.verify(mockCli, times(1)).assignAccountName(any(OfxAccount.class));
         Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
         Mockito.verify(mockAccountDao, times(1)).insert(any(Account.class));
         Mockito.verify(mockCategorizedTransactionDao, times(1)).isDuplicate(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
         Mockito.verify(mockCategorizedTransactionDao, times(1)).insert(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
-        Mockito.verifyNoMoreInteractions(mockCli, mockAccountDao, mockCategorizedTransactionDao);
+        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCategorizedTransactionDao);
     }
 
     @Test
@@ -163,7 +166,7 @@ class TransactionImportServiceTest {
 
         try {
             // actually run the test
-            final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, null, null, null);
+            final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, null, null, null, null);
             transactionImportService.categorizeTransactions(ofxExports);
             Assertions.fail("Expected a RuntimeException to be thrown");
         } catch (RuntimeException ex) {
@@ -197,15 +200,15 @@ class TransactionImportServiceTest {
 
         // every transaction is sorted into the same category
         final Category category = new Category(UUID.randomUUID().toString());
-        final CLI mockCli = Mockito.mock(CLI.class);
-        when(mockCli.categorizeTransaction(any(Transaction.class))).thenAnswer((Answer<CategorizedTransaction>) invocation -> {
-            final Transaction t = (Transaction) invocation.getArguments()[0];
+        final TransactionCategoryService mockTransactionCategoryService = Mockito.mock(TransactionCategoryService.class);
+        when(mockTransactionCategoryService.getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class))).thenAnswer((Answer<Optional<CategorizedTransaction>>) invocation -> {
+            final Transaction t = (Transaction) invocation.getArguments()[1];
             Assertions.assertEquals(transaction.getName().toUpperCase(), t.getDescription()); // default cleaner capitalizes this field
             Assertions.assertEquals(transaction.getDate(), t.getDate());
             Assertions.assertEquals(transaction.getAmount(), t.getAmount());
             Assertions.assertEquals(transaction.getAccount(), ofxAccount);
             Assertions.assertEquals(accountBalance.getAmount(), t.getBalance());
-            return new CategorizedTransaction(t, category);
+            return Optional.of(new CategorizedTransaction(t, category));
         });
 
         // there is only one transaction, and it belongs to a known account
@@ -243,7 +246,8 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao);
+        final CLI mockCli = Mockito.mock(CLI.class);
+        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, mockTransactionCategoryService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
 
         Assertions.assertEquals(1, categorizedTransactions.size());
@@ -251,11 +255,11 @@ class TransactionImportServiceTest {
         assertEquals(transaction, category, accountBalance.getAmount(), categorizedTransaction);
         Assertions.assertEquals(transaction.getAccount(), ofxAccount);
 
-        Mockito.verify(mockCli, times(1)).categorizeTransaction(any(Transaction.class));
+        Mockito.verify(mockTransactionCategoryService, times(1)).getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class));
         Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
         Mockito.verify(mockCategorizedTransactionDao, times(1)).isDuplicate(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
         Mockito.verify(mockCategorizedTransactionDao, times(1)).insert(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
-        Mockito.verifyNoMoreInteractions(mockCli, mockAccountDao, mockCategorizedTransactionDao);
+        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCategorizedTransactionDao);
     }
 
     private void assertEquals(OfxTransaction ofxTransaction, Category expectedCategory, float expectedBalance, CategorizedTransaction categorizedTransaction) {
@@ -301,7 +305,7 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(null, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao);
+        final TransactionImportService transactionImportService = new TransactionImportService(null, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, null);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 
@@ -329,14 +333,14 @@ class TransactionImportServiceTest {
 
         // every transaction is sorted into the same category
         final Category category = new Category(UUID.randomUUID().toString());
-        final CLI mockCli = Mockito.mock(CLI.class);
-        when(mockCli.categorizeTransaction(any(Transaction.class))).thenAnswer((Answer<CategorizedTransaction>) invocation -> {
-            final Transaction t = (Transaction) invocation.getArguments()[0];
+        final TransactionCategoryService mockTransactionCategoryService = Mockito.mock(TransactionCategoryService.class);
+        when(mockTransactionCategoryService.getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class))).thenAnswer((Answer<Optional<CategorizedTransaction>>) invocation -> {
+            final Transaction t = (Transaction) invocation.getArguments()[1];
             Assertions.assertEquals(transaction.getName().toUpperCase(), t.getDescription()); // default cleaner capitalizes this field
             Assertions.assertEquals(transaction.getDate(), t.getDate());
             Assertions.assertEquals(transaction.getAmount(), t.getAmount());
             Assertions.assertEquals(transaction.getAccount(), ofxAccount);
-            return new CategorizedTransaction(t, category);
+            return Optional.of(new CategorizedTransaction(t, category));
         });
 
         // there is only one transaction, and it belongs to a known account
@@ -364,15 +368,16 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao);
+        final CLI mockCli = Mockito.mock(CLI.class);
+        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, mockTransactionCategoryService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 
-        Mockito.verify(mockCli, times(1)).categorizeTransaction(any(Transaction.class));
+        Mockito.verify(mockTransactionCategoryService, times(1)).getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class));
         Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
         Mockito.verify(mockCategorizedTransactionDao, times(1)).isDuplicate(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
         Mockito.verify(mockCategorizedTransactionDao, times(1)).insert(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
-        Mockito.verifyNoMoreInteractions(mockCli, mockAccountDao, mockCategorizedTransactionDao);
+        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCategorizedTransactionDao);
     }
 
     @Test
@@ -412,10 +417,10 @@ class TransactionImportServiceTest {
 
         // every transaction is sorted into the same category
         final Category category = new Category(UUID.randomUUID().toString());
-        final CLI mockCli = Mockito.mock(CLI.class);
-        when(mockCli.categorizeTransaction(any(Transaction.class))).thenAnswer((Answer<CategorizedTransaction>) invocation -> {
-            final Transaction t = (Transaction) invocation.getArguments()[0];
-            return new CategorizedTransaction(t, category);
+        final TransactionCategoryService mockTransactionCategoryService = Mockito.mock(TransactionCategoryService.class);
+        when(mockTransactionCategoryService.getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class))).thenAnswer((Answer<Optional<CategorizedTransaction>>) invocation -> {
+            final Transaction t = (Transaction) invocation.getArguments()[1];
+            return Optional.of(new CategorizedTransaction(t, category));
         });
 
         // all transactions belong to the same account
@@ -437,7 +442,8 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao);
+        final CLI mockCli = Mockito.mock(CLI.class);
+        final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, mockTransactionCategoryService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
 
         // balances add up and transactions are ordered ascending by date (ie. least recent to most recent)
@@ -453,11 +459,11 @@ class TransactionImportServiceTest {
         }
         Assertions.assertEquals(accountBalance.getAmount(), expectedBalance);
 
-        Mockito.verify(mockCli, times(3)).categorizeTransaction(any(Transaction.class));
+        Mockito.verify(mockTransactionCategoryService, times(3)).getCategoryExact(any(DatabaseTransaction.class), any(Transaction.class));
         Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
         Mockito.verify(mockCategorizedTransactionDao, times(3)).isDuplicate(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
         Mockito.verify(mockCategorizedTransactionDao, times(3)).insert(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
-        Mockito.verifyNoMoreInteractions(mockCli, mockAccountDao, mockCategorizedTransactionDao);
+        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCategorizedTransactionDao);
     }
 
     // TODO: tests for importTransactions(...) method

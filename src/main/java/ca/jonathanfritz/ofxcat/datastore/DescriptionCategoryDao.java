@@ -47,25 +47,29 @@ public class DescriptionCategoryDao {
 
     public Optional<DescriptionCategory> insert(DescriptionCategory descriptionCategoryToInsert) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            // make sure that the category in question exists
-            logger.debug("Attempting to find existing Category with name {}", descriptionCategoryToInsert.getCategory().getName());
-            final Category category = categoryDao.select(t, descriptionCategoryToInsert.getCategory().getName())
-                    .or(() -> {
-                        logger.debug("Implicitly creating Category with name {}", descriptionCategoryToInsert.getCategory().getName());
-                        return categoryDao.insert(t, descriptionCategoryToInsert.getCategory());
-                    }).get();
-
-            // insert the DescriptionCategory object
-            logger.debug("Attempting to insert DescriptionCategory {} with Category {}", descriptionCategoryToInsert, category);
-            final String insertStatement = "INSERT INTO DescriptionCategory (description, category_id) VALUES (?, ?);";
-            return t.insert(insertStatement, ps -> {
-                ps.setString(1, descriptionCategoryToInsert.getDescription());
-                ps.setLong(2, category.getId());
-            }, descriptionCategoryDeserializer);
+            return insert(t, descriptionCategoryToInsert);
         } catch (SQLException e) {
             logger.error("Failed to insert DescriptionCategory {}", descriptionCategoryToInsert, e);
             return Optional.empty();
         }
+    }
+
+    public Optional<DescriptionCategory> insert(DatabaseTransaction t, DescriptionCategory descriptionCategoryToInsert) throws SQLException {
+        // make sure that the category in question exists
+        logger.debug("Attempting to find existing Category with name {}", descriptionCategoryToInsert.getCategory().getName());
+        final Category category = categoryDao.select(t, descriptionCategoryToInsert.getCategory().getName())
+                .or(() -> {
+                    logger.debug("Implicitly creating Category with name {}", descriptionCategoryToInsert.getCategory().getName());
+                    return categoryDao.insert(t, descriptionCategoryToInsert.getCategory());
+                }).get();
+
+        // insert the DescriptionCategory object
+        logger.debug("Attempting to insert DescriptionCategory {} with Category {}", descriptionCategoryToInsert, category);
+        final String insertStatement = "INSERT INTO DescriptionCategory (description, category_id) VALUES (?, ?);";
+        return t.insert(insertStatement, ps -> {
+            ps.setString(1, descriptionCategoryToInsert.getDescription());
+            ps.setLong(2, category.getId());
+        }, descriptionCategoryDeserializer);
     }
 
     /**
@@ -74,13 +78,17 @@ public class DescriptionCategoryDao {
      */
     public List<DescriptionCategory> selectAll() {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to select all DescriptionCategory objects");
-            final String selectStatement = "SELECT * FROM DescriptionCategory;";
-            return t.query(selectStatement, descriptionCategoryDeserializer);
+            return selectAll(t);
         } catch (SQLException e) {
             logger.error("Failed to select all DescriptionCategory objects", e);
             return new ArrayList<>();
         }
+    }
+
+    public List<DescriptionCategory> selectAll(DatabaseTransaction t) throws SQLException {
+        logger.debug("Attempting to select all DescriptionCategory objects");
+        final String selectStatement = "SELECT * FROM DescriptionCategory;";
+        return t.query(selectStatement, descriptionCategoryDeserializer);
     }
 
     /**
@@ -91,19 +99,23 @@ public class DescriptionCategoryDao {
      */
     public Optional<DescriptionCategory> selectByDescriptionAndCategory(String description, Category category) {
         try(DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to select DescriptionCategory with description {} and Category {}", description, category);
-            final String selectStatement = "SELECT dc.id AS id, dc.description AS description, dc.category_id AS category_id " +
-                    "FROM DescriptionCategory dc " +
-                    "INNER JOIN Category c ON dc.category_id = c.id " +
-                    "WHERE upper(dc.description) = ? AND upper(c.name) = ?;";
-            final List<DescriptionCategory> results = t.query(selectStatement, ps -> {
-                ps.setString(1, description.toUpperCase());
-                ps.setString(2, category.getName().toUpperCase());
-            }, descriptionCategoryDeserializer);
-            return DatabaseTransaction.getFirstResult(results);
+            return selectByDescriptionAndCategory(t, description, category);
         } catch (SQLException e) {
             logger.error("Failed to select DescriptionCategory with description {} and Category {}", description, category, e);
             return Optional.empty();
         }
+    }
+
+    public Optional<DescriptionCategory> selectByDescriptionAndCategory(DatabaseTransaction t, String description, Category category) throws SQLException {
+        logger.debug("Attempting to select DescriptionCategory with description {} and Category {}", description, category);
+        final String selectStatement = "SELECT dc.id AS id, dc.description AS description, dc.category_id AS category_id " +
+                "FROM DescriptionCategory dc " +
+                "INNER JOIN Category c ON dc.category_id = c.id " +
+                "WHERE upper(dc.description) = ? AND upper(c.name) = ?;";
+        final List<DescriptionCategory> results = t.query(selectStatement, ps -> {
+            ps.setString(1, description.toUpperCase());
+            ps.setString(2, category.getName().toUpperCase());
+        }, descriptionCategoryDeserializer);
+        return DatabaseTransaction.getFirstResult(results);
     }
 }

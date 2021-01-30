@@ -38,17 +38,19 @@ public class TransactionImportService {
     private final TransactionCleanerFactory transactionCleanerFactory;
     private final Connection connection;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionCategoryService transactionCategoryService;
 
     private static final Logger logger = LoggerFactory.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
         this.transactionCleanerFactory = transactionCleanerFactory;
         this.connection = connection;
         this.categorizedTransactionDao = categorizedTransactionDao;
+        this.transactionCategoryService = transactionCategoryService;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -76,17 +78,17 @@ public class TransactionImportService {
     List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
         final List<CategorizedTransaction> categorizedTransactions = new ArrayList<>();
         for (OfxExport ofxExport : ofxExports) {
-            // figure out which account this transaction belongs to
+            // figure out which account these transactions belong to
             final Account account = accountDao.selectByAccountNumber(ofxExport.getAccount().getAccountId())
                     .or(() -> accountDao.insert(cli.assignAccountName(ofxExport.getAccount())))
                     .orElseThrow(() -> new RuntimeException(String.format("Failed to find or create account %s", ofxExport)));
+            logger.info("Processing transactions for Account {}", account);
 
             // an ofx file contains the account balance after all included transactions were processed, but does not
             // include the initial account balance or the account balance after each individual transaction was processed.
             // we can determine the initial account balance by summing up the amount of all transactions and subtracting
             // that value from the final account balance. This can then be used to determine the account balance after
             // each transaction was applied.
-            logger.info("Processing transactions for Account {}", account);
             final float totalTransactionAmount = ofxExport.getTransactions().values().stream()
                     .flatMap((Function<List<OfxTransaction>, Stream<OfxTransaction>>) Collection::stream)
                     .map(OfxTransaction::getAmount)
@@ -97,14 +99,14 @@ public class TransactionImportService {
             // sorts transactions by date, transforms them into our internal representation, sets the resulting account
             // balance on each, and associates each with an account
             final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(account.getBankId());
-            final Accumulator<Float> currentBalance = new Accumulator<>(initialBalance, Float::sum);
+            final Accumulator<Float> balanceAccumulator = new Accumulator<>(initialBalance, Float::sum);
             final Stream<Transaction> transactionStream = ofxExport.getTransactions().entrySet().stream()
                     .flatMap((Function<Map.Entry<LocalDate, List<OfxTransaction>>, Stream<OfxTransaction>>) entry -> entry.getValue().stream())
                     .sorted(Comparator.comparing(OfxTransaction::getDate))
                     .map(transactionCleaner::clean)
-                    .map(builder -> builder.setBalance(currentBalance.add(builder.getAmount())))
+                    .map(builder -> builder.setBalance(balanceAccumulator.add(builder.getAmount())))
                     .map(builder -> builder.setAccount(account).build());
-            logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), currentBalance.getCurrentValue());
+            logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), balanceAccumulator.getCurrentValue());
 
             // filter out duplicates, categorize transactions, and insert them into the database
             transactionStream.forEach(transaction -> {
@@ -114,8 +116,14 @@ public class TransactionImportService {
                         return;
                     }
 
-                    final CategorizedTransaction categorizedTransaction = cli.categorizeTransaction(transaction);
+                    // try to automatically categorize the transaction
+                    // fall back to prompting the user for a category if an exact match cannot be found
+                    cli.printFoundNewTransaction(transaction);
+                    final CategorizedTransaction categorizedTransaction = transactionCategoryService.getCategoryExact(t, transaction)
+                            .orElse(cli.categorizeTransactionFuzzy(t, transaction));
+                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
                     logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
+
                     categorizedTransactionDao.insert(t, categorizedTransaction)
                             .ifPresent(categorizedTransactions::add);
 

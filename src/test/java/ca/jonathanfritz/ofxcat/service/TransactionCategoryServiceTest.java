@@ -9,6 +9,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,7 +86,11 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
             }
         });
 
-        final Optional<CategorizedTransaction> categorized = transactionCategoryService.getCategoryExact(newTransaction);
+        final Optional<CategorizedTransaction> categorized;
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            categorized = transactionCategoryService.getCategoryExact(t, newTransaction);
+        }
+
         Assertions.assertNotNull(categorized.get().getCategory().getId());
         Assertions.assertEquals("MUSIC", categorized.get().getCategory().getName());
         Assertions.assertEquals(newTransaction.getDescription(), categorized.get().getDescription());
@@ -104,7 +109,10 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
                 .setDate(LocalDate.now())
                 .setType(Transaction.TransactionType.DEBIT)
                 .build();
-        final Optional<CategorizedTransaction> categorized = transactionCategoryService.getCategoryExact(newTransaction);
+        final Optional<CategorizedTransaction> categorized;
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            categorized = transactionCategoryService.getCategoryExact(t, newTransaction);
+        }
         Assertions.assertTrue(categorized.isEmpty());
     }
 
@@ -121,7 +129,10 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
         // an empty optional will be returned because the search string matches multiple categories so an exact
         // match cannot be found
-        final Optional<CategorizedTransaction> categorized = transactionCategoryService.getCategoryExact(newTransaction);
+        final Optional<CategorizedTransaction> categorized;
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            categorized = transactionCategoryService.getCategoryExact(t, newTransaction);
+        }
         Assertions.assertTrue(categorized.isEmpty());
     }
 
@@ -150,7 +161,10 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     }
 
     private void getCategoryFuzzyTest(Transaction newTransaction, int numExpectedResults, List<String> expectedResults) {
-        List<Category> categories = transactionCategoryService.getCategoryFuzzy(newTransaction, 5);
+        final List<Category> categories;
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            categories = transactionCategoryService.getCategoryFuzzy(t, newTransaction, 5);
+        }
 
         // we asked for 5 results, but not all of the existing categories have a match threshold > 80%
         Assertions.assertEquals(numExpectedResults, categories.size());
