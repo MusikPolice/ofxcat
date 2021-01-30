@@ -47,7 +47,10 @@ public class RbcTransactionCleaner implements TransactionCleaner {
             Pattern.compile("^WWW TRANSFER - \\d+.*$"),
 
             // paypal
-            Pattern.compile("^MISC PAYMENT$")
+            Pattern.compile("^MISC PAYMENT$"),
+
+            // Personal loan repayment (car loan, small business loan, etc)
+            Pattern.compile("^SPL$")
     );
 
     private static final Map<Pattern, String> patternsToReplace = new HashMap<>();
@@ -64,6 +67,9 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // Interac e-transfer outgoing
         patternsToReplace.put(Pattern.compile("^EMAIL TRFS$"), "INTERAC E-TRANSFER");
+
+        // Personal loan repayment (car loan, small business loan, etc)
+        patternsToReplace.put(Pattern.compile("^PERSONAL LOAN$"), "PERSONAL LOAN REPAYMENT");
     }
 
     @Override

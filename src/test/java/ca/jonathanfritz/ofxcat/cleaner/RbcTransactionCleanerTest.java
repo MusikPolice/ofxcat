@@ -95,5 +95,27 @@ class RbcTransactionCleanerTest {
         MatcherAssert.assertThat(rbcTransactionCleaner.getInstitutionName(), IsEqual.equalTo(RBC_INSTITUTION_NAME));
     }
 
+    @Test
+    public void personalLoanSplTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("PERSONAL LOAN")
+                .setMemo("SPL")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("PERSONAL LOAN REPAYMENT"));
+    }
+
+    @Test
+    public void interacEtransferTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("Email Trfs")
+                .setMemo("INTERAC E-TRF- 8766")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER"));
+    }
+
     // TODO: test patterns to remove/replace regexes
 }
