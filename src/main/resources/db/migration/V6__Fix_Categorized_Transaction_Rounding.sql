@@ -1,0 +1,1 @@
+UPDATE CategorizedTransaction SET amount = ROUND(amount, 2), balance = ROUND(balance, 2);

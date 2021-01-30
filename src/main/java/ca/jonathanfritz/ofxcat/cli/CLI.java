@@ -145,7 +145,7 @@ public class CLI {
 
         // type
         textIO.getTextTerminal().print("Type: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->t.println(transaction.getType().name()));
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getType().name()));
 
         // amount
         textIO.getTextTerminal().print("Amount: ");
@@ -157,7 +157,11 @@ public class CLI {
 
         // description
         textIO.getTextTerminal().print("Description: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->t.println(transaction.getDescription()));
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDescription()));
+
+        // account name
+        textIO.getTextTerminal().print("Account: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getAccount().getName()));
     }
 
     CategorizedTransaction categorizeTransactionFuzzy(Transaction transaction) {
