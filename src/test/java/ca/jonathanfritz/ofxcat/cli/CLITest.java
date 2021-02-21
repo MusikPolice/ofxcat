@@ -11,6 +11,7 @@ import org.mockito.Mockito;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.UUID;
 
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
@@ -32,7 +33,7 @@ class CLITest extends AbstractDatabaseTest {
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             final CLI cli = new CLI(null, textIOWrapper, transactionCategoryService);
-            cli.categorizeTransactionFuzzy(t, Transaction.newBuilder().build());
+            cli.categorizeTransactionFuzzy(t, Transaction.newBuilder(UUID.randomUUID().toString()).build());
         }
 
         // the transaction will be categorized appropriately
@@ -54,7 +55,7 @@ class CLITest extends AbstractDatabaseTest {
 
         final CLI cli = new CLI(null, textIOWrapper, transactionCategoryService);
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            cli.categorizeTransactionFuzzy(t, Transaction.newBuilder().build());
+            cli.categorizeTransactionFuzzy(t, Transaction.newBuilder(UUID.randomUUID().toString()).build());
         }
 
         // the transaction will be categorized appropriately

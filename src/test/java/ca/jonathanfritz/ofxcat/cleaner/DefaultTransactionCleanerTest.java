@@ -1,12 +1,13 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
-import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static ca.jonathanfritz.ofxcat.cleaner.DefaultTransactionCleaner.DEFAULT_BANK_ID;
 import static ca.jonathanfritz.ofxcat.cleaner.DefaultTransactionCleaner.DEFAULT_INSTITUTION_NAME;
@@ -83,6 +84,16 @@ class DefaultTransactionCleanerTest {
 
         final Transaction transaction = defaultTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.ATM));
+    }
+
+    @Test
+    public void fitIdTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setFitId(UUID.randomUUID().toString())
+                .build();
+
+        final Transaction transaction = defaultTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getFitId(), IsEqual.equalTo(ofxTransaction.getFitId()));
     }
 
     @Test

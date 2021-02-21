@@ -33,7 +33,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         account = accountDao.insert(account).get();
 
         // now we can create a CategorizedTransaction
-        CategorizedTransaction categorizedTransaction = new CategorizedTransaction(Transaction.newBuilder()
+        CategorizedTransaction categorizedTransaction = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(5.14f)
                 .setDate(LocalDate.now())
@@ -53,7 +53,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     }
 
     @Test
-    void selectGroupByCategoryTest() throws SQLException {
+    void selectGroupByCategoryTest() {
         // need two categories
         final CategoryDao categoryDao = new CategoryDao(connection);
         Category groceries = new Category("GROCERIES");
@@ -74,7 +74,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // now we can create some CategorizedTransactions
         final CategorizedTransactionDao transactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
         final LocalDate now = LocalDate.now();
-        CategorizedTransaction quickieMart = new CategorizedTransaction(Transaction.newBuilder()
+        CategorizedTransaction quickieMart = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(10.72f)
                 .setDate(now.minusDays(3))
@@ -83,7 +83,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
                 .setBalance(21.58f)
                 .build(), groceries);
         quickieMart = transactionDao.insert(quickieMart).get();
-        CategorizedTransaction tastyMart = new CategorizedTransaction(Transaction.newBuilder()
+        CategorizedTransaction tastyMart = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(15.31f)
                 .setDate(now.minusDays(2))
@@ -92,7 +92,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
                 .setBalance(6.27f)
                 .build(), groceries);
         tastyMart = transactionDao.insert(tastyMart).get();
-        CategorizedTransaction monksCafe = new CategorizedTransaction(Transaction.newBuilder()
+        CategorizedTransaction monksCafe = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(2.50f)
                 .setDate(now.minusDays(1))
@@ -133,7 +133,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         account = accountDao.insert(account).get();
 
         // we can use them to create a transaction
-        final Transaction transaction = Transaction.newBuilder()
+        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(6.17F)
                 .setDate(LocalDate.now())
@@ -172,7 +172,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         account = accountDao.insert(account).get();
 
         // we can use them to create a transaction
-        final Transaction transaction = Transaction.newBuilder()
+        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setAmount(6.17F)
                 .setDate(LocalDate.now())
@@ -182,7 +182,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
                 .build();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            final Transaction target = Transaction.newBuilder()
+            final Transaction target = Transaction.newBuilder(UUID.randomUUID().toString())
                     .setAccount(account)
                     .setDescription(transaction.getDescription())
                     .build();

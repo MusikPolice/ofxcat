@@ -16,9 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
@@ -56,35 +54,27 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     }
 
     private void insertTransaction(Account account, String description, String categoryName) {
-        final Transaction transaction = Transaction.newBuilder()
+        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
                 .setDescription(description)
                 .setDate(LocalDate.now())
                 .setType(Transaction.TransactionType.DEBIT)
                 .build();
         final Category category = new Category(categoryName);
-        CategorizedTransaction categorizedTransaction = transactionCategoryService.put(transaction, category);
-        categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
+        final CategorizedTransaction categorizedTransaction = transactionCategoryService.put(transaction, category);
+        categorizedTransactionDao.insert(categorizedTransaction).get();
     }
 
     @Test
     void getCategoryExactOneMatchTest() {
         // get exact matches for a new transaction
-        Transaction newTransaction = Transaction.newBuilder()
+        Transaction newTransaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(testAccount)
                 .setDescription("Beats 'R Us")
                 .setAmount(8.14f)
                 .setDate(LocalDate.now())
                 .setType(Transaction.TransactionType.DEBIT)
                 .build();
-
-        final List<Account> accounts = accountDao.select();
-        final List<CategorizedTransaction> transactions = categorizedTransactionDao.selectGroupByCategory(LocalDate.now().minusDays(1), LocalDate.now().plusDays(1)).values().stream().reduce(new ArrayList<>(), new BinaryOperator<List<CategorizedTransaction>>() {
-            @Override
-            public List<CategorizedTransaction> apply(List<CategorizedTransaction> categorizedTransactions, List<CategorizedTransaction> categorizedTransactions2) {
-                return Stream.concat(categorizedTransactions.stream(), categorizedTransactions2.stream()).collect(Collectors.toList());
-            }
-        });
 
         final Optional<CategorizedTransaction> categorized;
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
@@ -102,7 +92,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     void getCategoryExactNoMatchTest() {
         // get exact matches for a new transaction
-        Transaction newTransaction = Transaction.newBuilder()
+        Transaction newTransaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(testAccount)
                 .setDescription("Beets 'R Us")
                 .setAmount(8.14f)
@@ -119,7 +109,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     void getCategoryExactMultipleMatchTest() {
         // get exact matches for a new transaction
-        Transaction newTransaction = Transaction.newBuilder()
+        Transaction newTransaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(testAccount)
                 .setDescription("Meats 'R Us")
                 .setAmount(8.14f)
@@ -139,7 +129,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     void getCategoryFuzzyTest1() {
         // get fuzzy matches for a new transaction
-        Transaction newTransaction = Transaction.newBuilder()
+        Transaction newTransaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setDescription("Soys 'R Us")
                 .setAmount(7.59f)
                 .setDate(LocalDate.now())
@@ -151,7 +141,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     void getCategoryFuzzyTest2() {
         // get fuzzy matches for a new transaction
-        Transaction newTransaction = Transaction.newBuilder()
+        Transaction newTransaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setDescription("Streets 'R Us")
                 .setAmount(7.59f)
                 .setDate(LocalDate.now())

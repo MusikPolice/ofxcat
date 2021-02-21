@@ -87,9 +87,9 @@ class ReportingServiceTest {
     void reportTransactionsTest() {
         final Category groceries = new Category("GROCERIES");
         final Category restaurants = new Category("RESTAURANTS");
-        final CategorizedTransaction t1 = new CategorizedTransaction(Transaction.newBuilder().setAmount(10f).build(), groceries);
-        final CategorizedTransaction t2 = new CategorizedTransaction(Transaction.newBuilder().setAmount(5f).build(), groceries);
-        final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder().setAmount(7f).build(), restaurants);
+        final CategorizedTransaction t1 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(10f).build(), groceries);
+        final CategorizedTransaction t2 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(5f).build(), groceries);
+        final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(7f).build(), restaurants);
 
         // mock transactions dao will return some categorized transactions
         final CategorizedTransactionDao mockTransactionsDao = Mockito.mock(CategorizedTransactionDao.class);

@@ -32,7 +32,7 @@ public class DefaultTransactionCleaner implements TransactionCleaner {
                 .map(s -> s.trim().toUpperCase())
                 .collect(Collectors.joining(" "));
 
-        return Transaction.newBuilder()
+        return Transaction.newBuilder(ofxTransaction.getFitId())
             .setType(categorizeTransactionType(ofxTransaction))
             .setDate(ofxTransaction.getDate())
             .setAmount(ofxTransaction.getAmount())

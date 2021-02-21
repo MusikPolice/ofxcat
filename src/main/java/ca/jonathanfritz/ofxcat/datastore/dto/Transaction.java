@@ -11,6 +11,7 @@ public class Transaction {
     private final String description;
     private final Account account;
     private final float balance;
+    private final String fitId;
 
     protected Transaction(Builder builder) {
         type = builder.type;
@@ -19,6 +20,7 @@ public class Transaction {
         description = builder.description;
         account = builder.account;
         balance = builder.balance;
+        fitId = builder.fitId;
     }
 
     public TransactionType getType() {
@@ -45,6 +47,10 @@ public class Transaction {
         return balance;
     }
 
+    public String getFitId() {
+        return fitId;
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -54,6 +60,7 @@ public class Transaction {
                 ", description='" + description + '\'' +
                 ", account=" + account +
                 ", balance=" + balance +
+                ", fitId='" + fitId + '\'' +
                 '}';
     }
 
@@ -67,20 +74,21 @@ public class Transaction {
                 type == that.type &&
                 Objects.equals(date, that.date) &&
                 Objects.equals(description, that.description) &&
-                Objects.equals(account, that.account);
+                Objects.equals(account, that.account) &&
+                Objects.equals(fitId, that.fitId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, date, amount, description, account, balance);
+        return Objects.hash(type, date, amount, description, account, balance, fitId);
     }
 
-    public static Builder newBuilder() {
-        return new Builder();
+    public static Builder newBuilder(String fitId) {
+        return new Builder(fitId);
     }
 
     public static Builder newBuilder(Transaction copy) {
-        Builder builder = new Builder();
+        Builder builder = new Builder(copy.fitId);
         builder.type = copy.getType();
         builder.date = copy.getDate();
         builder.amount = copy.getAmount();
@@ -98,8 +106,10 @@ public class Transaction {
         private String description;
         private Account account;
         private float balance;
+        private final String fitId;
 
-        private Builder() {
+        private Builder(String fitId) {
+            this.fitId = fitId;
         }
 
         public Builder setType(TransactionType type) {

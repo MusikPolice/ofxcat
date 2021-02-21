@@ -7,6 +7,7 @@ import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner.RBC_BANK_ID;
 import static ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner.RBC_INSTITUTION_NAME;
@@ -83,6 +84,16 @@ class RbcTransactionCleanerTest {
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.ATM));
+    }
+
+    @Test
+    public void fitIdTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setFitId(UUID.randomUUID().toString())
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getFitId(), IsEqual.equalTo(ofxTransaction.getFitId()));
     }
 
     @Test
