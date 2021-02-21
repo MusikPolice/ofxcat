@@ -13,22 +13,20 @@ import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class OfxParser {
-
-    // TODO: the ofx format contains an AVAILBAL block that shows the balance in the account on the date of export. Could use to work backward and find balance after each transaction
 
     // bank account information elements
     private static final String BANKACCTFROM = "BANKACCTFROM";  // start/end of account info element
     private static final String BANKID = "BANKID";              // unique id of the institution
     private static final String ACCTID = "ACCTID";              // bank account number that the transactions belong to
     private static final String ACCTTYPE = "ACCTTYPE";          // type of bank account
+
+    // credit card information elements
+    private static final String CCACCTFROM = "CCACCTFROM";      // start/end of credit card info element
 
     // transaction elements
     private static final String STMTTRN = "STMTTRN";    // start/end of transaction element
@@ -62,8 +60,8 @@ public class OfxParser {
             OfxAccount.Builder accountBuilder;
             OfxTransaction.TransactionBuilder transactionBuilder;
 
-            // if the file contains transactions from multiple accounts, a BANKACCTFROM entity will proceed the transactions
-            // for each account. We can attach the transactions for the account to this object
+            // if the file contains transactions from multiple accounts, a BANKACCTFROM or CCACCTFROM entity will
+            // proceed the transactions for each account. We can attach the transactions for the account to this object.
             OfxAccount currentAccount;
 
             // after each BANKTRANLIST element, there's a LEDGERBAL element that contains the current balance for that
@@ -74,6 +72,10 @@ public class OfxParser {
             public void startAggregate(String name) {
                 if (BANKACCTFROM.equalsIgnoreCase(name)) {
                     accountBuilder = OfxAccount.newBuilder();
+                } else if (CCACCTFROM.equalsIgnoreCase(name)) {
+                    // credit cards don't have an ACCTTYPE element, so force the type here
+                    accountBuilder = OfxAccount.newBuilder()
+                        .setAccountType("CREDIT_CARD");
                 } else if (STMTTRN.equalsIgnoreCase(name)) {
                     transactionBuilder = OfxTransaction.newBuilder();
                     if (currentAccount != null) {
@@ -92,6 +94,7 @@ public class OfxParser {
                         accountBuilder.setBankId(value);
                         break;
                     case ACCTID:
+                        // this element is used for the account id on normal bank accounts as well as credit cards
                         accountBuilder.setAccountId(value);
                         break;
                     case ACCTTYPE:
@@ -169,7 +172,7 @@ public class OfxParser {
 
             // fired whenever the currently open ofx entity ends
             public void endAggregate(String name) {
-                if (BANKACCTFROM.equalsIgnoreCase(name)) {
+                if (BANKACCTFROM.equalsIgnoreCase(name) || CCACCTFROM.equalsIgnoreCase(name)) {
                     currentAccount = accountBuilder.build();
                     logger.debug("Parsed bank account information {}", currentAccount);
                 } else if (STMTTRN.equalsIgnoreCase(name)) {
@@ -194,12 +197,15 @@ public class OfxParser {
         ofxReader.parse(inputStream);
 
         // bundle up the imported data for all accounts
+        // returned list is sorted alphabetically by account id
         return transactions.entrySet().stream()
                 .map(entry -> new OfxExport(entry.getKey(), accountBalances.get(entry.getKey()).build(),
                         entry.getValue().stream()
                             .map(OfxTransaction.TransactionBuilder::build)
                             .collect(Collectors.toList()))
-                ).collect(Collectors.toList());
+                )
+                .sorted(Comparator.comparing(o -> o.getAccount().getAccountId()))
+                .collect(Collectors.toList());
     }
 
     private LocalDate parseDate(String value) {

@@ -78,6 +78,10 @@ public class TransactionCategoryService {
      * the specified transaction, else {@link Optional#empty()}
      */
     public Optional<CategorizedTransaction> getCategoryExact(DatabaseTransaction t, Transaction transaction) {
+        if (StringUtils.isBlank(transaction.getDescription())) {
+            logger.warn("Specified transaction {} does not have a description. Cannot search for similar transactions", transaction);
+            return Optional.empty();
+        }
         if (transaction.getAccount() == null || StringUtils.isBlank(transaction.getAccount().getAccountNumber())) {
             logger.warn("Specified transaction {} does not have an account number. Cannot search for similar transactions", transaction);
             return Optional.empty();
@@ -89,15 +93,23 @@ public class TransactionCategoryService {
         // find previously categorized transactions with the same accountId and description
         try {
             logger.info("Attempting to find previously categorized transactions {}", withAccountIdAndDescription);
-            final List<CategorizedTransaction> existing = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction);
-            if (existing.isEmpty()) {
+
+            // TODO: search for exact string, but also for each token in the string, all on an executor
+            //       count number of matches for each category that is associated with the string, arrange into Map<Transaction, Integer>
+            //       Fuzzy match each map key's description w/ incoming transaction description, multiply result by category count, arrange into Map<Transaction, Float>
+            //       finally sum category "scores" by adding together map values that share a category, rank categories by score, prompt user to pick one
+            //       also add an index on categorized transaction description column b/c we're hitting it a lot
+            //       this incorporates exact matching & fuzzy matching based on existing categorized transactions, lets us delete the entire matchFuzzy(...) code path
+
+            final List<CategorizedTransaction> existingTransactions = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction);
+            if (existingTransactions.isEmpty()) {
                 // no similar transactions found
                 logger.debug("No previously categorized transactions {} were found", withAccountIdAndDescription);
                 return Optional.empty();
             }
 
             // if all of the matches share a category, we can use it
-            Optional<Category> potentialCategory = getSharedCategoryFromTransactions(existing);
+            Optional<Category> potentialCategory = getSharedCategoryFromTransactions(existingTransactions);
             if (potentialCategory.isPresent()) {
                 logger.debug("All previously categorized transactions {} were categorized as {}", withAccountIdAndDescription, potentialCategory.get());
                 return Optional.of(new CategorizedTransaction(transaction, potentialCategory.get()));
@@ -105,7 +117,7 @@ public class TransactionCategoryService {
 
             // matches belong to disparate categories
             // let's see if some subset of them also match on amount (ex. mortgage payments)
-            final List<CategorizedTransaction> amountMatches = existing.stream()
+            final List<CategorizedTransaction> amountMatches = existingTransactions.stream()
                     .filter(ct -> Math.floor(ct.getAmount()) == Math.floor(transaction.getAmount()))
                     .collect(Collectors.toList());
             if (amountMatches.isEmpty()) {
@@ -120,6 +132,8 @@ public class TransactionCategoryService {
                         withAccountIdAndDescription, amountMatches.get(0).getAmount(), potentialCategory.get());
                 return Optional.of(new CategorizedTransaction(transaction, potentialCategory.get()));
             }
+
+            // TODO: just prompt the user to pick a category, goddamnit!
 
             logger.info("Failed to match incoming transaction to previously categorized transactions");
             return Optional.empty();

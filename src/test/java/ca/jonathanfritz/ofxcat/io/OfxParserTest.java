@@ -10,12 +10,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OfxParserTest {
 
     private static final String ONE_ACCOUNT_OFX = "oneaccount.ofx";
     private static final String TWO_ACCOUNTS_OFX = "twoaccounts.ofx";
+    private static final String CREDIT_CARD_OFX = "creditcard.ofx";
+    private String TWO_ACCOUNTS_ONE_CREDIT_CARD = "twoaccountsonecreditcard.ofx";
 
     // this test data matches the contents of the two ofx files
     private static final LocalDate december10th2018 = LocalDate.of(2018, 12, 10);
@@ -89,6 +95,80 @@ class OfxParserTest {
         MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
         MatcherAssert.assertThat(ofxExports.get(1).getBalance(), IsEqual.equalTo(expectedAccount1Balance));
+    }
+
+    @Test
+    void creditCardTransactionsTest() throws IOException, OFXParseException {
+        final OfxParser ofxParser = new OfxParser();
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(CREDIT_CARD_OFX));
+
+        // there should be one credit card with a single transaction
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(1));
+        final OfxAccount account = ofxExports.get(0).getAccount();
+
+        // credit card id and type are set
+        MatcherAssert.assertThat(account.getAccountId(), IsEqual.equalTo("1530257824995812"));
+        MatcherAssert.assertThat(account.getAccountType(), IsEqual.equalTo("CREDIT_CARD"));
+
+        // credit cards are not linked to any particular bank
+        MatcherAssert.assertThat(account.getBankId(), IsEqual.equalTo(null));
+
+        // there was one transaction in the file
+        final Map<LocalDate, List<OfxTransaction>> transactions = ofxExports.get(0).getTransactions();
+        MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(1));
+        final LocalDate key = transactions.keySet().stream().findFirst().get();
+        MatcherAssert.assertThat(key, IsEqual.equalTo(LocalDate.of(2020,11,7)));
+        final List<OfxTransaction> ofxTransactions = transactions.get(key);
+        MatcherAssert.assertThat(ofxTransactions.size(), IsEqual.equalTo(1));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getAccount(), IsEqual.equalTo(account));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getAmount(), IsEqual.equalTo(-13.99F));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getDate(), IsEqual.equalTo(key));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getName(), IsEqual.equalTo("NETFLIX.COM"));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getMemo(), IsEqual.equalTo("898-1629899 CA"));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getType(), IsEqual.equalTo("DEBIT"));
+    }
+
+    // TODO: fix is ready to commit!
+    @Test
+    void allAccountsAndCreditCardsReadTest() throws IOException, OFXParseException {
+        final OfxParser ofxParser = new OfxParser();
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(TWO_ACCOUNTS_ONE_CREDIT_CARD));
+
+        // there should be two accounts and one credit card
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(3));
+
+        // the first should be a checking account with two transactions
+        final OfxExport checking = ofxExports.get(0);
+        MatcherAssert.assertThat(checking.getAccount().getAccountId(), IsEqual.equalTo("078123116385"));
+        MatcherAssert.assertThat(checking.getAccount().getAccountType(), IsEqual.equalTo("CHECKING"));
+        MatcherAssert.assertThat(checking.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
+        assertTrue(checking.getTransactions().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(t -> t.getFitId().equalsIgnoreCase("90000410039201316C20DD355A88F")));
+        assertTrue(checking.getTransactions().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(t -> t.getFitId().equalsIgnoreCase("900000F0C40239126C001C35F9B43")));
+
+        // the second should be a savings account with two transactions
+        final OfxExport savings = ofxExports.get(1);
+        MatcherAssert.assertThat(savings.getAccount().getAccountId(), IsEqual.equalTo("228035462751"));
+        MatcherAssert.assertThat(savings.getAccount().getAccountType(), IsEqual.equalTo("SAVINGS"));
+        MatcherAssert.assertThat(savings.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
+        assertTrue(savings.getTransactions().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(t -> t.getFitId().equalsIgnoreCase("900000C0820601159S401A9FDD687")));
+        assertTrue(savings.getTransactions().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(t -> t.getFitId().equalsIgnoreCase("90000040080203123400260F7415D")));
+
+        // the third should be a credit card with one transaction
+        final OfxExport creditCard = ofxExports.get(2);
+        MatcherAssert.assertThat(creditCard.getAccount().getAccountId(), IsEqual.equalTo("3580452029974826"));
+        MatcherAssert.assertThat(creditCard.getAccount().getAccountType(), IsEqual.equalTo("CREDIT_CARD"));
+        MatcherAssert.assertThat(creditCard.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(1L));
+        assertTrue(creditCard.getTransactions().values().stream()
+                .flatMap(Collection::stream)
+                .anyMatch(t -> t.getFitId().equalsIgnoreCase("9000001302920F103V05373431CF1")));
     }
 
     private InputStream loadOfxFile(String filename) {
