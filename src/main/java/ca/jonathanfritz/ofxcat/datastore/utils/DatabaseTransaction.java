@@ -17,7 +17,7 @@ public class DatabaseTransaction implements Closeable {
 
     private final Connection connection;
 
-    private static Logger logger = LoggerFactory.getLogger(DatabaseTransaction.class);
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseTransaction.class);
 
     public DatabaseTransaction(Connection connection) {
         this.connection = connection;

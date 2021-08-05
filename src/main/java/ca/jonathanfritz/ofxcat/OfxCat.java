@@ -176,7 +176,7 @@ public class OfxCat {
     private enum Mode {
         IMPORT,
         GET,
-        HELP;
+        HELP
 
     }
     private static Concern getConcern(String[] args) {
@@ -192,7 +192,7 @@ public class OfxCat {
     private enum Concern {
         TRANSACTIONS,
         ACCOUNTS,
-        CATEGORIES;
+        CATEGORIES
     }
 
     private static OfxCatOptions getOptions(String[] args) throws CliException {

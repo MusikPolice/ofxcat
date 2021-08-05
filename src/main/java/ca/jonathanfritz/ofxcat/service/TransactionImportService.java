@@ -116,16 +116,14 @@ public class TransactionImportService {
                         return;
                     }
 
-                    // try to automatically categorize the transaction
-                    // fall back to prompting the user for a category if an exact match cannot be found
+                    // try to automatically categorize the transaction, prompting the user for a category if necessary
                     cli.printFoundNewTransaction(transaction);
-                    final CategorizedTransaction categorizedTransaction = transactionCategoryService.getCategoryExact(t, transaction)
-                            .orElse(cli.categorizeTransactionFuzzy(t, transaction));
-                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
-                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
-
+                    final CategorizedTransaction categorizedTransaction = transactionCategoryService.categorizeTransaction(t, transaction);
                     categorizedTransactionDao.insert(t, categorizedTransaction)
                             .ifPresent(categorizedTransactions::add);
+
+                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
+                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
 
                 } catch (SQLException e) {
                     logger.error("Failed to import transaction {}", transaction, e);

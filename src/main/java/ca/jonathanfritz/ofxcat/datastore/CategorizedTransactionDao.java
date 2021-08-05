@@ -120,15 +120,8 @@ public class CategorizedTransactionDao {
         return !results.isEmpty();
     }
 
-    /**
-     * Searches for transactions that have the same description and accountId as the specified transaction
-     * @param t the {@link DatabaseTransaction} to perform this operation on
-     * @param transaction the {@link Transaction} to search with
-     * @return a {@link List<CategorizedTransaction>} that have the same description and accountId as the specified transaction
-     * @throws SQLException if something goes wrong
-     */
-    public List<CategorizedTransaction> findByDescriptionAndAccountNumber(DatabaseTransaction t, Transaction transaction) throws SQLException {
-        logger.debug("Searching for transactions similar to {}", transaction);
+    public List<CategorizedTransaction> findByDescriptionAndAccountNumber(DatabaseTransaction t, String description, String accountNumber) throws SQLException {
+        logger.debug("Searching for transactions with description {} and account number {}", description, accountNumber);
         final String selectStatement = "SELECT c.* " +
                 "FROM CategorizedTransaction AS c " +
                 "INNER JOIN Account AS a " +
@@ -137,8 +130,34 @@ public class CategorizedTransactionDao {
                 "AND a.account_number = ?;";
 
         return t.query(selectStatement, ps -> {
-            ps.setString(1, transaction.getDescription());
-            ps.setString(2, transaction.getAccount().getAccountNumber());
+            ps.setString(1, description);
+            ps.setString(2, accountNumber);
+        }, categorizedTransactionDeserializer);
+    }
+
+    public List<CategorizedTransaction> findByDescriptionAndAccountNumber(DatabaseTransaction t, List<String> tokens, String accountNumber) throws SQLException {
+        logger.debug("Searching for transactions with description containing one of {} and account number {}", tokens, accountNumber);
+        final StringBuilder likeClauses = new StringBuilder("(");
+        for (int i = 0; i < tokens.size(); i++) {
+            if (likeClauses.length() != 0) {
+                likeClauses.append(" OR");
+            }
+            likeClauses.append("c.description LIKE %?%");
+        }
+        likeClauses.append(") ");
+
+        final String selectStatement = "SELECT DISTINCT c.* " +
+                "FROM CategorizedTransaction AS c " +
+                "INNER JOIN Account AS a " +
+                "ON c.account_id = a.id " +
+                "WHERE " + likeClauses.toString() +
+                "AND a.account_number = ?;";
+
+        return t.query(selectStatement, ps -> {
+            for (int i = 1; i == tokens.size(); i++) {
+                ps.setString(i, tokens.get(i - 1));
+            }
+            ps.setString(tokens.size() + 1, accountNumber);
         }, categorizedTransactionDeserializer);
     }
 
