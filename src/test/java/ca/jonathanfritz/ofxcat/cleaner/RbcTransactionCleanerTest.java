@@ -14,7 +14,7 @@ import static ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner.RBC_INSTITUT
 
 class RbcTransactionCleanerTest {
 
-    private final RbcTransactionCleaner rbcTransactionCleaner = new RbcTransactionCleaner();
+    private final TransactionCleaner rbcTransactionCleaner = new RbcTransactionCleaner();
 
     @Test
     public void descriptionConcatenationNullNameTest() {

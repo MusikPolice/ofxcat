@@ -63,7 +63,6 @@ class DescriptionCategoryDaoTest extends AbstractDatabaseTest {
         final DescriptionCategoryDao descriptionCategoryDao = new DescriptionCategoryDao(connection, categoryDao);
         final DescriptionCategory descriptionCategoryToInsert = new DescriptionCategory("Mens' Buy n' Sell", category);
         final DescriptionCategory insertedDescriptionCategory = descriptionCategoryDao.insert(descriptionCategoryToInsert).get();
-        final DescriptionCategory descriptionCategoryToInsert2 = new DescriptionCategory("Man Catcher", category);
         final DescriptionCategory insertedDescriptionCategory2 = descriptionCategoryDao.insert(descriptionCategoryToInsert).get();
 
         // select all and ensure that both are present in the results

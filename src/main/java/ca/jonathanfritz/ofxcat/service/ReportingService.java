@@ -8,8 +8,6 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.time.LocalDate;
@@ -24,8 +22,6 @@ public class ReportingService {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CLI cli;
-
-    private static final Logger logger = LoggerFactory.getLogger(ReportingService.class);
 
     @Inject
     public ReportingService(CategorizedTransactionDao categorizedTransactionDao, AccountDao accountDao, CategoryDao categoryDao, CLI cli) {

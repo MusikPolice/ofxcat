@@ -113,9 +113,8 @@ public class CategorizedTransactionDao {
         final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE " +
                 "fitId = ?;";
 
-        final List<CategorizedTransaction> results = t.query(selectStatement, ps -> {
-            ps.setString(1, transaction.getFitId());
-        }, categorizedTransactionDeserializer);
+        final List<CategorizedTransaction> results = t.query(selectStatement, ps ->
+                ps.setString(1, transaction.getFitId()), categorizedTransactionDeserializer);
 
         return !results.isEmpty();
     }
@@ -150,7 +149,7 @@ public class CategorizedTransactionDao {
                 "FROM CategorizedTransaction AS c " +
                 "INNER JOIN Account AS a " +
                 "ON c.account_id = a.id " +
-                "WHERE " + likeClauses.toString() +
+                "WHERE " + likeClauses +
                 "AND a.account_number = ?;";
 
         return t.query(selectStatement, ps -> {

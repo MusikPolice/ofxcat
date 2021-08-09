@@ -14,7 +14,6 @@ import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.*;
 
-import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Mockito.*;
 
 class ReportingServiceTest {

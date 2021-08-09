@@ -14,7 +14,7 @@ import static ca.jonathanfritz.ofxcat.cleaner.DefaultTransactionCleaner.DEFAULT_
 
 class DefaultTransactionCleanerTest {
 
-    private final DefaultTransactionCleaner defaultTransactionCleaner = new DefaultTransactionCleaner();
+    private final TransactionCleaner defaultTransactionCleaner = new DefaultTransactionCleaner();
 
     @Test
     public void descriptionConcatenationNullNameTest() {

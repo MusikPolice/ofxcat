@@ -172,15 +172,4 @@ public class TransactionCategoryService {
                     .or(() -> Optional.of(promptForNewCategoryName(transaction)));
         }
     }
-
-    /**
-     * Returns an alphabetically sorted list of all known category names
-     */
-    public List<String> getCategoryNames() {
-        return categoryDao.select().stream()
-                .map(Category::getName)
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
-    }
 }

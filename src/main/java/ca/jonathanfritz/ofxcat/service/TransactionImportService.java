@@ -58,7 +58,7 @@ public class TransactionImportService {
         cli.println("Loading transactions from file:");
         cli.println("value", inputFile.toString());
 
-        logger.debug("Attempting to parse file {}", inputFile.toString());
+        logger.debug("Attempting to parse file {}", inputFile);
         final List<OfxExport> ofxTransactions;
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
             ofxTransactions = ofxParser.parse(inputStream);

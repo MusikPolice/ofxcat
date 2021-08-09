@@ -4,7 +4,6 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;
@@ -29,7 +28,7 @@ public class CLI {
     private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
-    public CLI(TextIO textIO, TextIOWrapper textIOWrapper, TransactionCategoryService transactionCategoryService) {
+    public CLI(TextIO textIO, TextIOWrapper textIOWrapper) {
         this.textIO = textIO;
         this.textIOWrapper = textIOWrapper;
     }
