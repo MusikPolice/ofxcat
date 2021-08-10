@@ -84,7 +84,9 @@ public class CLI {
      */
     public Account assignAccountName(OfxAccount ofxAccount) {
         // prompt the user to enter a name for the account
-        textIO.getTextTerminal().print("\nFound new account with account number ");
+        textIO.getTextTerminal().print("\nFound new ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.print(ofxAccount.getAccountType()));
+        textIO.getTextTerminal().print(" account with account number ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(ofxAccount.getAccountId()));
 
         final String accountName = textIO.newStringInputReader()
@@ -130,6 +132,10 @@ public class CLI {
     }
 
     private void printTransaction(Transaction transaction) {
+        // fit id
+        textIO.getTextTerminal().print("Transaction Id: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getFitId()));
+
         // date
         textIO.getTextTerminal().print("Date: ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDate().toString()));
@@ -140,11 +146,7 @@ public class CLI {
 
         // amount
         textIO.getTextTerminal().print("Amount: ");
-        if (transaction.getAmount() >= 0) {
-            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "$%.2f", Math.abs(transaction.getAmount()))));
-        } else {
-            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "-$%.2f", Math.abs(transaction.getAmount()))));
-        }
+        printCurrencyValue(transaction.getAmount());
 
         // description
         textIO.getTextTerminal().print("Description: ");
@@ -153,6 +155,23 @@ public class CLI {
         // account name
         textIO.getTextTerminal().print("Account: ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getAccount().getName()));
+
+        // remaining balance
+        textIO.getTextTerminal().print("Balance: ");
+        printCurrencyValue(transaction.getBalance());
+    }
+
+    private void printCurrencyValue(float value) {
+        if (value >= 0) {
+            printCurrencyValue("$%.2f", value);
+        } else {
+            printCurrencyValue("-$%.2f", value);
+        }
+    }
+
+    private void printCurrencyValue(String formatString, float value) {
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->
+                t.println(String.format(java.util.Locale.US, formatString, Math.abs(value))));
     }
 
     public Optional<Category> chooseCategoryOrChooseAnother(List<Category> categories) {

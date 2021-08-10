@@ -138,10 +138,10 @@ public class CategorizedTransactionDao {
         logger.debug("Searching for transactions with description containing one of {} and account number {}", tokens, accountNumber);
         final StringBuilder likeClauses = new StringBuilder("(");
         for (int i = 0; i < tokens.size(); i++) {
-            if (likeClauses.length() != 0) {
-                likeClauses.append(" OR");
+            if (likeClauses.length() > 1) {
+                likeClauses.append(" OR ");
             }
-            likeClauses.append("c.description LIKE %?%");
+            likeClauses.append("c.description LIKE ?");
         }
         likeClauses.append(") ");
 
@@ -152,9 +152,11 @@ public class CategorizedTransactionDao {
                 "WHERE " + likeClauses +
                 "AND a.account_number = ?;";
 
+        logger.debug(selectStatement);
+
         return t.query(selectStatement, ps -> {
             for (int i = 1; i == tokens.size(); i++) {
-                ps.setString(i, tokens.get(i - 1));
+                ps.setString(i, "%" + tokens.get(i - 1) + "%");
             }
             ps.setString(tokens.size() + 1, accountNumber);
         }, categorizedTransactionDeserializer);

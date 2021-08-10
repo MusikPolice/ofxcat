@@ -185,7 +185,8 @@ public class OfxParser {
                     logger.debug("Parsed transaction {}", transactionBuilder.build());
                 } else if (LEDGERBAL.equalsIgnoreCase(name)) {
                     isLedgerBalanceActive = false;
-                    logger.debug("Recorded balance {} for account {}", accountBalances.get(currentAccount), currentAccount.getAccountId());
+                    final OfxBalance ofxBalance = accountBalances.get(currentAccount).build();
+                    logger.debug("Recorded a balance of ${} on {} for account {}", ofxBalance.getAmount(), ofxBalance.getDate().toString(), currentAccount.getAccountId());
                 }
             }
 
