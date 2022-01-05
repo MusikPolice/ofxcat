@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 
 class CLITest extends AbstractDatabaseTest {
 
+    // TODO: this throws java.sql.SQLException: database in auto-commit mode
     @Test
     void categorizeTransactionFuzzySingleMatchTest() throws SQLException {
         // one fuzzy match is returned, user is prompted to verify association
