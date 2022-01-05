@@ -152,8 +152,6 @@ public class CategorizedTransactionDao {
                 "WHERE " + likeClauses +
                 "AND a.account_number = ?;";
 
-        logger.debug(selectStatement);
-
         return t.query(selectStatement, ps -> {
             for (int i = 1; i == tokens.size(); i++) {
                 ps.setString(i, "%" + tokens.get(i - 1) + "%");
