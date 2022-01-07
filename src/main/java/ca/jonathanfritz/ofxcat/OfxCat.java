@@ -13,9 +13,9 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.flywaydb.core.Flyway;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -37,7 +37,7 @@ public class OfxCat {
     private final PathUtils pathUtils;
     private final CLI cli;
 
-    private static final Logger log = LoggerFactory.getLogger(OfxCat.class);
+    private static final Logger logger = LogManager.getLogger(OfxCat.class);
 
     @Inject
     OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService, PathUtils pathUtils, CLI cli) {
@@ -49,9 +49,9 @@ public class OfxCat {
     }
 
     private void migrateDatabase() {
-        log.debug("Attempting to migrate database schema...");
+        logger.debug("Attempting to migrate database schema...");
         flyway.migrate();
-        log.info("Database schema migration complete");
+        logger.info("Database schema migration complete");
     }
 
     private void importTransactions(String path) throws OfxCatException {

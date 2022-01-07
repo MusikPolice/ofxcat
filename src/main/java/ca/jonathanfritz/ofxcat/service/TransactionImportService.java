@@ -5,18 +5,18 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.utils.Accumulator;
 import com.webcohesion.ofx4j.io.OFXParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -40,7 +40,7 @@ public class TransactionImportService {
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionCategoryService transactionCategoryService;
 
-    private static final Logger logger = LoggerFactory.getLogger(TransactionImportService.class);
+    private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
     public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService) {

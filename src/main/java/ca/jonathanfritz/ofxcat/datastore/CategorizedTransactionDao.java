@@ -10,8 +10,8 @@ import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
 import com.google.common.collect.Streams;
 import com.google.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -26,7 +26,7 @@ public class CategorizedTransactionDao {
     private final Connection connection;
     private final SqlFunction<TransactionState, List<CategorizedTransaction>> categorizedTransactionDeserializer;
 
-    private static final Logger logger = LoggerFactory.getLogger(CategorizedTransactionDao.class);
+    private static final Logger logger = LogManager.getLogger(CategorizedTransactionDao.class);
 
     @Inject
     public CategorizedTransactionDao(Connection connection, AccountDao accountDao, CategoryDao categoryDao) {

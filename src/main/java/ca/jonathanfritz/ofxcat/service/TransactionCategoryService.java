@@ -13,8 +13,8 @@ import com.google.inject.Inject;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.BoundExtractedResult;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -29,7 +29,7 @@ public class TransactionCategoryService {
     private final Connection connection;
     private final CLI cli;
 
-    private static final Logger logger = LoggerFactory.getLogger(TransactionCategoryService.class);
+    private static final Logger logger = LogManager.getLogger(TransactionCategoryService.class);
 
     @Inject
     public TransactionCategoryService(CategoryDao categoryDao, DescriptionCategoryDao descriptionCategoryDao, CategorizedTransactionDao categorizedTransactionDao, Connection connection, CLI cli) {

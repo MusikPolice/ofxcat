@@ -1,16 +1,18 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import ca.jonathanfritz.ofxcat.datastore.dto.Category;
-import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import com.google.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +23,7 @@ public class DescriptionCategoryDao {
     private final CategoryDao categoryDao;
     private final SqlFunction<TransactionState, List<DescriptionCategory>> descriptionCategoryDeserializer;
 
-    private static final Logger logger = LoggerFactory.getLogger(DescriptionCategoryDao.class);
+    private static final Logger logger = LogManager.getLogger(DescriptionCategoryDao.class);
 
     @Inject
     public DescriptionCategoryDao(Connection connection, CategoryDao categoryDao) {

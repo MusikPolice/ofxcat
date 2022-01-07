@@ -1,0 +1,24 @@
+Configuration:
+  status: warn
+  Appenders:
+    File:
+      name: File_Appender
+      fileName: ${sys:user.home}/.ofxcat/ofxcat.log
+      PatternLayout:
+        Pattern: "%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"
+  Loggers:
+    logger:
+      - name: ca.jonathanfritz.ofxcat
+        level: all
+        additivity: false
+        AppenderRef:
+          ref: File_Appender
+      - name: org.flywaydb
+        level: info
+        additivity: false
+        AppenderRef:
+          ref: File_Appender
+    Root:
+      level: debug
+      AppenderRef:
+        ref: File_Appender
