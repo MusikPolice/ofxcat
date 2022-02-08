@@ -68,7 +68,7 @@ class TransactionImportServiceTest {
 
         try {
             // actually run the test
-            final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, null, null, null, null);
+            final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, null, null, null, null, null);
             transactionImportService.categorizeTransactions(ofxExports);
             Assertions.fail("Expected a RuntimeException to be thrown");
         } catch (RuntimeException ex) {
@@ -114,7 +114,7 @@ class TransactionImportServiceTest {
 
         // actually run the test
         final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(null, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, null);
+        final TransactionImportService transactionImportService = new TransactionImportService(null, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, null, null);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 

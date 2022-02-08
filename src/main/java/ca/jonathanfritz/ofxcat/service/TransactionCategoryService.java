@@ -83,6 +83,7 @@ public class TransactionCategoryService {
         }
 
         // there were no partial matches - just prompt for a new category name
+        // TODO: this should let us choose from existing categories OR enter a new name
         return promptForNewCategoryName(transaction);
     }
 

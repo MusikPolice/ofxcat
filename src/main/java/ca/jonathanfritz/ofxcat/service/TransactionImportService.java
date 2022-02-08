@@ -5,6 +5,7 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
@@ -39,11 +40,12 @@ public class TransactionImportService {
     private final Connection connection;
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionCategoryService transactionCategoryService;
+    private final CategoryDao categoryDao;
 
     private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -51,6 +53,7 @@ public class TransactionImportService {
         this.connection = connection;
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.transactionCategoryService = transactionCategoryService;
+        this.categoryDao = categoryDao;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -118,14 +121,25 @@ public class TransactionImportService {
 
                     // try to automatically categorize the transaction, prompting the user for a category if necessary
                     cli.printFoundNewTransaction(transaction);
-                    final CategorizedTransaction categorizedTransaction = transactionCategoryService.categorizeTransaction(t, transaction);
+                    CategorizedTransaction categorizedTransaction = transactionCategoryService.categorizeTransaction(t, transaction);
+                    if (categorizedTransaction.getCategory().getId() == null) {
+                        // this is a new category, so we have to insert it before inserting the categorized transaction
+                        final Transaction newTransaction = categorizedTransaction.getTransaction();
+                        final String newCategoryName = categorizedTransaction.getCategory().getName();
+                        categorizedTransaction = categoryDao.insert(t, categorizedTransaction.getCategory())
+                            .map(newCategory ->
+                                    new CategorizedTransaction(newTransaction, newCategory)
+                            ).orElseThrow(() ->
+                                    new OfxCatException(String.format("Failed to insert new Category %s", newCategoryName))
+                            );
+                    }
                     categorizedTransactionDao.insert(t, categorizedTransaction)
                             .ifPresent(categorizedTransactions::add);
 
                     cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
                     logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
 
-                } catch (SQLException e) {
+                } catch (SQLException | OfxCatException e) {
                     logger.error("Failed to import transaction {}", transaction, e);
                 }
             });

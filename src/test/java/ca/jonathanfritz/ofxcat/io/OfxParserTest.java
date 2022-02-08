@@ -128,7 +128,6 @@ class OfxParserTest {
         MatcherAssert.assertThat(ofxTransactions.get(0).getType(), IsEqual.equalTo("DEBIT"));
     }
 
-    // TODO: fix is ready to commit!
     @Test
     void allAccountsAndCreditCardsReadTest() throws IOException, OFXParseException {
         final OfxParser ofxParser = new OfxParser();

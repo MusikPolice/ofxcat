@@ -109,7 +109,7 @@ public class CategoryDao {
         }
     }
 
-    Optional<Category> insert(DatabaseTransaction t, Category categoryToInsert) {
+    public Optional<Category> insert(DatabaseTransaction t, Category categoryToInsert) {
         try {
             logger.debug("Attempting to insert Category {}", categoryToInsert);
             final String insertStatement = "INSERT INTO Category (name) VALUES (?);";
