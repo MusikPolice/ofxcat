@@ -89,7 +89,7 @@ public class CategoryDao {
     public List<Category> select() {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to select all Category objects");
-            final String selectStatement = "SELECT * FROM Category;";
+            final String selectStatement = "SELECT * FROM Category ORDER BY name ASC;";
             return t.query(selectStatement, categoryDeserializer);
         } catch (SQLException e) {
             logger.error("Failed to select all Category objects", e);

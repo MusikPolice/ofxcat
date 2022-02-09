@@ -71,20 +71,21 @@ public class TransactionCategoryService {
 
     public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
         // try an exact match first
+        // TODO: Includes account number in search - consider dropping req to re-use categorizations between checking/visa?
         Optional<CategorizedTransaction> categorizedTransaction = categorizeTransactionExactMatch(t, transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
         }
 
         // if that doesn't work, try a partial match
+        // TODO: Includes account number in search - consider dropping req to re-use categorizations between checking/visa?
         categorizedTransaction = categorizeTransactionPartialMatch(t, transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
         }
 
         // there were no partial matches - just prompt for a new category name
-        // TODO: this should let us choose from existing categories OR enter a new name
-        return promptForNewCategoryName(transaction);
+        return chooseExistingCategoryOrAddNew(transaction);
     }
 
     private Optional<CategorizedTransaction> categorizeTransactionExactMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
@@ -106,7 +107,7 @@ public class TransactionCategoryService {
             // there is more than one potential category - prompt the user to choose
             logger.info("New transaction description and account number exactly match that of {} existing transactions " +
                     "with {} distinct categories", categorizedTransactions.size(), distinctCategories.size());
-            return chooseCategoryOrAddNewCategory(transaction, distinctCategories);
+            return Optional.of(chooseCategoryFromListOrAddNew(transaction, distinctCategories));
         }
     }
 
@@ -151,26 +152,43 @@ public class TransactionCategoryService {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-            return chooseCategoryOrAddNewCategory(transaction, choices);
+            return Optional.of(chooseCategoryFromListOrAddNew(transaction, choices));
         }
     }
 
+    /**
+     * Prompts the user to pick a category from the specified list, with the option to pick from the wider list of
+     * all categories, or to add a new category. The chosen category will be associated with the specified transaction
+     */
+    private CategorizedTransaction chooseCategoryFromListOrAddNew(Transaction transaction, List<Category> choices) {
+        Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
+        return chosenCategory.map(category -> new CategorizedTransaction(transaction, category))
+                .orElseGet(() -> chooseExistingCategoryOrAddNew(transaction));
+    }
+
+    /**
+     * Prompts the user to choose a category from the list of all known categories, with the option to add a new category
+     * if none suffice. The chosen category will be associated with the specified transaction
+     */
+    private CategorizedTransaction chooseExistingCategoryOrAddNew(Transaction transaction) {
+        final List<Category> allCategories = categoryDao.select();
+        if (allCategories.size() > 0) {
+            // choose one from the list of all known categories
+            final Optional<Category> chosenCategory = cli.chooseCategoryOrAddNew(allCategories);
+            if (chosenCategory.isPresent()) {
+                return new CategorizedTransaction(transaction, chosenCategory.get());
+            }
+        }
+
+        // there are no known categories or the user chose to add a new category
+        return promptForNewCategoryName(transaction);
+    }
+
+    /**
+     * Prompts the user to choose a new category name, associates it with the specified transaction
+     */
     private CategorizedTransaction promptForNewCategoryName(Transaction transaction) {
         final String newCategoryName = cli.promptForNewCategoryName();
         return new CategorizedTransaction(transaction, new Category(newCategoryName));
-    }
-
-    private Optional<CategorizedTransaction> chooseCategoryOrAddNewCategory(Transaction transaction, List<Category> choices) {
-        Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
-        if (chosenCategory.isPresent()) {
-            return Optional.of(new CategorizedTransaction(transaction, chosenCategory.get()));
-        } else {
-            // the user doesn't like any of our matches - allow them to pick from the full set of categories
-            final List<Category> allCategories = categoryDao.select();
-            chosenCategory = cli.chooseCategoryOrAddNew(allCategories);
-            // the user doesn't like any of the existing categories - allow them to add a new one
-            return chosenCategory.map(category -> new CategorizedTransaction(transaction, category))
-                    .or(() -> Optional.of(promptForNewCategoryName(transaction)));
-        }
     }
 }

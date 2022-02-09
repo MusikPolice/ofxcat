@@ -59,6 +59,9 @@ public class OfxCat {
         if (!(Files.exists(pathToImportFile) && Files.isReadable(pathToImportFile))) {
             throw new CliException("Import file path either does not exist or cannot be read");
         }
+
+        // TODO: show a progress bar?
+        // TODO: retain scrolling list of categorizations on screen
         transactionImportService.importTransactions(pathToImportFile.toFile());
 
         try {

@@ -45,11 +45,18 @@ public class ReportingService {
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue, Float::sum));
 
         // print categories sorted by total amount spent descending
+        cli.println(String.format("Categorized spending from %s to %s", startDate, endDate));
         cli.println(Streams.concat(
                 Stream.of("Category,Amount Spent"),
                 transactions.entrySet().stream()
                         .sorted(Map.Entry.comparingByValue((sum1, sum2) -> sum1.compareTo(sum2) * -1))
-                        .map(entry -> String.format("%s,$%.2f", entry.getKey().getName(), entry.getValue()))
+                        .map(entry -> {
+                            if (entry.getValue() > 0) {
+                                return String.format("%s,$%.2f", entry.getKey().getName(), entry.getValue());
+                            } else {
+                                return String.format("%s,-$%.2f", entry.getKey().getName(), entry.getValue()*-1);
+                            }
+                        })
             ).collect(Collectors.toList())
         );
     }
