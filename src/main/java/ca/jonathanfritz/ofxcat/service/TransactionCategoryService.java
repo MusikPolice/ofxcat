@@ -70,6 +70,8 @@ public class TransactionCategoryService {
         return new CategorizedTransaction(newTransaction, descriptionCategory.getCategory());
     }
 
+    // TODO: never auto-categorize as UNKNOWN! Always prompt user
+    // TODO: why does LCBO/RAO not auto-categorize?
     public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
         // try an exact match first
         // TODO: Includes account number in search - consider dropping req to re-use categorizations between checking/visa?

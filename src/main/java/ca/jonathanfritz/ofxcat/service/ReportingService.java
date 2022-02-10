@@ -13,7 +13,11 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
 import java.time.LocalDate;
-import java.util.*;
+import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +40,7 @@ public class ReportingService {
     /**
      * Prints out a CSV list of categories and the total amount spent in each between the specified dates
      * TODO: add a table-formatted option
+     * TODO: print a matrix with categories on x, months on y, so that we can graph expenses in each category over time
      */
     public void reportTransactions(LocalDate startDate, LocalDate endDate) {
         // get all transactions in the specified date range, grouped by category
@@ -54,6 +59,9 @@ public class ReportingService {
                 .max(Comparator.naturalOrder())
                 .orElse(endDate);
 
+        final long days = Math.abs(ChronoUnit.DAYS.between(minDate, maxDate));
+        final float months = days / (365/12F);
+
         // figure out how much money was spent in each category over the entirety of the specified date range
         final Map<Category, Float> categorySums = categorizedTransactions.entrySet().stream()
                 .map(entry -> Pair.of(
@@ -64,23 +72,46 @@ public class ReportingService {
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue, Float::sum));
 
         // print categories sorted by total amount spent descending
-        cli.println(String.format("Categorized spending from %s to %s", minDate, maxDate));
+        cli.println(String.format("Total spending from %s to %s", minDate, maxDate));
         cli.println(Streams.concat(
                 Stream.of("Category, Spend"),
                 categorySums.entrySet().stream()
-                        .sorted(Map.Entry.comparingByValue((sum1, sum2) ->
-                                // sort by absolute value descending
-                                Float.compare(Math.abs(sum1), Math.abs(sum2)) * -1)
-                        )
-                        .map(entry -> {
-                            if (entry.getValue() > 0) {
-                                return String.format("%s,$%.2f", entry.getKey().getName(), entry.getValue());
-                            } else {
-                                return String.format("%s,-$%.2f", entry.getKey().getName(), entry.getValue()*-1);
-                            }
-                        })
+                        .sorted(Map.Entry.comparingByValue(absoluteValueDescendingComparator()))
+                        .map(this::printCategorySpend)
             ).collect(Collectors.toList())
         );
+
+        // print categories sorted by total amount spent descending
+        cli.println("\n\n");
+        cli.println(String.format("Average Monthly spending from %s to %s", minDate, maxDate));
+        cli.println(Streams.concat(
+                        Stream.of("Category, Spend"),
+                        categorySums.entrySet().stream()
+                                .map(categoryFloatEntry ->
+                                        // divide each spend amount by the number of months spanned by our date range
+                                        Map.entry(categoryFloatEntry.getKey(), categoryFloatEntry.getValue() / months)
+                                )
+                                .sorted(Map.Entry.comparingByValue(absoluteValueDescendingComparator()))
+                                .map(this::printCategorySpend)
+                ).collect(Collectors.toList())
+        );
+    }
+
+    private Comparator<Float> absoluteValueDescendingComparator() {
+        return (sum1, sum2) -> {
+                // sort by absolute value descending
+                return Float.compare(Math.abs(sum1), Math.abs(sum2)) * -1;
+            };
+    }
+
+    private String printCategorySpend(Map.Entry<Category, Float> entry) {
+        final String category = entry.getKey().getName();
+        final float spend = entry.getValue();
+        if (spend > 0) {
+            return String.format("%s,$%.2f", category, spend);
+        } else {
+            return String.format("%s,-$%.2f", category, spend * -1);
+        }
     }
 
     /**

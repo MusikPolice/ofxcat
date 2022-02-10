@@ -18,6 +18,8 @@ import java.util.stream.Stream;
 public class RbcTransactionCleaner implements TransactionCleaner {
 
     // TODO: don't discard account numbers - we can match them to other accounts to improve UI
+    // TODO: credit card purchases in USD have description suffix like 14.99 @USD 0.80000001233 to show currency conversion
+    //       discard this suffix b/c it confuses the auto categorization
     private static final List<Pattern> patternsToDiscard = Arrays.asList(
             // Interac purchase
             Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
