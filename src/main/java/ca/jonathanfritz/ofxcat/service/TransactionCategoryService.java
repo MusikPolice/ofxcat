@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+// TODO: Test me!
 public class TransactionCategoryService {
 
     private final CategoryDao categoryDao;

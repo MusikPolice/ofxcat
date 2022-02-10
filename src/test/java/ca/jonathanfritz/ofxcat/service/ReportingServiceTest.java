@@ -114,6 +114,7 @@ class ReportingServiceTest {
                 String.format("%s,$7.00", restaurants.getName())
         );
         Mockito.verify(mockTransactionsDao, times(1)).selectGroupByCategory(any(LocalDate.class), any(LocalDate.class));
+        Mockito.verify(mockCli, times(1)).println(anyString());
         Mockito.verify(mockCli, times(1)).println(expectedLines);
         Mockito.verifyNoMoreInteractions(mockTransactionsDao, mockCli);
     }
