@@ -128,5 +128,27 @@ class RbcTransactionCleanerTest {
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER"));
     }
 
+    @Test
+    public void interacEtransferSentTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("Email Trfs")
+                .setMemo("E-TRANSFER SENT ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER E-TRANSFER SENT"));
+    }
+
+    @Test
+    public void usdPurchaseTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("SUBSTACK SUBSTACK.COM CA  ")
+                .setMemo("5.00 USD @ 1.308000000000")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("SUBSTACK SUBSTACK.COM CA (USD PURCHASE)"));
+    }
+
     // TODO: test patterns to remove/replace regexes
 }

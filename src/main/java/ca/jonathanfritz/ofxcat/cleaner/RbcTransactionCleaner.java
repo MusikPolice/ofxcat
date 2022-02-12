@@ -18,8 +18,6 @@ import java.util.stream.Stream;
 public class RbcTransactionCleaner implements TransactionCleaner {
 
     // TODO: don't discard account numbers - we can match them to other accounts to improve UI
-    // TODO: credit card purchases in USD have description suffix like 14.99 @USD 0.80000001233 to show currency conversion
-    //       discard this suffix b/c it confuses the auto categorization
     private static final List<Pattern> patternsToDiscard = Arrays.asList(
             // Interac purchase
             Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
@@ -62,6 +60,7 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
     public RbcTransactionCleaner() {
         // online transfer between accounts - groups with WWW TRANSFER
+        // TODO: it would be great if these were recognized as transfers
         patternsToReplace.put(Pattern.compile("^WWW TRF DDA - \\d+.*$"), "TRANSFER");
 
         // Interac e-transfer with autodeposit
@@ -72,6 +71,10 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // Personal loan repayment (car loan, small business loan, etc)
         patternsToReplace.put(Pattern.compile("^PERSONAL LOAN$"), "PERSONAL LOAN REPAYMENT");
+
+        // Purchases made in USD have MEMO like "5.00 USD @ 1.308000000000" to indicate currency conversion
+        // these tend to confuse the auto-categorization algorithm, so discard them
+        patternsToReplace.put(Pattern.compile("^\\d*\\.\\d*\\sUSD*\\s@\\s\\d*.\\d*$"), "(USD PURCHASE)");
     }
 
     @Override
