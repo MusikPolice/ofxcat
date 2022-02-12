@@ -1,10 +1,12 @@
 package ca.jonathanfritz.ofxcat.io;
 
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
+
 import java.time.LocalDate;
 import java.util.Objects;
 
 public class OfxTransaction {
-    private final String type;
+    private final TransactionType type;
     private final LocalDate date;
     private final float amount;
     private final String fitId; // bank id, followed by date in format yyyymmdd, followed by 12 character hex string
@@ -22,7 +24,7 @@ public class OfxTransaction {
         this.account = transactionBuilder.account;
     }
 
-    public String getType() {
+    public TransactionType getType() {
         return type;
     }
 
@@ -97,7 +99,7 @@ public class OfxTransaction {
     }
 
     public static class TransactionBuilder {
-        private String type;
+        private TransactionType type;
         private LocalDate date;
         private float amount;
         private String fitId;
@@ -107,7 +109,7 @@ public class OfxTransaction {
 
         private TransactionBuilder() {}
 
-        public TransactionBuilder setType(String type) {
+        public TransactionBuilder setType(TransactionType type) {
             this.type = type;
             return this;
         }

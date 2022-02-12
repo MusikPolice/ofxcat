@@ -1,5 +1,6 @@
 package ca.jonathanfritz.ofxcat.io;
 
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import com.webcohesion.ofx4j.io.OFXHandler;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import com.webcohesion.ofx4j.io.OFXReader;
@@ -103,7 +104,7 @@ public class OfxParser {
 
                     // transaction information
                     case TRNTYPE:
-                        transactionBuilder.setType(value);
+                        transactionBuilder.setType(TransactionType.valueOf(value));
                         break;
                     case DTPOSTED:
                         try {

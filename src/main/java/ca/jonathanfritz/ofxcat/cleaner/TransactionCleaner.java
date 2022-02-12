@@ -35,8 +35,15 @@ public interface TransactionCleaner {
      * If there is no field match, {@link Transaction.TransactionType#OTHER} is returned.
      */
     default Transaction.TransactionType categorizeTransactionType(final OfxTransaction ofxTransaction) {
+        // if type is undefined, treat it as OTHER
+        final String name = ofxTransaction.getType() == null ?
+                Transaction.TransactionType.OTHER.name() :
+                ofxTransaction.getType().name();
+
+        // map the enum values from one to the other - this works because our internal TransactionType enum is identical
+        // to the TransactionType enum from the OFX library
         return Arrays.stream(Transaction.TransactionType.values())
-                .filter(transactionType -> transactionType.toString().equalsIgnoreCase(ofxTransaction.getType()))
+                .filter(type -> type.name().equalsIgnoreCase(name))
                 .findFirst()
                 .orElse(Transaction.TransactionType.OTHER);
     }

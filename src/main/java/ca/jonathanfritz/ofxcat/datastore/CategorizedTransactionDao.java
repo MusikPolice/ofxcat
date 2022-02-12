@@ -102,7 +102,7 @@ public class CategorizedTransactionDao {
     }
 
     /**
-     * Checks to see if the specified {@link Transaction} already exists in the database
+     * Checks to see if a transaction exists in the database that has the same fitId as the specified {@link Transaction}
      * @param t the {@link DatabaseTransaction} to perform this operation on
      * @param transaction the Transaction to look for
      * @return true if the specified Transaction already exists, false otherwise
