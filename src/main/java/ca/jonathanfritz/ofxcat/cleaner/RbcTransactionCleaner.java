@@ -17,7 +17,6 @@ import java.util.stream.Stream;
  */
 public class RbcTransactionCleaner implements TransactionCleaner {
 
-    // TODO: don't discard account numbers - we can match them to other accounts to improve UI
     private static final List<Pattern> patternsToDiscard = Arrays.asList(
             // Interac purchase
             Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
@@ -59,11 +58,11 @@ public class RbcTransactionCleaner implements TransactionCleaner {
     public RbcTransactionCleaner() {
         // replaces NAME field of outgoing transfer from one account to another
         // these transactions do not have a MEMO field
-        patternsToReplace.put(Pattern.compile("^WWW TRF DDA - \\d+.*$"), "TRANSFER TO ACCOUNT");
+        patternsToReplace.put(Pattern.compile("^WWW TRF DDA - \\d+.*$"), "TRANSFER OUT OF ACCOUNT");
 
         // replaces MEMO field of incoming transfer from one account to another
         // the NAME field already contains the string "TRANSFER", so the description will be "TRANSFER FROM ACCOUNT"
-        patternsToReplace.put(Pattern.compile("^WWW TRANSFER - \\d+.*$"), "FROM ACCOUNT");
+        patternsToReplace.put(Pattern.compile("^WWW TRANSFER - \\d+.*$"), "INTO ACCOUNT");
 
         // replaces NAME field of Interac e-transfer autodeposit with human-readable string
         patternsToReplace.put(Pattern.compile("^E-TRF AUTODEPOSIT$"), "INTERAC E-TRANSFER AUTO-DEPOSIT");
@@ -77,6 +76,9 @@ public class RbcTransactionCleaner implements TransactionCleaner {
         // Purchases made in USD have MEMO like "5.00 USD @ 1.308000000000" to indicate currency conversion
         // these tend to confuse the auto-categorization algorithm, so discard them
         patternsToReplace.put(Pattern.compile("^\\d*\\.\\d*\\sUSD*\\s@\\s\\d*.\\d*$"), "(USD PURCHASE)");
+
+        // Sending money via Interac E-Transfer can incur service charges. Replaces the NAME field of these charges
+        patternsToReplace.put(Pattern.compile("^INTERAC-SC-\\d+$"), "INTERAC E-TRANSFER SERVICE CHARGE");
     }
 
     @Override

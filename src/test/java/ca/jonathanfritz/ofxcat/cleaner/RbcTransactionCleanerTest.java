@@ -162,7 +162,7 @@ class RbcTransactionCleanerTest {
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
-        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER TO ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER OUT OF ACCOUNT"));
     }
 
     @Test
@@ -177,7 +177,21 @@ class RbcTransactionCleanerTest {
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
-        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER FROM ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER INTO ACCOUNT"));
+    }
+
+    @Test
+    public void interacServiceChargeTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setDate(LocalDate.of(2021,9,13))
+                .setAmount(-2.00f)
+                .setFitId("90000010020210913S001F508AFAB")
+                .setName("INTERAC-SC-7891                 ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER SERVICE CHARGE"));
     }
 
     // TODO: test patterns to remove/replace regexes

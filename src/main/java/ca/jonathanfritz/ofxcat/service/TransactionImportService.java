@@ -112,6 +112,9 @@ public class TransactionImportService {
                     .map(builder -> builder.setAccount(account).build());
             logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), balanceAccumulator.getCurrentValue());
 
+            // TODO: scan transactions to identify transfers between accounts
+            //       unfortunately, this may be RBC-specific. Should it go into the RbcTransactionCleaner in some way?
+
             // filter out duplicates, categorize transactions, and insert them into the database
             transactionStream.forEach(transaction -> {
                 try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
