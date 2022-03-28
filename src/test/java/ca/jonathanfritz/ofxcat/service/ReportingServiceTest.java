@@ -8,6 +8,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -83,6 +84,7 @@ class ReportingServiceTest {
     }
 
     @Test
+    @Disabled("Reporting has been temporarily changed. See https://github.com/MusikPolice/ofxcat/issues/18")
     void reportTransactionsTest() {
         final Category groceries = new Category("GROCERIES");
         final Category restaurants = new Category("RESTAURANTS");
