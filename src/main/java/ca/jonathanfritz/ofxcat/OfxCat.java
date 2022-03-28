@@ -119,6 +119,7 @@ public class OfxCat {
         ));
     }
 
+    // TODO: add a mode that allows reprocessing of transactions from some category
     public static void main(String[] args) throws OfxCatException {
         final PathUtils pathUtils = new PathUtils();
         final OfxCat ofxCat = initializeApplication(pathUtils);

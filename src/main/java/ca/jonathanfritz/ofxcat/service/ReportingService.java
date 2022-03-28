@@ -82,7 +82,7 @@ public class ReportingService {
         );
 
         // print categories sorted by total amount spent descending
-        /*cli.println("\n\n");
+        cli.println("\n\n");
         cli.println(String.format("Average Monthly spending from %s to %s", minDate, maxDate));
         cli.println(Streams.concat(
                         Stream.of("Category, Spend"),
@@ -94,7 +94,7 @@ public class ReportingService {
                                 .sorted(Map.Entry.comparingByValue(absoluteValueDescendingComparator()))
                                 .map(this::printCategorySpend)
                 ).collect(Collectors.toList())
-        );*/
+        );
     }
 
     private Comparator<Float> absoluteValueDescendingComparator() {

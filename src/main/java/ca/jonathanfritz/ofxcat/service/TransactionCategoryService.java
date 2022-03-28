@@ -110,7 +110,7 @@ public class TransactionCategoryService {
             // there is more than one potential category - prompt the user to choose
             logger.info("New transaction description and account number exactly match that of {} existing transactions " +
                     "with {} distinct categories", categorizedTransactions.size(), distinctCategories.size());
-            return Optional.of(chooseCategoryFromListOrAddNew(transaction, distinctCategories));
+            return chooseCategoryFromList(transaction, distinctCategories);
         }
     }
 
@@ -155,18 +155,18 @@ public class TransactionCategoryService {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-            return Optional.of(chooseCategoryFromListOrAddNew(transaction, choices));
+            return chooseCategoryFromList(transaction, choices);
         }
     }
 
     /**
-     * Prompts the user to pick a category from the specified list, with the option to pick from the wider list of
-     * all categories, or to add a new category. The chosen category will be associated with the specified transaction
+     * Prompts the user to pick a category from the specified list. If the user chooses a category, it will be
+     * associated with the specified transaction. Otherwise, returns Optional.empty()
      */
-    private CategorizedTransaction chooseCategoryFromListOrAddNew(Transaction transaction, List<Category> choices) {
-        Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
-        return chosenCategory.map(category -> new CategorizedTransaction(transaction, category))
-                .orElseGet(() -> chooseExistingCategoryOrAddNew(transaction));
+    private Optional<CategorizedTransaction> chooseCategoryFromList(Transaction transaction, List<Category> choices) {
+        final Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
+        return Optional.of(chosenCategory.map(category -> new CategorizedTransaction(transaction, category)))
+                .orElse(Optional.empty());
     }
 
     /**
