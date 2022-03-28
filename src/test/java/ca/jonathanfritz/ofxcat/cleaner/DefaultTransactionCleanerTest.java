@@ -2,6 +2,7 @@ package ca.jonathanfritz.ofxcat.cleaner;
 
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ import static ca.jonathanfritz.ofxcat.cleaner.DefaultTransactionCleaner.DEFAULT_
 
 class DefaultTransactionCleanerTest {
 
-    private final DefaultTransactionCleaner defaultTransactionCleaner = new DefaultTransactionCleaner();
+    private final TransactionCleaner defaultTransactionCleaner = new DefaultTransactionCleaner();
 
     @Test
     public void descriptionConcatenationNullNameTest() {
@@ -79,7 +80,7 @@ class DefaultTransactionCleanerTest {
     @Test
     public void matchingTypeTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
-                .setType("atm")
+                .setType(TransactionType.ATM)
                 .build();
 
         final Transaction transaction = defaultTransactionCleaner.clean(ofxTransaction).build();

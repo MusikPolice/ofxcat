@@ -1,5 +1,6 @@
 package ca.jonathanfritz.ofxcat.io;
 
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.Is;
@@ -21,7 +22,7 @@ class OfxParserTest {
     private static final String ONE_ACCOUNT_OFX = "oneaccount.ofx";
     private static final String TWO_ACCOUNTS_OFX = "twoaccounts.ofx";
     private static final String CREDIT_CARD_OFX = "creditcard.ofx";
-    private String TWO_ACCOUNTS_ONE_CREDIT_CARD = "twoaccountsonecreditcard.ofx";
+    private final String TWO_ACCOUNTS_ONE_CREDIT_CARD = "twoaccountsonecreditcard.ofx";
 
     // this test data matches the contents of the two ofx files
     private static final LocalDate december10th2018 = LocalDate.of(2018, 12, 10);
@@ -31,12 +32,12 @@ class OfxParserTest {
             .setBankId("900000100")
             .build();
     private static final List<OfxTransaction> expectedAccount1Transactions = Arrays.asList(
-            OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-31.21f).setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY").setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("POS").setDate(december10th2018).setAmount(-61.4f).setFitId("90000010020181210D02197E2FA27").setName("WILD WING").setMemo("IDP PURCHASE - 8381").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("ATM").setDate(december10th2018).setAmount(-360.0f).setFitId("90000010020181210D0219652EA07").setName("Withdrawal").setMemo("PTB WD --- KB681166").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("CREDIT").setDate(december10th2018).setAmount(300.0f).setFitId("90000010020181210D02192620AD7").setMemo("Bank Error in Your Favour").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-7.08f).setFitId("90000010020181210D02192320AA7").setName("C-IDP PURCHASE-7123").setMemo("FARM BOY").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType("DEBIT").setDate(december10th2018).setAmount(-68.49f).setFitId("90000010020181210D02194C22AA7").setName("C-IDP PURCHASE-1229").setMemo("VALUMART").setAccount(expectedAccount1).build()
+            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december10th2018).setAmount(-31.21f).setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY").setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december10th2018).setAmount(-61.4f).setFitId("90000010020181210D02197E2FA27").setName("WILD WING").setMemo("IDP PURCHASE - 8381").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.ATM).setDate(december10th2018).setAmount(-360.0f).setFitId("90000010020181210D0219652EA07").setName("Withdrawal").setMemo("PTB WD --- KB681166").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.CREDIT).setDate(december10th2018).setAmount(300.0f).setFitId("90000010020181210D02192620AD7").setMemo("Bank Error in Your Favour").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december10th2018).setAmount(-7.08f).setFitId("90000010020181210D02192320AA7").setName("C-IDP PURCHASE-7123").setMemo("FARM BOY").setAccount(expectedAccount1).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december10th2018).setAmount(-68.49f).setFitId("90000010020181210D02194C22AA7").setName("C-IDP PURCHASE-1229").setMemo("VALUMART").setAccount(expectedAccount1).build()
     );
     private static final OfxBalance expectedAccount1Balance = OfxBalance.newBuilder()
             .setDate(LocalDate.of(2019, 3, 19))
@@ -50,8 +51,8 @@ class OfxParserTest {
             .setBankId("900000100")
             .build();
     private static final List<OfxTransaction> expectedAccount2Transactions = Arrays.asList(
-            OfxTransaction.newBuilder().setType("POS").setDate(december17th2018).setAmount(-241.94f).setFitId("90000010020181217C08184422CF1").setName("A AND M WOOD A").setMemo("IDP PURCHASE - 2835").setAccount(expectedAccount2).build(),
-            OfxTransaction.newBuilder().setType("DEBIT").setDate(december17th2018).setAmount(-190.34f).setFitId("90000010020181217C0910F89BF59").setName("UTILITY BILL PMT").setMemo("UTILITIES").setAccount(expectedAccount2).build()
+            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december17th2018).setAmount(-241.94f).setFitId("90000010020181217C08184422CF1").setName("A AND M WOOD A").setMemo("IDP PURCHASE - 2835").setAccount(expectedAccount2).build(),
+            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december17th2018).setAmount(-190.34f).setFitId("90000010020181217C0910F89BF59").setName("UTILITY BILL PMT").setMemo("UTILITIES").setAccount(expectedAccount2).build()
     );
     private static final OfxBalance expectedAccount2Balance = OfxBalance.newBuilder()
             .setDate(LocalDate.of(2019, 3, 19))
@@ -125,10 +126,9 @@ class OfxParserTest {
         MatcherAssert.assertThat(ofxTransactions.get(0).getDate(), IsEqual.equalTo(key));
         MatcherAssert.assertThat(ofxTransactions.get(0).getName(), IsEqual.equalTo("NETFLIX.COM"));
         MatcherAssert.assertThat(ofxTransactions.get(0).getMemo(), IsEqual.equalTo("898-1629899 CA"));
-        MatcherAssert.assertThat(ofxTransactions.get(0).getType(), IsEqual.equalTo("DEBIT"));
+        MatcherAssert.assertThat(ofxTransactions.get(0).getType(), IsEqual.equalTo(TransactionType.DEBIT));
     }
 
-    // TODO: fix is ready to commit!
     @Test
     void allAccountsAndCreditCardsReadTest() throws IOException, OFXParseException {
         final OfxParser ofxParser = new OfxParser();

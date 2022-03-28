@@ -5,18 +5,19 @@ import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.utils.Accumulator;
 import com.webcohesion.ofx4j.io.OFXParseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -30,6 +31,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+// TODO: Improve test coverage
 public class TransactionImportService {
 
     private final CLI cli;
@@ -39,11 +41,12 @@ public class TransactionImportService {
     private final Connection connection;
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionCategoryService transactionCategoryService;
+    private final CategoryDao categoryDao;
 
-    private static final Logger logger = LoggerFactory.getLogger(TransactionImportService.class);
+    private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -51,6 +54,7 @@ public class TransactionImportService {
         this.connection = connection;
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.transactionCategoryService = transactionCategoryService;
+        this.categoryDao = categoryDao;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -58,7 +62,7 @@ public class TransactionImportService {
         cli.println("Loading transactions from file:");
         cli.println("value", inputFile.toString());
 
-        logger.debug("Attempting to parse file {}", inputFile.toString());
+        logger.debug("Attempting to parse file {}", inputFile);
         final List<OfxExport> ofxTransactions;
         try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
             ofxTransactions = ofxParser.parse(inputStream);
@@ -108,6 +112,9 @@ public class TransactionImportService {
                     .map(builder -> builder.setAccount(account).build());
             logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), balanceAccumulator.getCurrentValue());
 
+            // TODO: scan transactions to identify transfers between accounts
+            //       unfortunately, this may be RBC-specific. Should it go into the RbcTransactionCleaner in some way?
+
             // filter out duplicates, categorize transactions, and insert them into the database
             transactionStream.forEach(transaction -> {
                 try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
@@ -116,18 +123,27 @@ public class TransactionImportService {
                         return;
                     }
 
-                    // try to automatically categorize the transaction
-                    // fall back to prompting the user for a category if an exact match cannot be found
+                    // try to automatically categorize the transaction, prompting the user for a category if necessary
                     cli.printFoundNewTransaction(transaction);
-                    final CategorizedTransaction categorizedTransaction = transactionCategoryService.getCategoryExact(t, transaction)
-                            .orElse(cli.categorizeTransactionFuzzy(t, transaction));
-                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
-                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
-
+                    CategorizedTransaction categorizedTransaction = transactionCategoryService.categorizeTransaction(t, transaction);
+                    if (categorizedTransaction.getCategory().getId() == null) {
+                        // this is a new category, so we have to insert it before inserting the categorized transaction
+                        final Transaction newTransaction = categorizedTransaction.getTransaction();
+                        final String newCategoryName = categorizedTransaction.getCategory().getName();
+                        categorizedTransaction = categoryDao.insert(t, categorizedTransaction.getCategory())
+                            .map(newCategory ->
+                                    new CategorizedTransaction(newTransaction, newCategory)
+                            ).orElseThrow(() ->
+                                    new OfxCatException(String.format("Failed to insert new Category %s", newCategoryName))
+                            );
+                    }
                     categorizedTransactionDao.insert(t, categorizedTransaction)
                             .ifPresent(categorizedTransactions::add);
 
-                } catch (SQLException e) {
+                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
+                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
+
+                } catch (SQLException | OfxCatException e) {
                     logger.error("Failed to import transaction {}", transaction, e);
                 }
             });

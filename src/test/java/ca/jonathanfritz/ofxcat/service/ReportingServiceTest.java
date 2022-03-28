@@ -14,7 +14,6 @@ import org.mockito.Mockito;
 import java.time.LocalDate;
 import java.util.*;
 
-import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Mockito.*;
 
 class ReportingServiceTest {
@@ -87,9 +86,9 @@ class ReportingServiceTest {
     void reportTransactionsTest() {
         final Category groceries = new Category("GROCERIES");
         final Category restaurants = new Category("RESTAURANTS");
-        final CategorizedTransaction t1 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(10f).build(), groceries);
-        final CategorizedTransaction t2 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(5f).build(), groceries);
-        final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setAmount(7f).build(), restaurants);
+        final CategorizedTransaction t1 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(10f).build(), groceries);
+        final CategorizedTransaction t2 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(5f).build(), groceries);
+        final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(7f).build(), restaurants);
 
         // mock transactions dao will return some categorized transactions
         final CategorizedTransactionDao mockTransactionsDao = Mockito.mock(CategorizedTransactionDao.class);
@@ -110,11 +109,12 @@ class ReportingServiceTest {
 
         // ensure that the right thing was printed - categories should be ordered by amount spent descending
         final List<String> expectedLines = Arrays.asList(
-                "Category,Amount Spent",
+                "Category, Spend",
                 String.format("%s,$15.00", groceries.getName()),
                 String.format("%s,$7.00", restaurants.getName())
         );
         Mockito.verify(mockTransactionsDao, times(1)).selectGroupByCategory(any(LocalDate.class), any(LocalDate.class));
+        Mockito.verify(mockCli, times(1)).println(anyString());
         Mockito.verify(mockCli, times(1)).println(expectedLines);
         Mockito.verifyNoMoreInteractions(mockTransactionsDao, mockCli);
     }

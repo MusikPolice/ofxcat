@@ -4,9 +4,9 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import com.google.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.flywaydb.core.Flyway;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sqlite.SQLiteDataSource;
 
 import javax.sql.DataSource;
@@ -17,7 +17,7 @@ public class DatastoreModule extends AbstractModule {
 
     private final String connectionString;
 
-    private static final Logger logger = LoggerFactory.getLogger(DatastoreModule.class);
+    private static final Logger logger = LogManager.getLogger(DatastoreModule.class);
 
     /**
      * Wires up a connection to the specified database

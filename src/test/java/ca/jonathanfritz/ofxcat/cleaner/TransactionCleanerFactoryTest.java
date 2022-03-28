@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class TransactionCleanerFactoryTest {
 
     private static final TransactionCleanerFactory factory = new TransactionCleanerFactory();

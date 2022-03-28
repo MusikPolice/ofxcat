@@ -1,18 +1,14 @@
 package ca.jonathanfritz.ofxcat.cli;
 
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;
 import org.beryx.textio.TextIO;
 
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -26,17 +22,15 @@ public class CLI {
     private static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
     private final TextIOWrapper textIOWrapper;
-    private final TransactionCategoryService transactionCategoryService;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
     private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
 
     @Inject
-    public CLI(TextIO textIO, TextIOWrapper textIOWrapper, TransactionCategoryService transactionCategoryService) {
+    public CLI(TextIO textIO, TextIOWrapper textIOWrapper) {
         this.textIO = textIO;
         this.textIOWrapper = textIOWrapper;
-        this.transactionCategoryService = transactionCategoryService;
     }
 
     public void printWelcomeBanner() {
@@ -90,7 +84,9 @@ public class CLI {
      */
     public Account assignAccountName(OfxAccount ofxAccount) {
         // prompt the user to enter a name for the account
-        textIO.getTextTerminal().print("\nFound new account with account number ");
+        textIO.getTextTerminal().print("\nFound new ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.print(ofxAccount.getAccountType()));
+        textIO.getTextTerminal().print(" account with account number ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(ofxAccount.getAccountId()));
 
         final String accountName = textIO.newStringInputReader()
@@ -136,6 +132,10 @@ public class CLI {
     }
 
     private void printTransaction(Transaction transaction) {
+        // fit id
+        textIO.getTextTerminal().print("Transaction Id: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getFitId()));
+
         // date
         textIO.getTextTerminal().print("Date: ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDate().toString()));
@@ -146,11 +146,7 @@ public class CLI {
 
         // amount
         textIO.getTextTerminal().print("Amount: ");
-        if (transaction.getAmount() >= 0) {
-            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "$%.2f", Math.abs(transaction.getAmount()))));
-        } else {
-            textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(String.format(java.util.Locale.US, "-$%.2f", Math.abs(transaction.getAmount()))));
-        }
+        printCurrencyValue(transaction.getAmount());
 
         // description
         textIO.getTextTerminal().print("Description: ");
@@ -159,74 +155,53 @@ public class CLI {
         // account name
         textIO.getTextTerminal().print("Account: ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getAccount().getName()));
+
+        // remaining balance
+        textIO.getTextTerminal().print("Balance: ");
+        printCurrencyValue(transaction.getBalance());
     }
 
-    public CategorizedTransaction categorizeTransactionFuzzy(DatabaseTransaction t, Transaction transaction) throws SQLException {
-
-        // TODO: load fuzzy matches from categorized transactions, rank them higher than the actual fuzzy matches
-
-        final List<Category> fuzzyMatches = transactionCategoryService.getCategoryFuzzy(t, transaction, 5);
-        if (fuzzyMatches.isEmpty()) {
-            // no fuzzy match - add a new category
-            return addNewCategory(transaction);
-        } else if (fuzzyMatches.size() == 1) {
-            // exactly one potential match - prompt user to confirm
-            final String prompt = String.format("\nDoes the transaction belong to category %s?", fuzzyMatches.get(0).getName());
-            if (textIOWrapper.promptYesNo(prompt)) {
-                return transactionCategoryService.put(t, transaction, fuzzyMatches.get(0));
-            } else {
-                // false positive - add a new category for the transaction
-                return addNewCategory(transaction);
-            }
+    private void printCurrencyValue(float value) {
+        if (value >= 0) {
+            printCurrencyValue("$%.2f", value);
+        } else {
+            printCurrencyValue("-$%.2f", value);
         }
+    }
 
-        // a bunch of potential matches, prompt user to select one
+    private void printCurrencyValue(String formatString, float value) {
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->
+                t.println(String.format(java.util.Locale.US, formatString, Math.abs(value))));
+    }
+
+    public Optional<Category> chooseCategoryOrChooseAnother(List<Category> categories) {
+        return chooseCategory(categories, CHOOSE_ANOTHER_CATEGORY_PROMPT);
+    }
+
+    public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
+        return chooseCategory(categories, NEW_CATEGORY_PROMPT);
+    }
+
+    /**
+     * Prompts the user to choose from one of the supplied distinctCategories. Includes an additional choice to "Choose
+     * another category"
+     * @param categories the list of categories to choose from
+     * @return an {@link Optional<Category>} containing the selected category, or {@link Optional#empty()} if "Choose
+     * another category" is selected
+     */
+    private Optional<Category> chooseCategory(List<Category> categories, final String prompt) {
         final List<String> potentialCategories = Stream.concat(
-                fuzzyMatches.stream().map(Category::getName),
-                Arrays.stream(new String[]{CHOOSE_ANOTHER_CATEGORY_PROMPT})
-            )
-            .collect(Collectors.toList());
+                categories.stream().map(Category::getName),
+                Arrays.stream(new String[]{prompt})
+        )
+        .collect(Collectors.toList());
         final String choice = textIOWrapper.promptChooseString("\nSelect an existing category for the transaction:", potentialCategories);
-
-        // associate the transaction with the selected category, or prompt the user to add a new category if none was selected
-        final Optional<Category> selectedCategory = fuzzyMatches.stream()
+        return categories.stream()
                 .filter(pc -> pc.getName().equalsIgnoreCase(choice))
                 .findFirst();
-        if (selectedCategory.isPresent()) {
-            return transactionCategoryService.put(t, transaction, selectedCategory.get());
-        } else {
-            return addNewCategory(transaction);
-        }
     }
 
-    private CategorizedTransaction addNewCategory(Transaction transaction) {
-        // if there are no existing categories, prompt the user to enter one
-        final List<String> existingCategoryNames = transactionCategoryService.getCategoryNames();
-        if (existingCategoryNames.isEmpty()) {
-            final String newCategoryName = promptForNewCategoryName();
-            return transactionCategoryService.put(transaction, new Category(newCategoryName));
-        }
-
-        // prompt the user to choose from an existing category
-        final List<String> potentialCategories = Stream.concat(
-                existingCategoryNames.stream(),
-                Arrays.stream(new String[] {NEW_CATEGORY_PROMPT})
-            ).collect(Collectors.toList());
-
-        final String input = textIO.newStringInputReader()
-                .withNumberedPossibleValues(potentialCategories)
-                .read("\nSelect an existing category for transaction:");
-
-        // if their choice matches an existing category name, return that category
-        final String categoryName = existingCategoryNames.stream()
-                .filter(pc -> pc.equalsIgnoreCase(input))
-                .findFirst()
-                .orElseGet(this::promptForNewCategoryName);
-
-        return transactionCategoryService.put(transaction, new Category(categoryName));
-    }
-
-    private String promptForNewCategoryName() {
+    public String promptForNewCategoryName() {
         // otherwise, prompt them to enter a new category name
         return textIO.newStringInputReader()
                 .withValueChecker((val, itemName) -> {

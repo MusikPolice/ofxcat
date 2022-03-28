@@ -1,8 +1,8 @@
 package ca.jonathanfritz.ofxcat.datastore.utils;
 
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.Closeable;
 import java.sql.Connection;
@@ -17,7 +17,7 @@ public class DatabaseTransaction implements Closeable {
 
     private final Connection connection;
 
-    private static Logger logger = LoggerFactory.getLogger(DatabaseTransaction.class);
+    private static final Logger logger = LogManager.getLogger(DatabaseTransaction.class);
 
     public DatabaseTransaction(Connection connection) {
         this.connection = connection;

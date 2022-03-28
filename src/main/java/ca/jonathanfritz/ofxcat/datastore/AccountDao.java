@@ -1,12 +1,12 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.inject.Inject;
 import java.sql.Connection;
@@ -21,7 +21,7 @@ public class AccountDao {
     private final Connection connection;
     private final SqlFunction<TransactionState, List<Account>> accountDeserializer;
 
-    private static final Logger logger = LoggerFactory.getLogger(AccountDao.class);
+    private static final Logger logger = LogManager.getLogger(AccountDao.class);
 
     @Inject
     public AccountDao(Connection connection) {

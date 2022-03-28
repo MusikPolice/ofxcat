@@ -1,13 +1,13 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import com.google.inject.Inject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -21,7 +21,7 @@ public class CategoryDao {
     private final Connection connection;
     private final SqlFunction<TransactionState, List<Category>> categoryDeserializer;
 
-    private static final Logger logger = LoggerFactory.getLogger(CategoryDao.class);
+    private static final Logger logger = LogManager.getLogger(CategoryDao.class);
 
     @Inject
     public CategoryDao(Connection connection) {
@@ -89,7 +89,7 @@ public class CategoryDao {
     public List<Category> select() {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to select all Category objects");
-            final String selectStatement = "SELECT * FROM Category;";
+            final String selectStatement = "SELECT * FROM Category ORDER BY name ASC;";
             return t.query(selectStatement, categoryDeserializer);
         } catch (SQLException e) {
             logger.error("Failed to select all Category objects", e);
@@ -109,7 +109,7 @@ public class CategoryDao {
         }
     }
 
-    Optional<Category> insert(DatabaseTransaction t, Category categoryToInsert) {
+    public Optional<Category> insert(DatabaseTransaction t, Category categoryToInsert) {
         try {
             logger.debug("Attempting to insert Category {}", categoryToInsert);
             final String insertStatement = "INSERT INTO Category (name) VALUES (?);";

@@ -2,6 +2,7 @@ package ca.jonathanfritz.ofxcat.cleaner;
 
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,7 @@ import static ca.jonathanfritz.ofxcat.cleaner.RbcTransactionCleaner.RBC_INSTITUT
 
 class RbcTransactionCleanerTest {
 
-    private final RbcTransactionCleaner rbcTransactionCleaner = new RbcTransactionCleaner();
+    private final TransactionCleaner rbcTransactionCleaner = new RbcTransactionCleaner();
 
     @Test
     public void descriptionConcatenationNullNameTest() {
@@ -79,7 +80,7 @@ class RbcTransactionCleanerTest {
     @Test
     public void matchingTypeTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
-                .setType("atm")
+                .setType(TransactionType.ATM)
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
@@ -126,6 +127,71 @@ class RbcTransactionCleanerTest {
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER"));
+    }
+
+    @Test
+    public void interacEtransferSentTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("Email Trfs")
+                .setMemo("E-TRANSFER SENT ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER E-TRANSFER SENT"));
+    }
+
+    @Test
+    public void usdPurchaseTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setName("SUBSTACK SUBSTACK.COM CA  ")
+                .setMemo("5.00 USD @ 1.308000000000")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("SUBSTACK SUBSTACK.COM CA (USD PURCHASE)"));
+    }
+
+    @Test
+    public void interAccountTransferDebitTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setDate(LocalDate.of(2021,9,13))
+                .setAmount(-96.15f)
+                .setFitId("90000010020210913C002AF3195DE")
+                .setName("WWW TRF DDA - 6498  ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER OUT OF ACCOUNT"));
+    }
+
+    @Test
+    public void interAccountTransferCreditTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setDate(LocalDate.of(2021,9,13))
+                .setAmount(96.15f)
+                .setFitId("90000010020210913S001F508AFAB")
+                .setName("Transfer                        ")
+                .setMemo("WWW TRANSFER - 6498 ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER INTO ACCOUNT"));
+    }
+
+    @Test
+    public void interacServiceChargeTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setDate(LocalDate.of(2021,9,13))
+                .setAmount(-2.00f)
+                .setFitId("90000010020210913S001F508AFAB")
+                .setName("INTERAC-SC-7891                 ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER SERVICE CHARGE"));
     }
 
     // TODO: test patterns to remove/replace regexes

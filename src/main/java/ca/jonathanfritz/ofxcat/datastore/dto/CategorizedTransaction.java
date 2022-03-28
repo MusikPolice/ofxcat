@@ -31,6 +31,11 @@ public class CategorizedTransaction extends Transaction implements Entity {
         return id;
     }
 
+    public Transaction getTransaction() {
+        // returns a copy of the parent transaction, stripping category information
+        return Transaction.newBuilder(this).build();
+    }
+
     @Override
     public String toString() {
         return "CategorizedTransaction{" +

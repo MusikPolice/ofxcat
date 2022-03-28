@@ -1,7 +1,7 @@
 package ca.jonathanfritz.ofxcat.datastore.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -16,7 +16,7 @@ public class ResultSetDeserializer<T extends Entity> implements SqlFunction<Tran
 
     private final TransactionStateConsumer<T> deserializer;
 
-    private static final Logger logger = LoggerFactory.getLogger(ResultSetDeserializer.class);
+    private static final Logger logger = LogManager.getLogger(ResultSetDeserializer.class);
 
     /**
      * Creates an instance of this deserializer

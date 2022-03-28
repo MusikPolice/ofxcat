@@ -1,12 +1,13 @@
 package ca.jonathanfritz.ofxcat.io;
 
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import com.webcohesion.ofx4j.io.OFXHandler;
 import com.webcohesion.ofx4j.io.OFXParseException;
 import com.webcohesion.ofx4j.io.OFXReader;
 import com.webcohesion.ofx4j.io.OFXSyntaxException;
 import com.webcohesion.ofx4j.io.nanoxml.NanoXMLOFXReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +45,7 @@ public class OfxParser {
 
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final Logger logger = LoggerFactory.getLogger(OfxParser.class);
+    private static final Logger logger = LogManager.getLogger(OfxParser.class);
 
     public List<OfxExport> parse(final InputStream inputStream) throws IOException, OFXParseException {
         final Map<OfxAccount, List<OfxTransaction.TransactionBuilder>> transactions = new HashMap<>();
@@ -103,7 +104,7 @@ public class OfxParser {
 
                     // transaction information
                     case TRNTYPE:
-                        transactionBuilder.setType(value);
+                        transactionBuilder.setType(TransactionType.valueOf(value));
                         break;
                     case DTPOSTED:
                         try {
@@ -185,7 +186,8 @@ public class OfxParser {
                     logger.debug("Parsed transaction {}", transactionBuilder.build());
                 } else if (LEDGERBAL.equalsIgnoreCase(name)) {
                     isLedgerBalanceActive = false;
-                    logger.debug("Recorded balance {} for account {}", accountBalances.get(currentAccount), currentAccount.getAccountId());
+                    final OfxBalance ofxBalance = accountBalances.get(currentAccount).build();
+                    logger.debug("Recorded a balance of ${} on {} for account {}", ofxBalance.getAmount(), ofxBalance.getDate().toString(), currentAccount.getAccountId());
                 }
             }
 
