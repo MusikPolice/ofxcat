@@ -9,6 +9,11 @@ public class Category implements Entity {
     private final Long id;
     private final String name;
 
+    /**
+     * Corresponds to the default UNKNOWN category created in V8__Create_Default_Unknown_Category.sql
+     */
+    public static final Category UNKNOWN = new Category(0L, "UNKNOWN");
+
     public Category(String name) {
         this(null, name);
     }

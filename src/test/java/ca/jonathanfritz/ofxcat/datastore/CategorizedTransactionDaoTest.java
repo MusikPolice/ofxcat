@@ -154,5 +154,45 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         }
     }
 
-    // TODO
+    @Test
+    public void findByDescriptionAndAccountNumberTest() throws SQLException {
+        // need a category
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        Category category = new Category("POTENT POTABLES");
+        category = categoryDao.insert(category).get();
+
+        // need an account
+        final AccountDao accountDao = new AccountDao(connection);
+        Account account = Account.newBuilder()
+                .setName(UUID.randomUUID().toString())
+                .setAccountType("CHECKING")
+                .setAccountNumber(UUID.randomUUID().toString())
+                .setBankId(UUID.randomUUID().toString())
+                .build();
+        account = accountDao.insert(account).get();
+
+        // create a transaction with description "Fronty's Meat Market"
+        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
+                .setAccount(account)
+                .setAmount(6.17F)
+                .setDate(LocalDate.now())
+                .setDescription("Fronty's Meat Market")
+                .setType(Transaction.TransactionType.DEBIT)
+                .setBalance(34.21f)
+                .build();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create the transaction
+            final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+            categorizedTransactionDao.insert(new CategorizedTransaction(transaction, category));
+
+            // search for transactions with tokens ["Fronty's", "Beat", "Market"]
+            final List<String> searchTerms = Arrays.asList("Fronty's", "Beat", "Market");
+            final List<CategorizedTransaction> results = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, searchTerms, account.getAccountNumber());
+
+            //  expect 1 match because the two transactions share "Fronty's" and "Market"
+            Assertions.assertEquals(1, results.size());
+            Assertions.assertEquals(transaction, results.get(0).getTransaction());
+        }
+    }
 }

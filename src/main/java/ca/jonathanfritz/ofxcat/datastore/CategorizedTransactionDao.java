@@ -153,8 +153,8 @@ public class CategorizedTransactionDao {
                 "AND a.account_number = ?;";
 
         return t.query(selectStatement, ps -> {
-            for (int i = 1; i == tokens.size(); i++) {
-                ps.setString(i, "%" + tokens.get(i - 1) + "%");
+            for (int i = 1; i <= tokens.size(); i++) {
+                ps.setString(i, "%" + tokens.get(i - 1).toUpperCase(Locale.ROOT) + "%");
             }
             ps.setString(tokens.size() + 1, accountNumber);
         }, categorizedTransactionDeserializer);

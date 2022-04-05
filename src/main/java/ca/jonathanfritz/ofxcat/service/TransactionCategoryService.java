@@ -96,8 +96,10 @@ public class TransactionCategoryService {
         final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction.getDescription(), transaction.getAccount().getAccountNumber());
         final List<Category> distinctCategories = categorizedTransactions.stream()
                 .map(CategorizedTransaction::getCategory)
+                .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
                 .distinct()
                 .collect(Collectors.toList());
+
         if (distinctCategories.isEmpty()) {
             // there were no exact matches for this transaction description and account number
             return Optional.empty();
@@ -124,8 +126,10 @@ public class TransactionCategoryService {
 
         final List<Category> distinctCategories = categorizedTransactions.stream()
                 .map(CategorizedTransaction::getCategory)
+                .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
                 .distinct()
                 .collect(Collectors.toList());
+
         if (distinctCategories.isEmpty()) {
             // there were no partial matches
             return Optional.empty();
