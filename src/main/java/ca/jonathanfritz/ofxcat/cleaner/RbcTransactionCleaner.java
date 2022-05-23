@@ -1,84 +1,174 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
+import ca.jonathanfritz.ofxcat.cleaner.rules.TransactionMatcherRule;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static ca.jonathanfritz.ofxcat.utils.StringUtils.coerceNullableString;
 
 /**
  * A transaction cleaner that tidies up data imported from RBC
  */
 public class RbcTransactionCleaner implements TransactionCleaner {
 
-    private static final List<Pattern> patternsToDiscard = Arrays.asList(
-            // Interac purchase
-            Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$"),
-
-            // contactless Interac purchase
-            Pattern.compile("^C-IDP PURCHASE\\s*-\\s*\\d+.*$"),
-
-            // discards memo field of Interac e-transfer
-            Pattern.compile("^INTERAC E-TRF\\s*-\\s*\\d+.*$"),
-
-            // ATM withdrawal
-            Pattern.compile("^PTB CB WD-.*$"),
-
-            // ATM Deposit
-            Pattern.compile("^PTB DEP --.*$"),
-
-            // discards MEMO field of ATM Withdrawal
-            // NAME field contains string WITHDRAWAL
-            Pattern.compile("^PTB WD ---.*$"),
-
-            // scheduled transfer to line of credit
-            Pattern.compile("^WWW LOAN PMT - \\d+.*$"),
-
-            // online bill payment
-            Pattern.compile("^WWW PAYMENT - \\d+.*$"),
-
-            // paypal
-            Pattern.compile("^MISC PAYMENT$"),
-
-            // discards memo field of Personal loan repayment (car loan, small business loan, etc)
-            Pattern.compile("^SPL$")
-    );
-
-    private static final Map<Pattern, String> patternsToReplace = new HashMap<>();
+    private static final List<TransactionMatcherRule> rules = new ArrayList<>();
 
     static final String RBC_BANK_ID = "900000100";
     static final String RBC_INSTITUTION_NAME = "Royal Bank Canada";
 
     public RbcTransactionCleaner() {
-        // replaces NAME field of outgoing transfer from one account to another
-        // these transactions do not have a MEMO field
-        patternsToReplace.put(Pattern.compile("^WWW TRF DDA - \\d+.*$"), "TRANSFER OUT OF ACCOUNT");
+        // inter-account transfer
+        final Function<OfxTransaction, Transaction.Builder> interAccountTransferTransformer = ofxTransaction -> {
+            final String description;
+            if (ofxTransaction.getAmount() < 0) {
+                // debit
+                description = "TRANSFER OUT OF ACCOUNT";
+            } else {
+                // credit
+                description = "TRANSFER INTO ACCOUNT";
+            }
+            return Transaction.newBuilder(ofxTransaction.getFitId())
+                    .setType(Transaction.TransactionType.XFER)
+                    .setDate(ofxTransaction.getDate())
+                    .setAmount(ofxTransaction.getAmount())
+                    .setDescription(description);
+        };
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^WWW TRF DDA - \\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(interAccountTransferTransformer));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^WWW TRANSFER - \\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(interAccountTransferTransformer));
 
-        // replaces MEMO field of incoming transfer from one account to another
-        // the NAME field already contains the string "TRANSFER", so the description will be "TRANSFER FROM ACCOUNT"
-        patternsToReplace.put(Pattern.compile("^WWW TRANSFER - \\d+.*$"), "INTO ACCOUNT");
+        // scheduled transfer to line of credit
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^WWW LOAN PMT - \\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("LINE OF CREDIT REPAYMENT")));
 
-        // replaces NAME field of Interac e-transfer autodeposit with human-readable string
-        patternsToReplace.put(Pattern.compile("^E-TRF AUTODEPOSIT$"), "INTERAC E-TRANSFER AUTO-DEPOSIT");
+        // online bill payment - strip the memo field prefix
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^WWW PAYMENT - \\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(ofxTransaction.getMemo().substring(19))));
 
-        // replaces MEMO field of Interac e-transfer outgoing with human-readable string
-        patternsToReplace.put(Pattern.compile("^EMAIL TRFS$"), "INTERAC E-TRANSFER");
+        // incoming Interac e-transfer with auto-deposit
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^E-TRF AUTODEPOSIT$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.CREDIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("INCOMING INTERAC E-TRANSFER AUTO-DEPOSIT")));
 
-        // replaces NAME field of Personal loan repayment (car loan, small business loan, etc) with human-readable string
-        patternsToReplace.put(Pattern.compile("^PERSONAL LOAN$"), "PERSONAL LOAN REPAYMENT");
+        // outgoing Interac e-transfer
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^INTERAC E-TRF-\\s\\d*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("OUTGOING INTERAC E-TRANSFER")));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^E-TRANSFER SENT", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("OUTGOING INTERAC E-TRANSFER")));
 
-        // Purchases made in USD have MEMO like "5.00 USD @ 1.308000000000" to indicate currency conversion
+        // sending money via Interac E-Transfer can incur service charges
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^INTERAC-SC-\\d+$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.FEE)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("INTERAC E-TRANSFER SERVICE CHARGE")));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^INT E-TRF FEE\\s*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.FEE)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("INTERAC E-TRANSFER SERVICE CHARGE")));
+
+        // personal loan repayment (car loan, small business loan, etc)
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^PERSONAL LOAN$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("PERSONAL LOAN REPAYMENT")));
+
+        // purchases made in USD have MEMO like "5.00 USD @ 1.308000000000" to indicate currency conversion
         // these tend to confuse the auto-categorization algorithm, so discard them
-        patternsToReplace.put(Pattern.compile("^\\d*\\.\\d*\\sUSD*\\s@\\s\\d*.\\d*$"), "(USD PURCHASE)");
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^\\d*\\.\\d*\\sUSD*\\s@\\s\\d*.\\d*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(coerceNullableString(ofxTransaction.getName()) + " (USD PURCHASE)")));
 
-        // Sending money via Interac E-Transfer can incur service charges. Replaces the NAME field of these charges
-        patternsToReplace.put(Pattern.compile("^INTERAC-SC-\\d+$"), "INTERAC E-TRANSFER SERVICE CHARGE");
+        // Interac purchase
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(ofxTransaction.getName())));
+
+        // contactless Interac purchase
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^C-IDP PURCHASE\\s*-\\s*\\d+.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(ofxTransaction.getMemo())));
+
+        // ATM withdrawal
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^PTB CB WD-.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("ATM WITHDRAWAL")));
+
+        // ATM deposit
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withMemo(Pattern.compile("^PTB DEP --.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.CREDIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("ATM DEPOSIT")));
+
+        // some kind of miscellaneous payment - discard the useless name field
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^MISC PAYMENT$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(ofxTransaction.getMemo())));
     }
 
     @Override
@@ -93,6 +183,11 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
     @Override
     public Transaction.Builder clean(OfxTransaction ofxTransaction) {
+        final Optional<TransactionMatcherRule> transformer = rules.stream().filter(r -> r.matches(ofxTransaction)).findFirst();
+        if (transformer.isPresent()) {
+            return transformer.get().apply(ofxTransaction);
+        }
+
         final String name = clean(ofxTransaction.getName());
         final String memo = clean(ofxTransaction.getMemo());
         final String description = Stream.of(name, memo)
@@ -111,16 +206,6 @@ public class RbcTransactionCleaner implements TransactionCleaner {
         if (StringUtils.isBlank(input)) {
             return null;
         }
-        String transformed = input.toUpperCase().trim();
-        if (patternsToDiscard.stream().anyMatch(pattern -> pattern.matcher(transformed).matches())) {
-            return null;
-        }
-
-        return patternsToReplace.entrySet()
-                .stream()
-                .filter(patternStringEntry -> patternStringEntry.getKey().matcher(transformed).matches())
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElse(transformed);
+        return input.toUpperCase().trim();
     }
 }

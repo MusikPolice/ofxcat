@@ -126,7 +126,7 @@ class RbcTransactionCleanerTest {
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
-        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER"));
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("OUTGOING INTERAC E-TRANSFER"));
     }
 
     @Test
@@ -137,7 +137,7 @@ class RbcTransactionCleanerTest {
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
-        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER E-TRANSFER SENT"));
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("OUTGOING INTERAC E-TRANSFER"));
     }
 
     @Test
@@ -152,39 +152,62 @@ class RbcTransactionCleanerTest {
     }
 
     @Test
-    public void interAccountTransferDebitTest() {
+    public void outgoingInterAccountTransferTrfDdaTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
                 .setType(TransactionType.DEBIT)
-                .setDate(LocalDate.of(2021,9,13))
-                .setAmount(-96.15f)
-                .setFitId("90000010020210913C002AF3195DE")
-                .setName("WWW TRF DDA - 6498  ")
+                .setAmount(-100.00f)
+                .setName("WWW TRF DDA - 0565              ")
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER OUT OF ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
     }
 
     @Test
-    public void interAccountTransferCreditTest() {
+    public void incomingInterAccountTransferTrfDdaTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
-                .setType(TransactionType.CREDIT)
-                .setDate(LocalDate.of(2021,9,13))
-                .setAmount(96.15f)
-                .setFitId("90000010020210913S001F508AFAB")
-                .setName("Transfer                        ")
-                .setMemo("WWW TRANSFER - 6498 ")
+                .setType(TransactionType.DEBIT)
+                .setAmount(100.00f)
+                .setName("WWW TRF DDA - 0565              ")
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER INTO ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
     }
 
     @Test
-    public void interacServiceChargeTest() {
+    public void outgoingInterAccountTransferWwwTransferTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
-                .setType(TransactionType.CREDIT)
-                .setDate(LocalDate.of(2021,9,13))
+                .setType(TransactionType.DEBIT)
+                .setAmount(-100.00f)
+                .setName("Transfer                        ")
+                .setMemo("WWW TRANSFER - 7288 ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER OUT OF ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
+
+    @Test
+    public void incomingInterAccountTransferWwwTransferTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(100.00f)
+                .setName("Transfer                        ")
+                .setMemo("WWW TRANSFER - 7288 ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER INTO ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
+
+    @Test
+    public void interacServiceChargeScTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
                 .setAmount(-2.00f)
                 .setFitId("90000010020210913S001F508AFAB")
                 .setName("INTERAC-SC-7891                 ")
@@ -192,7 +215,19 @@ class RbcTransactionCleanerTest {
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER SERVICE CHARGE"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.FEE));
     }
 
-    // TODO: test patterns to remove/replace regexes
+    @Test
+    public void interacServiceChargeFeeTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setAmount(-1.00f)
+                .setFitId("90000010030205111S002C37F0F62")
+                .setName("INT E-TRF FEE                   ")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER SERVICE CHARGE"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.FEE));
+    }
 }
