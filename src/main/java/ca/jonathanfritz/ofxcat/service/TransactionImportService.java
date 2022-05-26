@@ -9,6 +9,7 @@ import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
@@ -42,11 +43,12 @@ public class TransactionImportService {
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionCategoryService transactionCategoryService;
     private final CategoryDao categoryDao;
+    private final TransferMatchingService transferMatchingService;
 
     private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao, TransferMatchingService transferMatchingService) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -55,6 +57,7 @@ public class TransactionImportService {
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.transactionCategoryService = transactionCategoryService;
         this.categoryDao = categoryDao;
+        this.transferMatchingService = transferMatchingService;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -81,6 +84,8 @@ public class TransactionImportService {
     // TODO: return number of ignored duplicate transactions so that this info can be displayed in UI
     List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
         final List<CategorizedTransaction> categorizedTransactions = new ArrayList<>();
+
+        final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
             // figure out which account these transactions belong to
             final Account account = accountDao.selectByAccountNumber(ofxExport.getAccount().getAccountId())
@@ -104,20 +109,29 @@ public class TransactionImportService {
             // balance on each, and associates each with an account
             final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(account.getBankId());
             final Accumulator<Float> balanceAccumulator = new Accumulator<>(initialBalance, Float::sum);
-            final Stream<Transaction> transactionStream = ofxExport.getTransactions().entrySet().stream()
+            accountTransactions.put(account, ofxExport.getTransactions().entrySet().stream()
                     .flatMap((Function<Map.Entry<LocalDate, List<OfxTransaction>>, Stream<OfxTransaction>>) entry -> entry.getValue().stream())
                     .sorted(Comparator.comparing(OfxTransaction::getDate))
                     .map(transactionCleaner::clean)
                     .map(builder -> builder.setBalance(balanceAccumulator.add(builder.getAmount())))
-                    .map(builder -> builder.setAccount(account).build());
+                    .map(builder -> builder.setAccount(account).build())
+                    .toList());
             logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), balanceAccumulator.getCurrentValue());
+        }
 
-            // TODO: scan transactions to identify transfers between accounts
-            //       unfortunately, this may be RBC-specific. Should it go into the RbcTransactionCleaner in some way?
+        // all of our transactions have been cleaned up and enriched with account and balance information
+        // at this point, we can attempt to identify inter-account transfers
+        final Set<Transfer> transfers = transferMatchingService.match(accountTransactions);
+        // TODO: insert transfers (and associated transactions) into the database
+        //       transactions that are a part of transfers need implicit TRANSFER categorization
 
+        for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
+            // TODO: this can probably be cleaned up too
             // filter out duplicates, categorize transactions, and insert them into the database
+            final List<Transaction> transactionStream = entry.getValue();
             transactionStream.forEach(transaction -> {
                 try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+                    // TODO: strip dupes out way earlier?
                     if (categorizedTransactionDao.isDuplicate(t, transaction)) {
                         logger.info("Ignored duplicate Transaction {}", transaction);
                         return;
