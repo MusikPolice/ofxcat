@@ -63,11 +63,7 @@ public class TransferMatchingService {
             final List<Transaction> filtered = accountTransactions.get(account).stream()
                     .filter(t -> !matchedTransactions.contains(t))
                     .toList();
-            if (filtered.isEmpty()) {
-                accountTransactions.remove(account);
-            } else {
-                accountTransactions.put(account, filtered);
-            }
+            accountTransactions.put(account, filtered);
         }
 
         return transfers;

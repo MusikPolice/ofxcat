@@ -6,10 +6,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
+import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
@@ -122,16 +119,35 @@ public class TransactionImportService {
         // all of our transactions have been cleaned up and enriched with account and balance information
         // at this point, we can attempt to identify inter-account transfers
         final Set<Transfer> transfers = transferMatchingService.match(accountTransactions);
-        // TODO: insert transfers (and associated transactions) into the database
-        //       transactions that are a part of transfers need implicit TRANSFER categorization
+        transfers.forEach(transfer -> {
+            transfer.stream().forEach(transaction -> {
+                try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+                    if (categorizedTransactionDao.isDuplicate(t, transaction)) {
+                        logger.info("Ignored duplicate Transaction {}", transaction);
+                        return;
+                    }
+
+                    // TODO: make the schema change that creates this category
+                    CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, Category.TRANSFER);
+                    categorizedTransactionDao.insert(t, categorizedTransaction)
+                            .ifPresent(categorizedTransactions::add);
+
+                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
+                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
+                } catch (SQLException e) {
+                    logger.error("Failed to import transaction {}", transaction, e);
+                }
+            });
+
+            // TODO: insert the transfer itself into a separate table
+
+        });
 
         for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
             // TODO: this can probably be cleaned up too
             // filter out duplicates, categorize transactions, and insert them into the database
-            final List<Transaction> transactionStream = entry.getValue();
-            transactionStream.forEach(transaction -> {
+            entry.getValue().forEach(transaction -> {
                 try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-                    // TODO: strip dupes out way earlier?
                     if (categorizedTransactionDao.isDuplicate(t, transaction)) {
                         logger.info("Ignored duplicate Transaction {}", transaction);
                         return;

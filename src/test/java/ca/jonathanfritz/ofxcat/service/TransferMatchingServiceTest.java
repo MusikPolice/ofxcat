@@ -51,9 +51,13 @@ class TransferMatchingServiceTest {
         ));
 
         // there will be one remaining unmatched transaction
-        assertFalse(accountTransactions.containsKey(savings));
+        assertEquals(2, accountTransactions.size());
+        assertTrue(accountTransactions.containsKey(savings));
         assertTrue(accountTransactions.containsKey(checking));
+
         assertEquals(1, accountTransactions.get(checking).size());
         assertEquals(checkingTransactions.get(3), accountTransactions.get(checking).get(0));
+
+        assertTrue(accountTransactions.get(savings).isEmpty());
     }
 }

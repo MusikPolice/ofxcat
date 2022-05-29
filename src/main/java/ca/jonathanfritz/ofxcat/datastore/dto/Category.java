@@ -11,8 +11,15 @@ public class Category implements Entity {
 
     /**
      * Corresponds to the default UNKNOWN category created in V8__Create_Default_Unknown_Category.sql
+     * Used to categorize transactions that the user does not recognize
      */
     public static final Category UNKNOWN = new Category(0L, "UNKNOWN");
+
+    /**
+     * Corresponds to the default TRANSFER category created in V9__Create_Default_Transfer_Category.sql
+     * Used to categorize transactions that represent inter-account transfers
+     */
+    public static final Category TRANSFER = new Category(1L, "TRANSFER");
 
     public Category(String name) {
         this(null, name);
