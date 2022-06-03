@@ -136,7 +136,7 @@ public class ReportingService {
         final List<Category> categories = categoryDao.select();
         cli.println(Streams.concat(
                 Stream.of("Category Name"),
-                categories.stream().map(Category::getName)
+                categories.stream().filter(c -> !Category.UNKNOWN.equals(c)).map(Category::getName)
             )
             .collect(Collectors.toList()));
     }

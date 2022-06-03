@@ -1,127 +1,125 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
+import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
+class TransactionImportServiceTest extends AbstractDatabaseTest {
 
-class TransactionImportServiceTest {
+    private final TransactionCleanerFactory transactionCleanerFactory;
+    private final AccountDao accountDao;
+    private final CategoryDao categoryDao;
+    private final CategorizedTransactionDao categorizedTransactionDao;
 
-    @Test
-    void categorizeTransactionsUnknownAccountInsertFailsTest() {
-        final String bankId = UUID.randomUUID().toString();
-        final String accountId = UUID.randomUUID().toString();
-
-        final OfxAccount ofxAccount = OfxAccount.newBuilder()
-                .setBankId(bankId)
-                .setAccountId(accountId)
-                .build();
-        final OfxTransaction transaction = OfxTransaction.newBuilder()
-                .setDate(LocalDate.now())
-                .setName("Some Vendor")
-                .setAmount(10.00f)
-                .setAccount(ofxAccount)
-                .build();
-
-        // there is only one transaction, but it belongs to an unknown account
-        final List<OfxTransaction> transactions = Collections.singletonList(transaction);
-        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, null, transactions));
-        final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
-        when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.empty());
-
-        // the CLI will be queried for the account name and the account will be inserted into the db
-        // the insert operation will fail and return an empty optional
-        final String accountName = "Some Account";
-        final Account account = Account.newBuilder()
-                .setAccountType(ofxAccount.getAccountType())
-                .setAccountNumber(ofxAccount.getAccountId())
-                .setBankId(ofxAccount.getBankId())
-                .setName(accountName)
-                .build();
-        final CLI mockCli = Mockito.mock(CLI.class);
-        when(mockCli.assignAccountName(ofxAccount)).thenReturn(account);
-        when(mockAccountDao.insert(account)).thenReturn(Optional.empty());
-
-        try {
-            // actually run the test
-            final TransactionImportService transactionImportService = new TransactionImportService(mockCli, null, mockAccountDao, null, null, null, null, null);
-            transactionImportService.categorizeTransactions(ofxExports);
-            Assertions.fail("Expected a RuntimeException to be thrown");
-        } catch (RuntimeException ex) {
-            Mockito.verify(mockCli, times(1)).assignAccountName(any(OfxAccount.class));
-            Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
-            Mockito.verify(mockAccountDao, times(1)).insert(any(Account.class));
-            Mockito.verifyNoMoreInteractions(mockCli, mockAccountDao);
-        }
+    public TransactionImportServiceTest() {
+        this.transactionCleanerFactory = new TransactionCleanerFactory();
+        this.accountDao = injector.getInstance(AccountDao.class);
+        this.categoryDao = injector.getInstance(CategoryDao.class);
+        this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
     }
 
     @Test
-    void categorizeTransactionsDuplicateTransactionIsIgnoredTest() throws SQLException {
-        final TransactionCleanerFactory transactionCleanerFactory = new TransactionCleanerFactory();
-        final String bankId = UUID.randomUUID().toString();
-        final String accountId = UUID.randomUUID().toString();
+    void categorizeTransactionsSingleTransactionTest() {
+        // there is one existing account and category
+        final String fitId = UUID.randomUUID().toString();
+        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory = categoryDao.insert(new Category("Test Category")).get();
 
-        final OfxAccount ofxAccount = OfxAccount.newBuilder()
-                .setBankId(bankId)
-                .setAccountId(accountId)
-                .build();
-        final OfxTransaction transaction = OfxTransaction.newBuilder()
-                .setDate(LocalDate.now())
-                .setName("Some Vendor")
-                .setAmount(10.00f)
-                .setAccount(ofxAccount)
-                .build();
-
-        // there is only one transaction, and it belongs to a known account
+        // create an OFX file that contains a new transaction belonging to both
+        final CategorizedTransaction testTransaction = new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory);
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
+        final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
         final List<OfxTransaction> transactions = Collections.singletonList(transaction);
         final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
-        final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
-        when(mockAccountDao.selectByAccountNumber(accountId)).thenReturn(Optional.of(Account.newBuilder()
-                .setId(1L)
-                .setAccountNumber(accountId)
-                .setBankId(bankId)
-                .setAccountType("Savings")
-                .setName("Savings")
-                .build()));
 
-        // it also happens to be a duplicate, so it will not be inserted
-        final CategorizedTransactionDao mockCategorizedTransactionDao = Mockito.mock(CategorizedTransactionDao.class);
-        when(mockCategorizedTransactionDao.isDuplicate(any(DatabaseTransaction.class), any(Transaction.class))).thenReturn(true);
+        // try to insert it
+        final SpyCli spyCli = new SpyCli();
+        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao);
+        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        Assertions.assertEquals(1, categorizedTransactions.size());
+        Assertions.assertEquals(fitId, categorizedTransactions.get(0).getTransaction().getFitId());
+        Assertions.assertEquals(testAccount, categorizedTransactions.get(0).getAccount());
+        Assertions.assertEquals(testCategory, categorizedTransactions.get(0).getCategory());
+
+        // the new transaction was printed to the CLI
+        Assertions.assertEquals(1, spyCli.getCapturedTransactions().size());
+        Assertions.assertEquals(testTransaction.getTransaction().getFitId(), spyCli.getCapturedTransactions().get(0).getFitId());
+
+        // make sure that the transaction was created as expected
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        Assertions.assertNotNull(actual.getId());
+        Assertions.assertEquals(testCategory, actual.getCategory());
+    }
+
+    @Test
+    void categorizeTransactionsDuplicateTransactionIsIgnoredTest() {
+        // there is one existing transaction with a known fitId
+        final String fitId = UUID.randomUUID().toString();
+        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory = categoryDao.insert(new Category("Test Category")).get();
+        final CategorizedTransaction testTransaction = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory)
+        ).get();
+
+        // try to insert the same transaction
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
+        final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
+        final List<OfxTransaction> transactions = Collections.singletonList(transaction);
+        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
 
         // actually run the test
-        final Connection mockConnection = Mockito.mock(Connection.class);
-        final TransactionImportService transactionImportService = new TransactionImportService(null, null, mockAccountDao, transactionCleanerFactory, mockConnection, mockCategorizedTransactionDao, null, null);
+        final TransactionImportService transactionImportService = new TransactionImportService(null, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, null, categoryDao);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 
-        Mockito.verify(mockAccountDao, times(1)).selectByAccountNumber(anyString());
-        Mockito.verify(mockCategorizedTransactionDao, times(1)).isDuplicate(any(DatabaseTransaction.class), any(CategorizedTransaction.class));
-        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCategorizedTransactionDao);
+        // make sure that the original transaction still exists
+        // this will throw an SQLException if there are two transactions with the same FitID
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        Assertions.assertEquals(testTransaction, actual);
     }
 
-    // TODO
+    private static class SpyCli extends CLI {
+
+        private final List<Transaction> capturedTransactions = new ArrayList<>();
+
+        public SpyCli() {
+            super(null, null);
+        }
+
+        @Override
+        public void printFoundNewTransaction(Transaction transaction) {
+            capturedTransactions.add(transaction);
+        }
+
+        @Override
+        public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
+            return Optional.of(categories.get(0));
+        }
+
+        @Override
+        public void printTransactionCategorizedAs(final Category category) {
+            // no op
+        }
+
+        public List<Transaction> getCapturedTransactions() {
+            return Collections.unmodifiableList(capturedTransactions);
+        }
+    }
 }

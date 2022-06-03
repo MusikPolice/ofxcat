@@ -14,7 +14,7 @@ import java.sql.Connection;
  */
 public abstract class AbstractDatabaseTest {
 
-    private final Injector injector;
+    protected final Injector injector;
     protected final Connection connection;
     private static Flyway flyway;
 

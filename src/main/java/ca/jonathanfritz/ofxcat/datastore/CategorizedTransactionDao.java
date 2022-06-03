@@ -81,6 +81,18 @@ public class CategorizedTransactionDao {
         }
     }
 
+    public Optional<CategorizedTransaction> selectByFitId(String fitId) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to query Transaction with fitId {}", fitId);
+            final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE fitId = ?";
+            final List<CategorizedTransaction> results = t.query(selectStatement, ps -> ps.setString(1, fitId), categorizedTransactionDeserializer);
+            return DatabaseTransaction.getFirstResult(results);
+        } catch (SQLException e) {
+            logger.error("Failed to query Transaction with fitId {}", fitId, e);
+            return Optional.empty();
+        }
+    }
+
     public Map<Category, List<CategorizedTransaction>> selectGroupByCategory(LocalDate startDate, LocalDate endDate) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to get transactions between {} and {} grouped by category", startDate, endDate);
@@ -159,6 +171,7 @@ public class CategorizedTransactionDao {
             ps.setString(tokens.size() + 1, accountNumber);
         }, categorizedTransactionDeserializer);
     }
+
 
     /**
      * Inserts the specified {@link CategorizedTransaction} into the database
