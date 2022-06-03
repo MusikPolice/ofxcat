@@ -1,6 +1,7 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
+import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
@@ -194,5 +195,27 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
             Assertions.assertEquals(1, results.size());
             Assertions.assertEquals(transaction, results.get(0).getTransaction());
         }
+    }
+
+    @Test
+    public void selectByFitIdTest() {
+        // need a category
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        Category category = new Category("HORSEY SAUCE");
+        category = categoryDao.insert(category).get();
+
+        // need an account
+        final AccountDao accountDao = new AccountDao(connection);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).get();
+
+        // now we can create a CategorizedTransaction
+        final String fitId = UUID.randomUUID().toString();
+        CategorizedTransaction expected = new CategorizedTransaction(TestUtils.createRandomTransaction(account, fitId), category);
+        final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+        expected = categorizedTransactionDao.insert(expected).get();
+
+        // and select it by fitId
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        Assertions.assertEquals(expected, actual);
     }
 }

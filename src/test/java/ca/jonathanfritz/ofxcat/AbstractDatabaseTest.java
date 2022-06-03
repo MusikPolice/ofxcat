@@ -5,6 +5,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.sql.Connection;
 
@@ -13,14 +14,18 @@ import java.sql.Connection;
  */
 public abstract class AbstractDatabaseTest {
 
-    protected static Connection connection;
+    protected final Injector injector;
+    protected final Connection connection;
     private static Flyway flyway;
 
     public AbstractDatabaseTest() {
         // get a connection to an in-memory database for child classes to use
-        final Injector injector = Guice.createInjector(new DatastoreModule());
+        injector = Guice.createInjector(new DatastoreModule());
         connection = injector.getInstance(Connection.class);
+    }
 
+    @BeforeEach
+    protected void migrate() {
         // initialize the schema of that in-memory database
         flyway = injector.getInstance(Flyway.class);
         flyway.migrate();

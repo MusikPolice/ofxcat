@@ -1,86 +1,71 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
+import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
-import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.time.LocalDate;
 import java.util.*;
 
-import static org.mockito.Mockito.*;
+class ReportingServiceTest extends AbstractDatabaseTest {
 
-class ReportingServiceTest {
+    private final AccountDao accountDao;
+    private final CategoryDao categoryDao;
+
+    ReportingServiceTest() {
+        this.accountDao = injector.getInstance(AccountDao.class);
+        this.categoryDao = injector.getInstance(CategoryDao.class);
+    }
 
     @Test
     void reportAccountsTest() {
-        final String accountName = UUID.randomUUID().toString();
-        final String accountId = UUID.randomUUID().toString();
-        final String bankId = UUID.randomUUID().toString();
-        final String accountType = UUID.randomUUID().toString();
-
-        // mock account dao will return one account
-        final AccountDao mockAccountDao = Mockito.mock(AccountDao.class);
-        when(mockAccountDao.select()).thenReturn(Collections.singletonList(
-                Account.newBuilder()
-                        .setName(accountName)
-                        .setAccountNumber(accountId)
-                        .setBankId(bankId)
-                        .setAccountType(accountType)
-                        .build()
-        ));
+        // create one test account
+        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
 
         // we expect that account to be printed to the CLI
-        final CLI mockCli = Mockito.mock(CLI.class);
-        doNothing().when(mockCli).println(anyListOf(String.class));
+        final SpyCli spyCli = new SpyCli();
 
         // run the test
-        final ReportingService reportingService = new ReportingService(null, mockAccountDao, null, mockCli);
+        final ReportingService reportingService = new ReportingService(null, accountDao, null, spyCli);
         reportingService.reportAccounts();
 
         // ensure that the right thing was printed
         final List<String> expectedLines = Arrays.asList(
                 "Account Name,Account Number,Bank Id,Account Type",
-                String.format("%s,%s,%s,%s", accountName, accountId, bankId, accountType)
+                String.format("%s,%s,%s,%s", testAccount.getName(), testAccount.getAccountNumber(), testAccount.getBankId(), testAccount.getAccountType())
         );
-        Mockito.verify(mockAccountDao, times(1)).select();
-        Mockito.verify(mockCli, times(1)).println(expectedLines);
-        Mockito.verifyNoMoreInteractions(mockAccountDao, mockCli);
+        final List<String> actualLines = spyCli.getCapturedLines();
+        Assertions.assertEquals(expectedLines, actualLines);
     }
 
     @Test
     void reportCategoriesTest() {
-        final String categoryName = UUID.randomUUID().toString();
-
-        // mock category dao will return one category
-        final CategoryDao mockCategoryDao = Mockito.mock(CategoryDao.class);
-        when(mockCategoryDao.select()).thenReturn(Collections.singletonList(
-                new Category(categoryName)
-        ));
+        // create a test category
+        final Category testCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
 
         // we expect that category to be printed to the CLI
-        final CLI mockCli = Mockito.mock(CLI.class);
-        doNothing().when(mockCli).println(anyListOf(String.class));
+        final SpyCli spyCli = new SpyCli();
 
         // run the test
-        final ReportingService reportingService = new ReportingService(null, null, mockCategoryDao, mockCli);
+        final ReportingService reportingService = new ReportingService(null, null, categoryDao, spyCli);
         reportingService.reportCategories();
 
         // ensure that the right thing was printed - category name should be uppercase!
         final List<String> expectedLines = Arrays.asList(
                 "Category Name",
-                categoryName.toUpperCase()
+                testCategory.getName().toUpperCase()
         );
-        Mockito.verify(mockCategoryDao, times(1)).select();
-        Mockito.verify(mockCli, times(1)).println(expectedLines);
-        Mockito.verifyNoMoreInteractions(mockCategoryDao, mockCli);
+        final List<String> actualLines = spyCli.getCapturedLines();
+        Assertions.assertEquals(expectedLines, actualLines);
     }
 
     @Test
@@ -93,21 +78,21 @@ class ReportingServiceTest {
         final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(7f).build(), restaurants);
 
         // mock transactions dao will return some categorized transactions
-        final CategorizedTransactionDao mockTransactionsDao = Mockito.mock(CategorizedTransactionDao.class);
+        //final CategorizedTransactionDao mockTransactionsDao = Mockito.mock(CategorizedTransactionDao.class);
         final LocalDate startDate = LocalDate.now().minusDays(3);
         final LocalDate endDate = LocalDate.now();
-        when(mockTransactionsDao.selectGroupByCategory(startDate, endDate)).thenReturn(Map.of(
+        /*when(mockTransactionsDao.selectGroupByCategory(startDate, endDate)).thenReturn(Map.of(
                 groceries, Arrays.asList(t1, t2),
                 restaurants, Collections.singletonList(t3)
-        ));
+        ));*/
 
         // we expect the summarized transactions to be printed to the CLI
-        final CLI mockCli = Mockito.mock(CLI.class);
-        doNothing().when(mockCli).println(anyListOf(String.class));
+        /*final CLI mockCli = Mockito.mock(CLI.class);
+        doNothing().when(mockCli).println(anyListOf(String.class));*/
 
         // run the test
-        final ReportingService reportingService = new ReportingService(mockTransactionsDao, null, null, mockCli);
-        reportingService.reportTransactions(startDate, endDate);
+        //final ReportingService reportingService = new ReportingService(mockTransactionsDao, null, null, mockCli);
+        //reportingService.reportTransactions(startDate, endDate);
 
         // ensure that the right thing was printed - categories should be ordered by amount spent descending
         final List<String> expectedLines = Arrays.asList(
@@ -115,9 +100,27 @@ class ReportingServiceTest {
                 String.format("%s,$15.00", groceries.getName()),
                 String.format("%s,$7.00", restaurants.getName())
         );
-        Mockito.verify(mockTransactionsDao, times(1)).selectGroupByCategory(any(LocalDate.class), any(LocalDate.class));
+        /*Mockito.verify(mockTransactionsDao, times(1)).selectGroupByCategory(any(LocalDate.class), any(LocalDate.class));
         Mockito.verify(mockCli, times(1)).println(anyString());
         Mockito.verify(mockCli, times(1)).println(expectedLines);
-        Mockito.verifyNoMoreInteractions(mockTransactionsDao, mockCli);
+        Mockito.verifyNoMoreInteractions(mockTransactionsDao, mockCli);*/
+    }
+
+    private static class SpyCli extends CLI {
+
+        private final List<String> capturedLines = new ArrayList<>();
+
+        public SpyCli() {
+            super(null, null);
+        }
+
+        @Override
+        public void println(List<String> lines) {
+            capturedLines.addAll(lines);
+        }
+
+        public List<String> getCapturedLines() {
+            return Collections.unmodifiableList(capturedLines);
+        }
     }
 }

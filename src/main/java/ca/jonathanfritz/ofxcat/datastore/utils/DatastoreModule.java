@@ -31,11 +31,12 @@ public class DatastoreModule extends AbstractModule {
      * Wires up an in-memory database for testing purposes
      */
     public DatastoreModule() {
-        this.connectionString = "jdbc:sqlite:mem:testdb";
+        this.connectionString = "jdbc:sqlite:file::memory:?cache=shared";
         logger.info("Database connection string is {}", connectionString);
     }
 
     @Provides
+    @Singleton
     public DataSource provideDataSource() {
         // if any SQLite-specific config is required, this is where it should be added
         final SQLiteDataSource dataSource = new SQLiteDataSource();
