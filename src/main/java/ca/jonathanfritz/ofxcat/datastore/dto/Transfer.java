@@ -1,13 +1,45 @@
 package ca.jonathanfritz.ofxcat.datastore.dto;
 
+import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
+
 import java.util.Objects;
-import java.util.stream.Stream;
 
-public record Transfer(Transaction source,
-                       Transaction sink) {
+public class Transfer implements Entity {
 
-    public Stream<Transaction> stream() {
-        return Stream.of(source, sink);
+    private final Long id;
+    private final CategorizedTransaction source;
+    private final CategorizedTransaction sink;
+
+    public Transfer(CategorizedTransaction source, CategorizedTransaction sink) {
+        this(null, source, sink);
+    }
+
+    public Transfer(Long id, CategorizedTransaction source, CategorizedTransaction sink) {
+        this.id = id;
+        this.source = source;
+        this.sink = sink;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
+    }
+
+    public CategorizedTransaction getSource() {
+        return source;
+    }
+
+    public CategorizedTransaction getSink() {
+        return sink;
+    }
+
+    @Override
+    public String toString() {
+        return "Transfer{" +
+                "id=" + id +
+                ", source=" + source +
+                ", sink=" + sink +
+                '}';
     }
 
     @Override
@@ -15,11 +47,11 @@ public record Transfer(Transaction source,
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transfer transfer = (Transfer) o;
-        return Objects.equals(source, transfer.source) && Objects.equals(sink, transfer.sink);
+        return Objects.equals(id, transfer.id) && Objects.equals(source, transfer.source) && Objects.equals(sink, transfer.sink);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(source, sink);
+        return Objects.hash(id, source, sink);
     }
 }

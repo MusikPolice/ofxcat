@@ -1,8 +1,6 @@
 package ca.jonathanfritz.ofxcat.service;
 
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
+import ca.jonathanfritz.ofxcat.datastore.dto.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -51,17 +49,20 @@ public class TransferMatchingService {
                 final Transaction sink = potentialSinks.get(0);
                 sourceTransactions.remove(source);
                 sinkTransactions.remove(sink);
-                transfers.add(new Transfer(source, sink));
+                transfers.add(new Transfer(
+                    new CategorizedTransaction(source, Category.TRANSFER),
+                    new CategorizedTransaction(sink, Category.TRANSFER)
+                ));
             }
         }
 
         // finally, we can remove all matched transactions from the incoming map of account transactions
-        final Set<Transaction> matchedTransactions = transfers.stream()
-                .flatMap(t -> Stream.of(t.sink(), t.source()))
+        final Set<CategorizedTransaction> matchedTransactions = transfers.stream()
+                .flatMap(t -> Stream.of(t.getSink(), t.getSource()))
                 .collect(Collectors.toSet());
         for (Account account : accountTransactions.keySet()) {
             final List<Transaction> filtered = accountTransactions.get(account).stream()
-                    .filter(t -> !matchedTransactions.contains(t))
+                    .filter(t -> matchedTransactions.stream().noneMatch(ct -> ct.getFitId().equals(t.getFitId())))
                     .toList();
             accountTransactions.put(account, filtered);
         }

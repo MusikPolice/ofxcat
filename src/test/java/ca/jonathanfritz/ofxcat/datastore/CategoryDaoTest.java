@@ -83,9 +83,10 @@ class CategoryDaoTest extends AbstractDatabaseTest {
 
         final List<Category> categories = categoryDao.select();
 
-        // the default UNKNOWN category will be returned, along with the two new categories that were inserted
-        Assertions.assertEquals(3, categories.size());
+        // the default UNKNOWN and TRANSFER categories will be returned, along with the two new categories that were inserted
+        Assertions.assertEquals(4, categories.size());
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(Category.UNKNOWN)));
+        Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(Category.TRANSFER)));
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category1)));
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category2)));
     }

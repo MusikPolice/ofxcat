@@ -71,31 +71,31 @@ public class CategorizedTransactionDao {
      */
     public Optional<CategorizedTransaction> select(long id) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to query Transaction with id {}", id);
+            logger.debug("Attempting to query CategorizedTransaction with id {}", id);
             final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE id = ?";
             final List<CategorizedTransaction> results = t.query(selectStatement, ps -> ps.setLong(1, id), categorizedTransactionDeserializer);
             return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
-            logger.error("Failed to query Transaction with id {}", id, e);
+            logger.error("Failed to query CategorizedTransaction with id {}", id, e);
             return Optional.empty();
         }
     }
 
     public Optional<CategorizedTransaction> selectByFitId(String fitId) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to query Transaction with fitId {}", fitId);
+            logger.debug("Attempting to query CategorizedTransaction with fitId {}", fitId);
             final String selectStatement = "SELECT * FROM CategorizedTransaction WHERE fitId = ?";
             final List<CategorizedTransaction> results = t.query(selectStatement, ps -> ps.setString(1, fitId), categorizedTransactionDeserializer);
             return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
-            logger.error("Failed to query Transaction with fitId {}", fitId, e);
+            logger.error("Failed to query CategorizedTransaction with fitId {}", fitId, e);
             return Optional.empty();
         }
     }
 
     public Map<Category, List<CategorizedTransaction>> selectGroupByCategory(LocalDate startDate, LocalDate endDate) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            logger.debug("Attempting to get transactions between {} and {} grouped by category", startDate, endDate);
+            logger.debug("Attempting to get CategorizedTransactions between {} and {} grouped by category", startDate, endDate);
             final String query = "SELECT * FROM CategorizedTransaction WHERE date >= ? AND date <= ?";
             final List<CategorizedTransaction> results = t.query(query, ps -> {
                 ps.setDate(1, Date.valueOf(startDate));
@@ -108,7 +108,7 @@ public class CategorizedTransactionDao {
                             (l1, l2) -> Streams.concat(l1.stream(), l2.stream()).collect(Collectors.toList()))
                     );
         } catch (SQLException e) {
-            logger.error("Failed to get transactions between {} and {} grouped by category", startDate, endDate, e);
+            logger.error("Failed to get CategorizedTransactions between {} and {} grouped by category", startDate, endDate, e);
             return new HashMap<>();
         }
     }
@@ -132,7 +132,7 @@ public class CategorizedTransactionDao {
     }
 
     public List<CategorizedTransaction> findByDescriptionAndAccountNumber(DatabaseTransaction t, String description, String accountNumber) throws SQLException {
-        logger.debug("Searching for transactions with description {} and account number {}", description, accountNumber);
+        logger.debug("Searching for CategorizedTransactions with description {} and account number {}", description, accountNumber);
         final String selectStatement = "SELECT c.* " +
                 "FROM CategorizedTransaction AS c " +
                 "INNER JOIN Account AS a " +
@@ -147,7 +147,7 @@ public class CategorizedTransactionDao {
     }
 
     public List<CategorizedTransaction> findByDescriptionAndAccountNumber(DatabaseTransaction t, List<String> tokens, String accountNumber) throws SQLException {
-        logger.debug("Searching for transactions with description containing one of {} and account number {}", tokens, accountNumber);
+        logger.debug("Searching for CategorizedTransactions with description containing one of {} and account number {}", tokens, accountNumber);
         final StringBuilder likeClauses = new StringBuilder("(");
         for (int i = 0; i < tokens.size(); i++) {
             if (likeClauses.length() > 1) {

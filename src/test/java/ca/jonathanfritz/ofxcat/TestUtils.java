@@ -97,6 +97,10 @@ public class TestUtils {
         return createRandomTransaction(account, fitId, date, amount, type);
     }
 
+    public static Transaction createRandomTransaction(Account account) {
+        return createRandomTransaction(account, UUID.randomUUID().toString());
+    }
+
     public static Transaction createRandomTransaction() {
         final Account account = createRandomAccount();
         final LocalDate date = LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));

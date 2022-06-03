@@ -6,6 +6,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransferDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
@@ -27,6 +28,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // TODO: Improve test coverage
@@ -41,11 +43,12 @@ public class TransactionImportService {
     private final TransactionCategoryService transactionCategoryService;
     private final CategoryDao categoryDao;
     private final TransferMatchingService transferMatchingService;
+    private final TransferDao transferDao;
 
     private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao, TransferMatchingService transferMatchingService) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao, TransferMatchingService transferMatchingService, TransferDao transferDao) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -55,6 +58,7 @@ public class TransactionImportService {
         this.transactionCategoryService = transactionCategoryService;
         this.categoryDao = categoryDao;
         this.transferMatchingService = transferMatchingService;
+        this.transferDao = transferDao;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -118,30 +122,25 @@ public class TransactionImportService {
 
         // all of our transactions have been cleaned up and enriched with account and balance information
         // at this point, we can attempt to identify inter-account transfers
-        final Set<Transfer> transfers = transferMatchingService.match(accountTransactions);
-        transfers.forEach(transfer -> {
-            transfer.stream().forEach(transaction -> {
-                try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-                    if (categorizedTransactionDao.isDuplicate(t, transaction)) {
-                        logger.info("Ignored duplicate Transaction {}", transaction);
-                        return;
-                    }
+        final Set<Transfer> transfers = transferMatchingService.match(accountTransactions).stream().map(transfer -> {
+            try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+                // insert each transaction
+                final CategorizedTransaction source = insertTransferTransaction(t, transfer.getSource());
+                final CategorizedTransaction sink = insertTransferTransaction(t, transfer.getSink());
+                categorizedTransactions.addAll(List.of(source, sink));
 
-                    // TODO: make the schema change that creates this category
-                    CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, Category.TRANSFER);
-                    categorizedTransactionDao.insert(t, categorizedTransaction)
-                            .ifPresent(categorizedTransactions::add);
+                // create the transfer
+                transfer = transferDao.insert(t, new Transfer(source, sink))
+                        .orElseThrow(() -> new SQLException("Failed to insert Transfer"));
+                cli.printFoundNewTransfer(transfer);
 
-                    cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
-                    logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
-                } catch (SQLException e) {
-                    logger.error("Failed to import transaction {}", transaction, e);
-                }
-            });
+                return transfer;
 
-            // TODO: insert the transfer itself into a separate table
-
-        });
+            } catch (SQLException | OfxCatException e) {
+                logger.error("Failed to import Transfer {}", transfer, e);
+                return null;
+            }
+        }).filter(Objects::nonNull).collect(Collectors.toSet());
 
         for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
             // TODO: this can probably be cleaned up too
@@ -180,5 +179,28 @@ public class TransactionImportService {
         }
 
         return categorizedTransactions;
+    }
+
+    private CategorizedTransaction insertTransferTransaction(DatabaseTransaction t, Transaction transaction) throws OfxCatException {
+        try {
+            // if the transaction was previously inserted, return the existing record
+            if (categorizedTransactionDao.isDuplicate(t, transaction)) {
+                logger.info("Ignored duplicate Transaction {}", transaction);
+                return categorizedTransactionDao.selectByFitId(transaction.getFitId()).get();
+            }
+
+            // otherwise insert it
+            CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, Category.TRANSFER);
+            categorizedTransaction = categorizedTransactionDao.insert(t, categorizedTransaction)
+                    .orElseThrow(() -> new OfxCatException("Failed to insert CategorizedTransaction with fitId " +
+                            transaction.getFitId() + " and Category " + Category.TRANSFER.getName()));
+
+            cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
+            logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
+
+            return categorizedTransaction;
+        } catch (SQLException ex) {
+            throw new OfxCatException("Failed to insert either the source or sink of a Transfer", ex);
+        }
     }
 }

@@ -3,6 +3,7 @@ package ca.jonathanfritz.ofxcat.cli;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
@@ -26,6 +27,7 @@ public class CLI {
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
     private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
+    private static final String NEW_TRANSFER_BOOKMARK = "new-transfer";
 
     @Inject
     public CLI(TextIO textIO, TextIOWrapper textIOWrapper) {
@@ -218,5 +220,21 @@ public class CLI {
                     return null;
                 })
                 .read("\nPlease enter a new category for transaction");
+    }
+
+    public void printFoundNewTransfer(Transfer transfer) {
+        textIO.getTextTerminal().println("\nFound new transfer:");
+
+        textIO.getTextTerminal().print("Amount: ");
+        printCurrencyValue(transfer.getSink().getAmount());
+
+        textIO.getTextTerminal().print("From: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSource().getAccount().getName()));
+
+        textIO.getTextTerminal().print("To: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSink().getAccount().getName()));
+
+        textIO.getTextTerminal().print("On: ");
+        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSource().getDate().toString()));
     }
 }

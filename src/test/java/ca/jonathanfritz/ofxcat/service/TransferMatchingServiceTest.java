@@ -41,13 +41,16 @@ class TransferMatchingServiceTest {
         final Set<Transfer> transfers = service.match(accountTransactions);
         assertEquals(3, transfers.size());
         assertTrue(transfers.stream().anyMatch(t ->
-                t.sink().equals(checkingTransactions.get(0)) && t.source().equals(savingsTransactions.get(0))
+                t.getSink().getFitId().equals(checkingTransactions.get(0).getFitId()) &&
+                        t.getSource().getFitId().equals(savingsTransactions.get(0).getFitId())
         ));
         assertTrue(transfers.stream().anyMatch(t ->
-                t.sink().equals(checkingTransactions.get(1)) && t.source().equals(savingsTransactions.get(1))
+                t.getSink().getFitId().equals(checkingTransactions.get(1).getFitId()) &&
+                        t.getSource().getFitId().equals(savingsTransactions.get(1).getFitId())
         ));
         assertTrue(transfers.stream().anyMatch(t ->
-                t.source().equals(checkingTransactions.get(2)) && t.sink().equals(savingsTransactions.get(2))
+                t.getSource().getFitId().equals(checkingTransactions.get(2).getFitId()) &&
+                        t.getSink().getFitId().equals(savingsTransactions.get(2).getFitId())
         ));
 
         // there will be one remaining unmatched transaction
