@@ -26,12 +26,14 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransferMatchingService transferMatchingService;
 
     public TransactionImportServiceTest() {
         this.transactionCleanerFactory = new TransactionCleanerFactory();
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        this.transferMatchingService = injector.getInstance(TransferMatchingService.class);
     }
 
     @Test
@@ -51,7 +53,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         // try to insert it
         final SpyCli spyCli = new SpyCli();
         final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao);
+        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertEquals(1, categorizedTransactions.size());
         Assertions.assertEquals(fitId, categorizedTransactions.get(0).getTransaction().getFitId());
@@ -85,7 +87,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
 
         // actually run the test
-        final TransactionImportService transactionImportService = new TransactionImportService(null, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, null, categoryDao);
+        final TransactionImportService transactionImportService = new TransactionImportService(null, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, null, categoryDao, transferMatchingService);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 

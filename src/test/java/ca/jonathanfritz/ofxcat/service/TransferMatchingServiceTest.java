@@ -23,17 +23,17 @@ class TransferMatchingServiceTest {
 
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         final List<Transaction> checkingTransactions = Arrays.asList(
-                TestUtils.createRandomTransaction(checking, today, 100f, Transaction.TransactionType.XFER),
-                TestUtils.createRandomTransaction(checking, today, 50f, Transaction.TransactionType.XFER),
-                TestUtils.createRandomTransaction(checking, today, -20f, Transaction.TransactionType.XFER),
-                TestUtils.createRandomTransaction(checking, today, 200f, Transaction.TransactionType.XFER)
+                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, 50f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, -20f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, 200f, Transaction.TransactionType.XFER)
         );
         accountTransactions.put(checking, checkingTransactions);
 
         final List<Transaction> savingsTransactions = Arrays.asList(
-                TestUtils.createRandomTransaction(savings, today, -100f, Transaction.TransactionType.XFER),
-                TestUtils.createRandomTransaction(savings, today, -50f, Transaction.TransactionType.XFER),
-                TestUtils.createRandomTransaction(savings, today, 20f, Transaction.TransactionType.XFER)
+                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, -50f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, 20f, Transaction.TransactionType.XFER)
         );
         accountTransactions.put(savings, savingsTransactions);
 
