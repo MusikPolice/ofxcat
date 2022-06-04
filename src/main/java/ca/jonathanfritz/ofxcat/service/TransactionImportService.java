@@ -28,7 +28,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // TODO: Improve test coverage
@@ -88,6 +87,9 @@ public class TransactionImportService {
 
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
+
+            // TODO: credit cards don't have a bank id - infer it from other accounts in the ofx file?
+
             // figure out which account these transactions belong to
             final Account account = accountDao.selectByAccountNumber(ofxExport.getAccount().getAccountId())
                     .or(() -> accountDao.insert(cli.assignAccountName(ofxExport.getAccount())))
@@ -122,7 +124,7 @@ public class TransactionImportService {
 
         // all of our transactions have been cleaned up and enriched with account and balance information
         // at this point, we can attempt to identify inter-account transfers
-        final Set<Transfer> transfers = transferMatchingService.match(accountTransactions).stream().map(transfer -> {
+        transferMatchingService.match(accountTransactions).stream().forEach(transfer -> {
             try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
                 // insert each transaction
                 final CategorizedTransaction source = insertTransferTransaction(t, transfer.getSource());
@@ -134,13 +136,10 @@ public class TransactionImportService {
                         .orElseThrow(() -> new SQLException("Failed to insert Transfer"));
                 cli.printFoundNewTransfer(transfer);
 
-                return transfer;
-
             } catch (SQLException | OfxCatException e) {
                 logger.error("Failed to import Transfer {}", transfer, e);
-                return null;
             }
-        }).filter(Objects::nonNull).collect(Collectors.toSet());
+        });
 
         for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
             // TODO: this can probably be cleaned up too

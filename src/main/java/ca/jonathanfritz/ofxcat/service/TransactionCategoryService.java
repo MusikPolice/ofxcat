@@ -188,14 +188,14 @@ public class TransactionCategoryService {
         }
 
         // there are no known categories or the user chose to add a new category
-        return promptForNewCategoryName(transaction);
+        return promptForNewCategoryName(transaction, allCategories);
     }
 
     /**
      * Prompts the user to choose a new category name, associates it with the specified transaction
      */
-    private CategorizedTransaction promptForNewCategoryName(Transaction transaction) {
-        final String newCategoryName = cli.promptForNewCategoryName();
+    private CategorizedTransaction promptForNewCategoryName(Transaction transaction, List<Category> allCategories) {
+        final String newCategoryName = cli.promptForNewCategoryName(allCategories);
         return new CategorizedTransaction(transaction, new Category(newCategoryName));
     }
 }

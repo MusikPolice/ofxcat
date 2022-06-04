@@ -203,7 +203,7 @@ public class CLI {
                 .findFirst();
     }
 
-    public String promptForNewCategoryName() {
+    public String promptForNewCategoryName(List<Category> allCategories) {
         // otherwise, prompt them to enter a new category name
         return textIO.newStringInputReader()
                 .withValueChecker((val, itemName) -> {
@@ -216,6 +216,8 @@ public class CLI {
                         return Collections.singletonList(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
                     } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
                         return Collections.singletonList(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
+                    } else if (allCategories.stream().anyMatch(c -> c.getName().trim().equalsIgnoreCase(val.trim()))) {
+                        return Collections.singletonList("Category names must be unique");
                     }
                     return null;
                 })

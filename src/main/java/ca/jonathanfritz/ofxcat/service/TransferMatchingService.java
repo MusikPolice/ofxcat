@@ -35,8 +35,7 @@ public class TransferMatchingService {
         // next we'll attempt to match each source transaction with a corresponding sink transaction that took place on
         // the same day, is for the same amount (negated), and belongs to a different account
         final Set<Transfer> transfers = new HashSet<>();
-        while (sourceTransactions.iterator().hasNext()) {
-            final Transaction source = sourceTransactions.iterator().next();
+        for (Transaction source : sourceTransactions) {
             final List<Transaction> potentialSinks = sinkTransactions.stream()
                     .filter(t -> t.getDate().equals(source.getDate()))
                     .filter(t -> t.getAmount() == source.getAmount() * -1)
@@ -47,8 +46,6 @@ public class TransferMatchingService {
             // account to the other
             if (potentialSinks.size() == 1) {
                 final Transaction sink = potentialSinks.get(0);
-                sourceTransactions.remove(source);
-                sinkTransactions.remove(sink);
                 transfers.add(new Transfer(
                     new CategorizedTransaction(source, Category.TRANSFER),
                     new CategorizedTransaction(sink, Category.TRANSFER)

@@ -53,6 +53,8 @@ public class TransactionCleanerFactory {
         }
     }
 
+    // TODO: bankId is null for credit card "accounts"
+    //  if there are transactions on the CC that require massaging, may need to make a special cleaner for them
     public TransactionCleaner findByBankId(String bankId) {
         final TransactionCleaner cached = cache.get(bankId);
         if (cached != null) {
