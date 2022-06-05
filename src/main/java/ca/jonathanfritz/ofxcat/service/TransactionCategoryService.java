@@ -70,7 +70,6 @@ public class TransactionCategoryService {
         return new CategorizedTransaction(newTransaction, descriptionCategory.getCategory());
     }
 
-    // TODO: never auto-categorize as UNKNOWN! Always prompt user
     // TODO: why does LCBO/RAO not auto-categorize?
     public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
         // try an exact match first
@@ -102,6 +101,7 @@ public class TransactionCategoryService {
 
         if (distinctCategories.isEmpty()) {
             // there were no exact matches for this transaction description and account number
+            logger.info("There are no existing transactions that exactly match the description of the specified Transaction");
             return Optional.empty();
         } else if (distinctCategories.size() == 1) {
             // all matching transactions share the same category - use it
@@ -124,43 +124,44 @@ public class TransactionCategoryService {
                 .collect(Collectors.toList());
         final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, tokens, transaction.getAccount().getAccountNumber());
 
+        // count the number of categories that we found
         final List<Category> distinctCategories = categorizedTransactions.stream()
                 .map(CategorizedTransaction::getCategory)
                 .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
                 .distinct()
                 .collect(Collectors.toList());
 
+        // short circuit if there were no partial matches
         if (distinctCategories.isEmpty()) {
-            // there were no partial matches
+            logger.info("There are no existing transactions that partially match the description of the specified Transaction");
             return Optional.empty();
-        } else if (distinctCategories.size() == 1) {
-            // all matching transactions share the same category - use it
-            logger.info("New transaction exactly matches description and account number of {} existing transactions " +
-                    "with category {}", categorizedTransactions.size(), distinctCategories.get(0));
-            return Optional.of(new CategorizedTransaction(transaction, distinctCategories.get(0)));
-        } else {
-            // there is more than one potential category - rank the choices by fuzzy string match and prompt the user to choose
-            final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(transaction.getDescription(), categorizedTransactions, Transaction::getDescription);
+        }
+        logger.info("New transaction description and account number partially match that of {} existing transactions " +
+                "with categories {}", categorizedTransactions.size(), distinctCategories);
 
-            // score each category based on the fuzzy match score of all associated transactions
-            final Map<Category, Float> categoryScores = new HashMap<>();
-            for (Category category : distinctCategories) {
-                // find all matched transactions with this category
-                final List<BoundExtractedResult<CategorizedTransaction>> categoryFuzzyMatches = fuzzyMatches.stream()
-                        .filter(fm -> fm.getReferent().getCategory() == category)
-                        .collect(Collectors.toList());
-                final float score = categoryFuzzyMatches.stream().map(BoundExtractedResult::getScore).reduce(0, Integer::sum) / (float) categoryFuzzyMatches.size();
-                categoryScores.put(category, score);
-            }
+        // rank the choices by fuzzy string match and prompt the user to choose
+        final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(transaction.getDescription(), categorizedTransactions, Transaction::getDescription);
 
-            // get list of choices ranked by score descending for the user to choose from
-            final List<Category> choices = categoryScores.entrySet().stream()
-                .sorted((entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue()) * -1)
-                    .map(Map.Entry::getKey)
+        // score each category based on the fuzzy match score of all associated transactions
+        final Map<Category, Float> categoryScores = new HashMap<>();
+        for (Category category : distinctCategories) {
+            // find all matched transactions with this category
+            final List<BoundExtractedResult<CategorizedTransaction>> categoryFuzzyMatches = fuzzyMatches.stream()
+                    .filter(fm -> fm.getReferent().getCategory() == category)
                     .collect(Collectors.toList());
 
-            return chooseCategoryFromList(transaction, choices);
+            // compute the average score
+            final float score = categoryFuzzyMatches.stream().map(BoundExtractedResult::getScore).reduce(0, Integer::sum) / (float) categoryFuzzyMatches.size();
+            categoryScores.put(category, score);
         }
+
+        // get list of choices ranked by score descending for the user to choose from
+        final List<Category> choices = categoryScores.entrySet().stream()
+            .sorted((entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue()) * -1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        return chooseCategoryFromList(transaction, choices);
     }
 
     /**
@@ -168,9 +169,15 @@ public class TransactionCategoryService {
      * associated with the specified transaction. Otherwise, returns Optional.empty()
      */
     private Optional<CategorizedTransaction> chooseCategoryFromList(Transaction transaction, List<Category> choices) {
+        logger.info("Prompting user to categorize new transaction as one of {}", choices);
         final Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
-        return Optional.of(chosenCategory.map(category -> new CategorizedTransaction(transaction, category)))
-                .orElse(Optional.empty());
+        return Optional.of(chosenCategory.map(category -> {
+                    logger.info("User chose category {}", category);
+                    return new CategorizedTransaction(transaction, category);
+                })).orElseGet(() -> {
+                    logger.info("User declined to choose one of the presented categories");
+                    return Optional.empty();
+                });
     }
 
     /**

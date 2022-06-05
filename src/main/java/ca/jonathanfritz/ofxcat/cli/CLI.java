@@ -20,14 +20,11 @@ import java.util.stream.Stream;
 // TODO: test me?
 public class CLI {
 
-    private static final String CATEGORIZED_TRANSACTION_BOOKMARK = "categorized-transaction";
     private final TextIO textIO;
     private final TextIOWrapper textIOWrapper;
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
-    private static final String CATEGORIZE_NEW_TRANSACTION_BOOKMARK = "categorize-transaction";
-    private static final String NEW_TRANSFER_BOOKMARK = "new-transfer";
 
     @Inject
     public CLI(TextIO textIO, TextIOWrapper textIOWrapper) {
@@ -110,21 +107,11 @@ public class CLI {
     }
 
     public void printFoundNewTransaction(Transaction transaction) {
-        textIO.getTextTerminal().setBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
         textIO.getTextTerminal().println("\nFound new transaction:");
         printTransaction(transaction);
     }
 
     public void printTransactionCategorizedAs(final Category category) {
-        // return the cursor to the bookmark that we set before starting the categorization process
-        // this will be replaced by a println(...) if not supported in the current terminal
-        textIO.getTextTerminal().resetToBookmark(CATEGORIZE_NEW_TRANSACTION_BOOKMARK);
-
-        // return the cursor to the bookmark that we set before showing the category that the last transaction was sorted into
-        // this will be replaced by a println(...) if not supported in the current terminal
-        textIO.getTextTerminal().resetToBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
-        textIO.getTextTerminal().setBookmark(CATEGORIZED_TRANSACTION_BOOKMARK);
-
         textIO.getTextTerminal().print("\nCategorized transaction as ");
         textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(category.getName()));
     }

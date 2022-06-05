@@ -18,9 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
@@ -65,7 +63,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
      * transaction, even if its description matches an existing transaction in that category
      */
     @Test
-    public void categorizeTransactionDoesNotMatchUnknown() throws SQLException {
+    public void categorizeTransactionDoesNotMatchUnknownTest() throws SQLException {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // when the cli is prompted to choose a category, it will return the first category that isn't UNKNOWN
             final List<Category> categories = categoryDao.select();
@@ -98,6 +96,55 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         }
     }
 
+    @Test
+    public void categorizeTransactionExactMatchTest() throws SQLException {
+        // create one previously categorized transaction
+        final String description = "Hello World";
+        final Transaction existingTransaction = createRandomTransaction(testAccount, description);
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
+        final CategorizedTransaction expected =
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).get();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create another transaction with the same description
+            final Transaction newTransaction = createRandomTransaction(testAccount, description);
+
+            // attempt to automatically categorize it - we should get a direct match with the category created above
+            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
+            final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
+
+            // actual should have the same category as expected
+            Assertions.assertEquals(expected.getCategory(), actual.getCategory());
+            Assertions.assertEquals(existingCategory, actual.getCategory());
+        }
+    }
+
+    @Test
+    public void categorizeTransactionPartialMatchTest() throws SQLException {
+        // create one previously categorized transaction
+        final Transaction existingTransaction = createRandomTransaction(testAccount, "Hello World");
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
+        final CategorizedTransaction expected =
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).get();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create another transaction with a description that shares a word in common with that of an existing transaction
+            final Transaction newTransaction = createRandomTransaction(testAccount, "Boy Meets World");
+
+            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
+            final SpyCli spyCli = new SpyCli(existingCategory);
+            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+            final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
+
+            // actual should have the same category as expected
+            Assertions.assertEquals(expected.getCategory(), actual.getCategory());
+            Assertions.assertEquals(existingCategory, actual.getCategory());
+
+            // and the CLI should have been prompted to choose the existing category
+            Assertions.assertEquals(List.of(existingCategory), spyCli.capturedCategories);
+        }
+    }
+
     // inserts a transaction, associating it with a new category
     private void insertTransaction(Account account, String description, String categoryName, TransactionCategoryService transactionCategoryService) {
         final Transaction transaction = createRandomTransaction(account, description);
@@ -125,6 +172,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     private static class SpyCli extends CLI {
 
         private final Category category;
+        private final List<Category> capturedCategories = new ArrayList<>();
 
         public SpyCli(Category category) {
             super(null, null);
@@ -134,6 +182,16 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         @Override
         public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
             return Optional.of(category);
+        }
+
+        @Override
+        public Optional<Category> chooseCategoryOrChooseAnother(List<Category> categories) {
+            capturedCategories.addAll(categories);
+            return Optional.of(category);
+        }
+
+        public List<Category> getCapturedCategories() {
+            return Collections.unmodifiableList(capturedCategories);
         }
     }
 }
