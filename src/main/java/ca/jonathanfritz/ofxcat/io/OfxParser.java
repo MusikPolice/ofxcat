@@ -6,6 +6,7 @@ import com.webcohesion.ofx4j.io.OFXParseException;
 import com.webcohesion.ofx4j.io.OFXReader;
 import com.webcohesion.ofx4j.io.OFXSyntaxException;
 import com.webcohesion.ofx4j.io.nanoxml.NanoXMLOFXReader;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,11 +53,17 @@ public class OfxParser {
         final Map<OfxAccount, List<OfxTransaction.TransactionBuilder>> transactions = new HashMap<>();
         final Map<OfxAccount, OfxBalance.Builder> accountBalances = new HashMap<>();
 
+        // an OFX file that is exported from an institution may contain a mix of credit cards and traditional bank
+        // accounts, but the credit cards may not have a bankId associated with them. This breaks the
+        // TransactionCleanerFactory's ability to assign the correct transaction cleaner to the credit card.
+        // record the first bankId found in the file and use it for every account unless otherwise specified.
+        // this is a one element array because Java streams can only access effectively final variables from the parent scope :/
+        final String[] bankId = {null};
+
         // no sense in making this a singleton, since this whole object is re-created every time the parse function is
         // called to avoid storing state in OfxParser
         final OFXReader ofxReader = new NanoXMLOFXReader();
         ofxReader.setContentHandler(new OFXHandler() {
-
             // in progress builders - the OFXReader executes callback methods as it encounters elements in the file, so
             // we need to start pojos and then add to them as new elements are read
             OfxAccount.Builder accountBuilder;
@@ -92,6 +100,10 @@ public class OfxParser {
                 switch (name.toUpperCase()) {
                     //account information
                     case BANKID:
+                        // save the first bankId that we find in the file
+                        if (StringUtils.isBlank(bankId[0])) {
+                            bankId[0] = value;
+                        }
                         accountBuilder.setBankId(value);
                         break;
                     case ACCTID:
@@ -201,6 +213,25 @@ public class OfxParser {
         // bundle up the imported data for all accounts
         // returned list is sorted alphabetically by account id
         return transactions.entrySet().stream()
+                .flatMap((Function<Map.Entry<OfxAccount, List<OfxTransaction.TransactionBuilder>>, Stream<Map.Entry<OfxAccount, List<OfxTransaction.TransactionBuilder>>>>) entry -> {
+                    // if one of our accounts was not assigned a bankId, we can assume that the correct bankId is the
+                    // first one found in the OFX file, since the file should only contain accounts that come from a
+                    // single institution
+                    // this ensures that credit cards get a bankId, which means that we run their transactions through
+                    // the correct TransactionCleaner
+                    final OfxAccount account = entry.getKey();
+                    if (StringUtils.isBlank(account.getBankId()) && StringUtils.isNotBlank(bankId[0])) {
+                        final OfxAccount updatedAccount = OfxAccount.newBuilder(account)
+                                .setBankId(bankId[0])
+                                .build();
+
+                        final OfxBalance.Builder balance = accountBalances.remove(account);
+                        accountBalances.put(updatedAccount, balance);
+
+                        return Stream.of(Map.entry(updatedAccount, entry.getValue()));
+                    }
+                    return Stream.of(entry);
+                })
                 .map(entry -> new OfxExport(entry.getKey(), accountBalances.get(entry.getKey()).build(),
                         entry.getValue().stream()
                             .map(OfxTransaction.TransactionBuilder::build)

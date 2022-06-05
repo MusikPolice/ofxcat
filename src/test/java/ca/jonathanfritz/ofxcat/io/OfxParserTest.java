@@ -5,6 +5,7 @@ import com.webcohesion.ofx4j.io.OFXParseException;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.Is;
 import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNull;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -139,6 +140,7 @@ class OfxParserTest {
 
         // the first should be a checking account with two transactions
         final OfxExport checking = ofxExports.get(0);
+        MatcherAssert.assertThat(checking.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(checking.getAccount().getAccountId(), IsEqual.equalTo("078123116385"));
         MatcherAssert.assertThat(checking.getAccount().getAccountType(), IsEqual.equalTo("CHECKING"));
         MatcherAssert.assertThat(checking.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
@@ -151,6 +153,7 @@ class OfxParserTest {
 
         // the second should be a savings account with two transactions
         final OfxExport savings = ofxExports.get(1);
+        MatcherAssert.assertThat(savings.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(savings.getAccount().getAccountId(), IsEqual.equalTo("228035462751"));
         MatcherAssert.assertThat(savings.getAccount().getAccountType(), IsEqual.equalTo("SAVINGS"));
         MatcherAssert.assertThat(savings.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
@@ -163,12 +166,18 @@ class OfxParserTest {
 
         // the third should be a credit card with one transaction
         final OfxExport creditCard = ofxExports.get(2);
+        MatcherAssert.assertThat(creditCard.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(creditCard.getAccount().getAccountId(), IsEqual.equalTo("3580452029974826"));
         MatcherAssert.assertThat(creditCard.getAccount().getAccountType(), IsEqual.equalTo("CREDIT_CARD"));
         MatcherAssert.assertThat(creditCard.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(1L));
         assertTrue(creditCard.getTransactions().values().stream()
                 .flatMap(Collection::stream)
                 .anyMatch(t -> t.getFitId().equalsIgnoreCase("9000001302920F103V05373431CF1")));
+
+        // all three accounts should have the same bankId because they came from the same OFX file
+        assertTrue(ofxExports.stream()
+                .map(ofxExport -> ofxExport.getAccount().getBankId())
+                .allMatch("900000100"::equals));
     }
 
     private InputStream loadOfxFile(String filename) {
