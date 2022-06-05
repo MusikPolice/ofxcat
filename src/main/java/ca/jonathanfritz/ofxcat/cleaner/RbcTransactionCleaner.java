@@ -3,6 +3,7 @@ package ca.jonathanfritz.ofxcat.cleaner;
 import ca.jonathanfritz.ofxcat.cleaner.rules.TransactionMatcherRule;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -65,6 +66,15 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription(ofxTransaction.getMemo().substring(19))));
 
+        // wire transfer
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^FUNDS TRANSFER CR", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("WIRE TRANSFER")));
+
         // incoming Interac e-transfer with auto-deposit
         rules.add(TransactionMatcherRule.newBuilder()
                 .withName(Pattern.compile("^E-TRF AUTODEPOSIT$", Pattern.CASE_INSENSITIVE))
@@ -105,6 +115,16 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setDate(ofxTransaction.getDate())
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription("INTERAC E-TRANSFER SERVICE CHARGE")));
+
+        // sometimes an e-transfer can be cancelled and refunded
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withMemo(Pattern.compile("^E-TRANSFER CANCEL"))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.CREDIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("CANCELLED INTERAC E-TRANSFER")));
 
         // personal loan repayment (car loan, small business loan, etc)
         rules.add(TransactionMatcherRule.newBuilder()

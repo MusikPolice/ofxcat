@@ -141,10 +141,22 @@ class RbcTransactionCleanerTest {
     }
 
     @Test
+    public void interacEtransferCancelledTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setName("Email Trfs Can")
+                .setMemo("E-TRANSFER CANCEL")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("CANCELLED INTERAC E-TRANSFER"));
+    }
+
+    @Test
     public void usdPurchaseTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
-                .setName("SUBSTACK SUBSTACK.COM CA  ")
-                .setMemo("5.00 USD @ 1.308000000000")
+                .setName("SUBSTACK SUBSTACK.COM CA        ")
+                .setMemo("5.00 USD @ 1.294000000000")
                 .build();
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
@@ -229,5 +241,19 @@ class RbcTransactionCleanerTest {
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INTERAC E-TRANSFER SERVICE CHARGE"));
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.FEE));
+    }
+
+    @Test
+    public void wireTransferTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setAmount(2400)
+                .setName("FUNDS TRANSFER CR")
+                .setMemo("TT JONATHAN M F")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("WIRE TRANSFER"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.CREDIT));
     }
 }

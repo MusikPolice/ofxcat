@@ -198,7 +198,6 @@ public class TransactionImportService {
                     .orElseThrow(() -> new OfxCatException("Failed to insert CategorizedTransaction with fitId " +
                             transaction.getFitId() + " and Category " + Category.TRANSFER.getName()));
 
-            cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
             logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
 
             return categorizedTransaction;
