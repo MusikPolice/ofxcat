@@ -95,4 +95,13 @@ public class TransferDao {
             ps.setLong(2, transferToInsert.getSink().getId());
         }, transferDeserializer);
     }
+
+    public boolean isDuplicate(DatabaseTransaction t, Transfer transfer) throws SQLException {
+        final String selectStatement = "SELECT * FROM Transfer WHERE source_id = ? AND sink_id = ?;";
+        final List<Transfer> results = t.query(selectStatement, ps -> {
+            ps.setLong(1, transfer.getSource().getId());
+            ps.setLong(2, transfer.getSink().getId());
+        }, transferDeserializer);
+        return results.size() > 0;
+    }
 }

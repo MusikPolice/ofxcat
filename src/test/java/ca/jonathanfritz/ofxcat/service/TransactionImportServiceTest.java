@@ -148,6 +148,45 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         Assertions.assertEquals(sink.getFitId(), transfer.getSink().getFitId());
     }
 
+    @Test
+    void categorizeTransactionsDuplicateTransferIsIgnoredTest() {
+        // create two accounts
+        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
+
+        // transfer money from one to the other
+        final LocalDate today = LocalDate.now();
+        final CategorizedTransaction source = new CategorizedTransaction(
+                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
+                Category.TRANSFER);
+        final CategorizedTransaction sink = new CategorizedTransaction(
+                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
+                Category.TRANSFER);
+
+        // create an OFX file that contains both transactions
+        final OfxBalance zeroBalance = OfxBalance.newBuilder().setAmount(0f).build();
+        final List<OfxExport> ofxExports = List.of(
+                new OfxExport(TestUtils.accountToOfxAccount(checking), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(source))),
+                new OfxExport(TestUtils.accountToOfxAccount(savings), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(sink)))
+        );
+
+        // insert the transfer for the first time
+        SpyCli spyCli = new SpyCli();
+        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
+        transactionImportService.categorizeTransactions(ofxExports);
+
+        // try to insert the transfer again
+        spyCli = new SpyCli();
+        transactionImportService.categorizeTransactions(ofxExports);
+
+        // the transfer was NOT printed to the CLI because it is implicitly ignored
+        Assertions.assertTrue(spyCli.getCapturedTransfers().isEmpty());
+
+        // zero transactions were printed to the CLI (because they are implicitly inserted as a part of transfer handling)
+        Assertions.assertTrue(spyCli.getCapturedTransactions().isEmpty());
+    }
+
     private static class SpyCli extends CLI {
 
         private final List<Transaction> capturedTransactions = new ArrayList<>();

@@ -132,9 +132,13 @@ public class TransactionImportService {
                 categorizedTransactions.addAll(List.of(source, sink));
 
                 // create the transfer
-                transfer = transferDao.insert(t, new Transfer(source, sink))
-                        .orElseThrow(() -> new SQLException("Failed to insert Transfer"));
-                cli.printFoundNewTransfer(transfer);
+                Transfer newTransfer = new Transfer(source, sink);
+                if (!transferDao.isDuplicate(t, newTransfer)) {
+                    newTransfer = transferDao.insert(t, newTransfer)
+                            .orElseThrow(() -> new SQLException("Failed to insert Transfer"));
+
+                    cli.printFoundNewTransfer(newTransfer);
+                }
 
             } catch (SQLException | OfxCatException e) {
                 logger.error("Failed to import Transfer {}", transfer, e);
