@@ -48,14 +48,23 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                 .withMemo(Pattern.compile("^WWW TRANSFER - \\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(interAccountTransferTransformer));
 
-        // scheduled transfer to line of credit
+        // scheduled transfer from one account to a line of credit
         rules.add(TransactionMatcherRule.newBuilder()
                 .withMemo(Pattern.compile("^WWW LOAN PMT - \\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
-                        .setType(Transaction.TransactionType.DEBIT)
                         .setDate(ofxTransaction.getDate())
                         .setAmount(ofxTransaction.getAmount())
-                        .setDescription("LINE OF CREDIT REPAYMENT")));
+                        .setType(Transaction.TransactionType.XFER)
+                        .setDescription("LINE OF CREDIT PAYMENT")));
+
+        // scheduled transfer to a line of credit from another account
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^WWW PMT TIN0.*", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setType(Transaction.TransactionType.XFER)
+                        .setDescription("LINE OF CREDIT PAYMENT")));
 
         // online bill payment - strip the memo field prefix
         rules.add(TransactionMatcherRule.newBuilder()

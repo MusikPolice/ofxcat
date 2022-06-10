@@ -256,4 +256,28 @@ class RbcTransactionCleanerTest {
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("WIRE TRANSFER"));
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.CREDIT));
     }
+
+    @Test
+    public void lineOfCreditPaymentTest() {
+        final OfxTransaction outgoing = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setAmount(300)
+                .setName("WWW PMT TIN0-04601")
+                .build();
+
+        Transaction transaction = rbcTransactionCleaner.clean(outgoing).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("LINE OF CREDIT PAYMENT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+
+        final OfxTransaction incoming = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-300)
+                .setName("Loan Pmt")
+                .setMemo("WWW LOAN PMT - 5784 ")
+                .build();
+
+        transaction = rbcTransactionCleaner.clean(incoming).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("LINE OF CREDIT PAYMENT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
 }
