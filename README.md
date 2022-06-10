@@ -5,7 +5,7 @@ A command line utility that imports bank transactions in `*.ofx` format and cate
 To build ofxcat, you'll need the following software:
 * git
 * maven
-* JDK 12+
+* JDK 17+
 
 Start by cloning the `master` branch of this repository:
 ```bash
