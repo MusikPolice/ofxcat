@@ -40,8 +40,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
     @BeforeEach
     void populateTestData() {
-        final Account account = TestUtils.createRandomAccount();
-        testAccount = accountDao.insert(account).get();
+        testAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // used to populate data here, but not a global variable because we want to use a custom version as a test fixture
         final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
@@ -70,7 +69,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
             final Category expectedCategory = categories.stream()
                     .filter(c -> c != Category.UNKNOWN)
                     .findFirst()
-                    .get();
+                    .orElse(null);
             final CLI spyCli = new SpyCli(expectedCategory);
 
             final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
@@ -101,9 +100,9 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         // create one previously categorized transaction
         final String description = "Hello World";
         final Transaction existingTransaction = createRandomTransaction(testAccount, description);
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
         final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).get();
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction with the same description
@@ -120,15 +119,66 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    public void categorizeTransactionExactMatchDifferentAccountsTest() throws SQLException {
+        // create one previously categorized transaction
+        final String description = "Hello World";
+        final Account otherAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Transaction existingTransaction = createRandomTransaction(otherAccount, description);
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final CategorizedTransaction expected =
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create another transaction that has the same description, but in a different account from the first
+            final Transaction newTransaction = createRandomTransaction(testAccount, description);
+
+            // attempt to automatically categorize it - we should get a direct match with the category created above
+            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
+            final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
+
+            // actual should have the same category as expected
+            Assertions.assertEquals(expected.getCategory(), actual.getCategory());
+            Assertions.assertEquals(existingCategory, actual.getCategory());
+        }
+    }
+
+    @Test
     public void categorizeTransactionPartialMatchTest() throws SQLException {
         // create one previously categorized transaction
         final Transaction existingTransaction = createRandomTransaction(testAccount, "Hello World");
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
         final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).get();
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction with a description that shares a word in common with that of an existing transaction
+            final Transaction newTransaction = createRandomTransaction(testAccount, "Boy Meets World");
+
+            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
+            final SpyCli spyCli = new SpyCli(existingCategory);
+            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+            final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
+
+            // actual should have the same category as expected
+            Assertions.assertEquals(expected.getCategory(), actual.getCategory());
+            Assertions.assertEquals(existingCategory, actual.getCategory());
+
+            // and the CLI should have been prompted to choose the existing category
+            Assertions.assertEquals(List.of(existingCategory), spyCli.capturedCategories);
+        }
+    }
+
+    @Test
+    public void categorizeTransactionPartialMatchDifferentAccountsTest() throws SQLException {
+        // create one previously categorized transaction
+        final Account otherAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Transaction existingTransaction = createRandomTransaction(otherAccount, "Hello World");
+        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final CategorizedTransaction expected =
+                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create another transaction with a description that shares a word in common with that of an existing transaction, but is in a different account
             final Transaction newTransaction = createRandomTransaction(testAccount, "Boy Meets World");
 
             // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
@@ -150,14 +200,14 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         final Transaction transaction = createRandomTransaction(account, description);
         final Category category = new Category(categoryName);
         final CategorizedTransaction categorizedTransaction = transactionCategoryService.put(transaction, category);
-        categorizedTransactionDao.insert(categorizedTransaction).get();
+        categorizedTransactionDao.insert(categorizedTransaction).orElse(null);
     }
 
     // inserts a transaction, associating it with an existing category
     private void insertTransaction(Account account, String description, Category category, TransactionCategoryService transactionCategoryService) {
         final Transaction transaction = createRandomTransaction(account, description);
         final CategorizedTransaction categorizedTransaction = transactionCategoryService.put(transaction, category);
-        categorizedTransactionDao.insert(categorizedTransaction).get();
+        categorizedTransactionDao.insert(categorizedTransaction).orElse(null);
     }
 
     private Transaction createRandomTransaction(Account account, String description) {

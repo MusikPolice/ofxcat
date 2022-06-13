@@ -92,7 +92,7 @@ public class TestUtils {
 
     public static Transaction createRandomTransaction(Account account, String fitId) {
         final LocalDate date = LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
-        final float amount = (Math.round(RandomUtils.nextFloat(0, 200) * 100f) / 100f) - 100;
+        final float amount = getRandomAmount();
         final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         return createRandomTransaction(account, fitId, date, amount, type);
     }
@@ -101,13 +101,27 @@ public class TestUtils {
         return createRandomTransaction(account, UUID.randomUUID().toString());
     }
 
+    public static Transaction createRandomTransaction(Account account, LocalDate date) {
+        final float amount = getRandomAmount();
+        final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        return createRandomTransaction(account, UUID.randomUUID().toString(), date, amount, type);
+    }
+
     public static Transaction createRandomTransaction() {
         final Account account = createRandomAccount();
         final LocalDate date = LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
-        final float amount = (Math.round(RandomUtils.nextFloat(0, 200) * 100f) / 100f) - 100;
+        final float amount = getRandomAmount();
         final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         final String fitId = UUID.randomUUID().toString();
         return createRandomTransaction(account, fitId, date, amount, type);
+    }
+
+    /**
+     * Returns a random float between -100 and +100 with 2 decimal places of precision
+     */
+    private static float getRandomAmount() {
+        final int multiplier = RandomUtils.nextBoolean() ? 1 : -1;
+        return (Math.round(RandomUtils.nextFloat(0, 200) * 100f) / 100f) * multiplier;
     }
 
     public static OfxAccount accountToOfxAccount(Account account) {

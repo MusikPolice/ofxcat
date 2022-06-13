@@ -73,14 +73,12 @@ public class TransactionCategoryService {
     // TODO: why does LCBO/RAO not auto-categorize?
     public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
         // try an exact match first
-        // TODO: Includes account number in search - consider dropping req to re-use categorizations between checking/visa?
         Optional<CategorizedTransaction> categorizedTransaction = categorizeTransactionExactMatch(t, transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
         }
 
         // if that doesn't work, try a partial match
-        // TODO: Includes account number in search - consider dropping req to re-use categorizations between checking/visa?
         categorizedTransaction = categorizeTransactionPartialMatch(t, transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
@@ -91,8 +89,8 @@ public class TransactionCategoryService {
     }
 
     private Optional<CategorizedTransaction> categorizeTransactionExactMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
-        // first search is on the account number and entire description of the incoming transaction
-        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, transaction.getDescription(), transaction.getAccount().getAccountNumber());
+        // first search is on the entire description of the incoming transaction
+        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, transaction.getDescription());
         final List<Category> distinctCategories = categorizedTransactions.stream()
                 .map(CategorizedTransaction::getCategory)
                 .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
@@ -100,17 +98,17 @@ public class TransactionCategoryService {
                 .collect(Collectors.toList());
 
         if (distinctCategories.isEmpty()) {
-            // there were no exact matches for this transaction description and account number
+            // there were no exact matches for this transaction description
             logger.info("There are no existing transactions that exactly match the description of the specified Transaction");
             return Optional.empty();
         } else if (distinctCategories.size() == 1) {
             // all matching transactions share the same category - use it
-            logger.info("New transaction description and account number exactly match that of {} existing transactions " +
+            logger.info("New transaction description exactly matches that of {} existing transactions " +
                     "with category {}", categorizedTransactions.size(), distinctCategories.get(0));
             return Optional.of(new CategorizedTransaction(transaction, distinctCategories.get(0)));
         } else {
             // there is more than one potential category - prompt the user to choose
-            logger.info("New transaction description and account number exactly match that of {} existing transactions " +
+            logger.info("New transaction description exactly matches that of {} existing transactions " +
                     "with {} distinct categories", categorizedTransactions.size(), distinctCategories.size());
             return chooseCategoryFromList(transaction, distinctCategories);
         }
@@ -122,7 +120,7 @@ public class TransactionCategoryService {
                 .filter(StringUtils::isNotBlank)
                 .distinct()
                 .collect(Collectors.toList());
-        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, tokens, transaction.getAccount().getAccountNumber());
+        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, tokens);
 
         // count the number of categories that we found
         final List<Category> distinctCategories = categorizedTransactions.stream()
@@ -136,11 +134,15 @@ public class TransactionCategoryService {
             logger.info("There are no existing transactions that partially match the description of the specified Transaction");
             return Optional.empty();
         }
-        logger.info("New transaction description and account number partially match that of {} existing transactions " +
+        logger.info("New transaction description partially matches that of {} existing transactions " +
                 "with categories {}", categorizedTransactions.size(), distinctCategories);
 
         // rank the choices by fuzzy string match and prompt the user to choose
-        final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(transaction.getDescription(), categorizedTransactions, Transaction::getDescription);
+        final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(
+                transaction.getDescription(),
+                categorizedTransactions,
+                Transaction::getDescription
+        );
 
         // score each category based on the fuzzy match score of all associated transactions
         final Map<Category, Float> categoryScores = new HashMap<>();
@@ -148,11 +150,14 @@ public class TransactionCategoryService {
             // find all matched transactions with this category
             final List<BoundExtractedResult<CategorizedTransaction>> categoryFuzzyMatches = fuzzyMatches.stream()
                     .filter(fm -> fm.getReferent().getCategory() == category)
-                    .collect(Collectors.toList());
+                    .toList();
 
             // compute the average score
-            final float score = categoryFuzzyMatches.stream().map(BoundExtractedResult::getScore).reduce(0, Integer::sum) / (float) categoryFuzzyMatches.size();
-            categoryScores.put(category, score);
+            final Integer sum = categoryFuzzyMatches.stream()
+                    .map(BoundExtractedResult::getScore)
+                    .reduce(0, Integer::sum);
+            final float average = sum / (float) categoryFuzzyMatches.size();
+            categoryScores.put(category, average);
         }
 
         // get list of choices ranked by score descending for the user to choose from

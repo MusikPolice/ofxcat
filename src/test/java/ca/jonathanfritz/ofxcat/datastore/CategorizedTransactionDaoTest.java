@@ -20,37 +20,24 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     void insertSelectSuccessTest() {
         // need a category
         final CategoryDao categoryDao = new CategoryDao(connection);
-        Category category = new Category("HORSERADISH");
-        category = categoryDao.insert(category).get();
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
 
         // need an account
         final AccountDao accountDao = new AccountDao(connection);
-        Account account = Account.newBuilder()
-                .setName(UUID.randomUUID().toString())
-                .setAccountType("VISA")
-                .setAccountNumber(UUID.randomUUID().toString())
-                .setBankId(UUID.randomUUID().toString())
-                .build();
-        account = accountDao.insert(account).get();
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // now we can create a CategorizedTransaction
-        CategorizedTransaction categorizedTransaction = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(5.14f)
-                .setDate(LocalDate.now())
-                .setDescription("SAUCE BOSS")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(21.58f)
-                .build(), category);
         final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
-        categorizedTransaction = categorizedTransactionDao.insert(categorizedTransaction).get();
+        final CategorizedTransaction expected = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElse(null);
 
         // it should have been given an id
-        Assertions.assertNotNull(categorizedTransaction.getId());
+        Assertions.assertNotNull(expected.getId());
 
         // use the id to find it
-        final CategorizedTransaction foundCategorizedTransaction = categorizedTransactionDao.select(categorizedTransaction.getId()).get();
-        Assertions.assertEquals(categorizedTransaction, foundCategorizedTransaction);
+        final CategorizedTransaction actual = categorizedTransactionDao.select(expected.getId()).orElse(null);
+        Assertions.assertEquals(expected, actual);
     }
 
     @Test
@@ -58,90 +45,52 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // need two categories
         final CategoryDao categoryDao = new CategoryDao(connection);
         Category groceries = new Category("GROCERIES");
-        groceries = categoryDao.insert(groceries).get();
+        groceries = categoryDao.insert(groceries).orElse(null);
         Category restaurants = new Category("RESTAURANTS");
-        restaurants = categoryDao.insert(restaurants).get();
+        restaurants = categoryDao.insert(restaurants).orElse(null);
 
         // need an account
         final AccountDao accountDao = new AccountDao(connection);
-        Account account = Account.newBuilder()
-                .setName(UUID.randomUUID().toString())
-                .setAccountType("CHECKING")
-                .setAccountNumber(UUID.randomUUID().toString())
-                .setBankId(UUID.randomUUID().toString())
-                .build();
-        account = accountDao.insert(account).get();
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // now we can create some CategorizedTransactions
         final CategorizedTransactionDao transactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
         final LocalDate now = LocalDate.now();
-        CategorizedTransaction quickieMart = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(10.72f)
-                .setDate(now.minusDays(3))
-                .setDescription("QUICKIE MART")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(21.58f)
-                .build(), groceries);
-        quickieMart = transactionDao.insert(quickieMart).get();
-        CategorizedTransaction tastyMart = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(15.31f)
-                .setDate(now.minusDays(2))
-                .setDescription("TASTY MART")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(6.27f)
-                .build(), groceries);
-        tastyMart = transactionDao.insert(tastyMart).get();
-        CategorizedTransaction monksCafe = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(2.50f)
-                .setDate(now.minusDays(1))
-                .setDescription("MONKS CAFE")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(3.77f)
-                .build(), restaurants);
-        monksCafe = transactionDao.insert(monksCafe).get();
+        final CategorizedTransaction threeDaysAgo = transactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, now.minusDays(3)), groceries)
+        ).orElse(null);
+        final CategorizedTransaction twoDaysAgo = transactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, now.minusDays(2)), groceries)
+        ).orElse(null);
+        final CategorizedTransaction oneDayAgo = transactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, now.minusDays(1)), restaurants)
+        ).orElse(null);
 
         // now we can get all transactions grouped by category
         Map<Category, List<CategorizedTransaction>> transactions = transactionDao.selectGroupByCategory(now.minusDays(4), now);
-        Assertions.assertEquals(transactions.keySet(), Set.of(restaurants, groceries));
-        Assertions.assertEquals(transactions.get(groceries), Arrays.asList(quickieMart, tastyMart));
-        Assertions.assertEquals(transactions.get(restaurants), Collections.singletonList(monksCafe));
+        Assertions.assertEquals(Set.of(restaurants, groceries), transactions.keySet());
+        Assertions.assertEquals(Arrays.asList(threeDaysAgo, twoDaysAgo), transactions.get(groceries));
+        Assertions.assertEquals(Collections.singletonList(oneDayAgo), transactions.get(restaurants));
 
         // adjusting the date range excludes some transactions
         transactions = transactionDao.selectGroupByCategory(now.minusDays(2), now);
-        Assertions.assertEquals(transactions.keySet(), Set.of(restaurants, groceries));
-        Assertions.assertEquals(transactions.get(groceries), Collections.singletonList(tastyMart));
-        Assertions.assertEquals(transactions.get(restaurants), Collections.singletonList(monksCafe));
+        Assertions.assertEquals(Set.of(restaurants, groceries), transactions.keySet());
+        Assertions.assertEquals(Collections.singletonList(twoDaysAgo), transactions.get(groceries));
+        Assertions.assertEquals(Collections.singletonList(oneDayAgo), transactions.get(restaurants));
     }
 
     @Test
     void isDuplicateSuccessTest() throws SQLException {
         // need a category
         final CategoryDao categoryDao = new CategoryDao(connection);
-        Category category = new Category("EXCLAMATIONS OF DISBELIEF");
-        category = categoryDao.insert(category).get();
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
 
         // need an account
         final AccountDao accountDao = new AccountDao(connection);
-        Account account = Account.newBuilder()
-                .setName(UUID.randomUUID().toString())
-                .setAccountType("VISA")
-                .setAccountNumber(UUID.randomUUID().toString())
-                .setBankId(UUID.randomUUID().toString())
-                .build();
-        account = accountDao.insert(account).get();
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // we can use them to create a transaction
-        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(6.17F)
-                .setDate(LocalDate.now())
-                .setDescription("HORSE FEATHERS")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(34.21f)
-                .build();
+        final Transaction transaction = TestUtils.createRandomTransaction(account);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // the transaction should not a duplicate because it doesn't exist yet
@@ -150,36 +99,51 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
 
             // now we can insert the transaction, and assert that it is a duplicate since it exists
             final CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, category);
-            categorizedTransactionDao.insert(t, categorizedTransaction).get();
+            categorizedTransactionDao.insert(t, categorizedTransaction);
             Assertions.assertTrue(categorizedTransactionDao.isDuplicate(t, transaction));
         }
     }
 
     @Test
-    public void findByDescriptionAndAccountNumberTest() throws SQLException {
+    public void findByDescriptionExactTest() throws SQLException {
         // need a category
         final CategoryDao categoryDao = new CategoryDao(connection);
-        Category category = new Category("POTENT POTABLES");
-        category = categoryDao.insert(category).get();
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
 
         // need an account
         final AccountDao accountDao = new AccountDao(connection);
-        Account account = Account.newBuilder()
-                .setName(UUID.randomUUID().toString())
-                .setAccountType("CHECKING")
-                .setAccountNumber(UUID.randomUUID().toString())
-                .setBankId(UUID.randomUUID().toString())
-                .build();
-        account = accountDao.insert(account).get();
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        // create a transaction
+        final Transaction expected = TestUtils.createRandomTransaction(account);
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // create the transaction
+            final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+            categorizedTransactionDao.insert(new CategorizedTransaction(expected, category));
+
+            // search for the transaction using its exact description string
+            final List<CategorizedTransaction> actual = categorizedTransactionDao.findByDescription(t, expected.getDescription());
+
+            //  expect 1 match because the two transactions share a description
+            Assertions.assertEquals(1, actual.size());
+            Assertions.assertEquals(expected, actual.get(0).getTransaction());
+        }
+    }
+
+    @Test
+    public void findByDescriptionTokensTest() throws SQLException {
+        // need a category
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+
+        // need an account
+        final AccountDao accountDao = new AccountDao(connection);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // create a transaction with description "Fronty's Meat Market"
-        final Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
-                .setAccount(account)
-                .setAmount(6.17F)
-                .setDate(LocalDate.now())
+        final Transaction transaction = Transaction.newBuilder(TestUtils.createRandomTransaction(account))
                 .setDescription("Fronty's Meat Market")
-                .setType(Transaction.TransactionType.DEBIT)
-                .setBalance(34.21f)
                 .build();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
@@ -189,7 +153,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
 
             // search for transactions with tokens ["Fronty's", "Beat", "Market"]
             final List<String> searchTerms = Arrays.asList("Fronty's", "Beat", "Market");
-            final List<CategorizedTransaction> results = categorizedTransactionDao.findByDescriptionAndAccountNumber(t, searchTerms, account.getAccountNumber());
+            final List<CategorizedTransaction> results = categorizedTransactionDao.findByDescription(t, searchTerms);
 
             //  expect 1 match because the two transactions share "Fronty's" and "Market"
             Assertions.assertEquals(1, results.size());
@@ -201,21 +165,21 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     public void selectByFitIdTest() {
         // need a category
         final CategoryDao categoryDao = new CategoryDao(connection);
-        Category category = new Category("HORSEY SAUCE");
-        category = categoryDao.insert(category).get();
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
 
         // need an account
         final AccountDao accountDao = new AccountDao(connection);
-        final Account account = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // now we can create a CategorizedTransaction
-        final String fitId = UUID.randomUUID().toString();
-        CategorizedTransaction expected = new CategorizedTransaction(TestUtils.createRandomTransaction(account, fitId), category);
         final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
-        expected = categorizedTransactionDao.insert(expected).get();
+        final String fitId = UUID.randomUUID().toString();
+        final CategorizedTransaction expected = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, fitId), category)
+        ).orElse(null);
 
         // and select it by fitId
-        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).orElse(null);
         Assertions.assertEquals(expected, actual);
     }
 }
