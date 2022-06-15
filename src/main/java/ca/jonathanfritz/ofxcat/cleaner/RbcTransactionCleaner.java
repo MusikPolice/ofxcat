@@ -199,16 +199,27 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription(coerceNullableString(ofxTransaction.getName()) + " (USD PURCHASE)")));
 
-        // Interac purchase
+        // Interac purchase - these appear with both the DEBIT and POS transaction types
+        // strip the useless MEMO field because it confuses the transaction matcher
         rules.add(TransactionMatcherRule.newBuilder()
-                .withType(TransactionType.DEBIT)
                 .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
-                        .setType(categorizeTransactionType(ofxTransaction))
+                        .setType(Transaction.TransactionType.DEBIT)
                         .setDate(ofxTransaction.getDate())
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription(ofxTransaction.getName())));
+
+        // another variation of interac purchase
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
+                .withName(Pattern.compile("^WWWINTERAC PUR.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription(ofxTransaction.getMemo())));
 
         // contactless Interac purchase
         rules.add(TransactionMatcherRule.newBuilder()

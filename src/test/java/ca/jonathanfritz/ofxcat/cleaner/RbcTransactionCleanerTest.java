@@ -343,4 +343,43 @@ class RbcTransactionCleanerTest {
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("ATM WITHDRAWAL"));
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
     }
+
+    @Test
+    public void interacPurchaseTest() {
+        OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-60.00f)
+                .setName("BANGKOK CUISINE")
+                .setMemo("IDP PURCHASE - 32476")
+                .build();
+
+        // the memo field should be dropped
+        Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("BANGKOK CUISINE"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
+
+        ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.POS)
+                .setAmount(-60.00f)
+                .setName("BANGKOK CUISINE")
+                .setMemo("IDP PURCHASE - 32476")
+                .build();
+
+        // the memo field should be dropped
+        transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("BANGKOK CUISINE"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
+
+        ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-60.00f)
+                .setName("WWWINTERAC PUR 7731")
+                .setMemo("Landmark Cinema")
+                .build();
+
+        // the name field should be dropped
+        transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("Landmark Cinema"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
+    }
 }
