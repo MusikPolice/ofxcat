@@ -1,5 +1,6 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
+import ca.jonathanfritz.ofxcat.cleaner.rules.AmountMatcherRule;
 import ca.jonathanfritz.ofxcat.cleaner.rules.TransactionMatcherRule;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
@@ -50,6 +51,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // scheduled transfer from one account to a line of credit
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^WWW LOAN PMT - \\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setDate(ofxTransaction.getDate())
@@ -59,6 +62,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // scheduled transfer to a line of credit from another account
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
                 .withName(Pattern.compile("^WWW PMT TIN0.*", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setDate(ofxTransaction.getDate())
@@ -66,8 +71,21 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setType(Transaction.TransactionType.XFER)
                         .setDescription("LINE OF CREDIT PAYMENT")));
 
+        // credit card payment
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
+                .withName(Pattern.compile("^PAYMENT - THANK YOU.*", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setType(Transaction.TransactionType.XFER)
+                        .setDescription("CREDIT CARD PAYMENT")));
+
         // online bill payment - strip the memo field prefix
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^WWW PAYMENT - \\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.DEBIT)
@@ -86,6 +104,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // incoming Interac e-transfer with auto-deposit
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
                 .withName(Pattern.compile("^E-TRF AUTODEPOSIT$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.CREDIT)
@@ -95,6 +115,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // outgoing Interac e-transfer
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^INTERAC E-TRF-\\s\\d*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.DEBIT)
@@ -102,6 +124,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription("OUTGOING INTERAC E-TRANSFER")));
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^E-TRANSFER SENT", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.DEBIT)
@@ -111,6 +135,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // sending money via Interac E-Transfer can incur service charges
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withName(Pattern.compile("^INTERAC-SC-\\d+$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.FEE)
@@ -118,6 +144,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription("INTERAC E-TRANSFER SERVICE CHARGE")));
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withName(Pattern.compile("^INT E-TRF FEE\\s*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.FEE)
@@ -128,6 +156,7 @@ public class RbcTransactionCleaner implements TransactionCleaner {
         // sometimes an e-transfer can be cancelled and refunded
         rules.add(TransactionMatcherRule.newBuilder()
                 .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
                 .withMemo(Pattern.compile("^E-TRANSFER CANCEL"))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.CREDIT)
@@ -137,6 +166,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // personal loan repayment (car loan, small business loan, etc)
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withName(Pattern.compile("^PERSONAL LOAN$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.DEBIT)
@@ -147,6 +178,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
         // purchases made in USD have MEMO like "5.00 USD @ 1.308000000000" to indicate currency conversion
         // these tend to confuse the auto-categorization algorithm, so discard them
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^\\d*\\.\\d*\\sUSD*\\s@\\s\\d*.\\d*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(categorizeTransactionType(ofxTransaction))
@@ -156,6 +189,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // Interac purchase
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^IDP PURCHASE\\s*-\\s*\\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(categorizeTransactionType(ofxTransaction))
@@ -165,6 +200,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // contactless Interac purchase
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.DEBIT)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withName(Pattern.compile("^C-IDP PURCHASE\\s*-\\s*\\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(categorizeTransactionType(ofxTransaction))
@@ -174,7 +211,18 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // ATM withdrawal
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.ATM)
+                .withAmount(AmountMatcherRule.isLessThan(0))
                 .withMemo(Pattern.compile("^PTB CB WD-.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.DEBIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("ATM WITHDRAWAL")));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.ATM)
+                .withAmount(AmountMatcherRule.isLessThan(0))
+                .withMemo(Pattern.compile("^PTB WD ---.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.DEBIT)
                         .setDate(ofxTransaction.getDate())
@@ -183,6 +231,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
         // ATM deposit
         rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.ATM)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
                 .withMemo(Pattern.compile("^PTB DEP --.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.CREDIT)

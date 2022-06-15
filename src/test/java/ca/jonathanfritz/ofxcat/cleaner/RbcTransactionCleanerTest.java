@@ -110,6 +110,8 @@ class RbcTransactionCleanerTest {
     @Test
     public void personalLoanSplTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-500f)
                 .setName("PERSONAL LOAN")
                 .setMemo("SPL")
                 .build();
@@ -121,6 +123,8 @@ class RbcTransactionCleanerTest {
     @Test
     public void interacEtransferTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-10f)
                 .setName("Email Trfs")
                 .setMemo("INTERAC E-TRF- 8766")
                 .build();
@@ -132,6 +136,8 @@ class RbcTransactionCleanerTest {
     @Test
     public void interacEtransferSentTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-10f)
                 .setName("Email Trfs")
                 .setMemo("E-TRANSFER SENT ")
                 .build();
@@ -144,6 +150,7 @@ class RbcTransactionCleanerTest {
     public void interacEtransferCancelledTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
                 .setType(TransactionType.CREDIT)
+                .setAmount(105f)
                 .setName("Email Trfs Can")
                 .setMemo("E-TRANSFER CANCEL")
                 .build();
@@ -155,6 +162,8 @@ class RbcTransactionCleanerTest {
     @Test
     public void usdPurchaseTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-52f)
                 .setName("SUBSTACK SUBSTACK.COM CA        ")
                 .setMemo("5.00 USD @ 1.294000000000")
                 .build();
@@ -220,6 +229,7 @@ class RbcTransactionCleanerTest {
     @Test
     public void interacServiceChargeScTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
                 .setAmount(-2.00f)
                 .setFitId("90000010020210913S001F508AFAB")
                 .setName("INTERAC-SC-7891                 ")
@@ -233,6 +243,7 @@ class RbcTransactionCleanerTest {
     @Test
     public void interacServiceChargeFeeTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
                 .setAmount(-1.00f)
                 .setFitId("90000010030205111S002C37F0F62")
                 .setName("INT E-TRF FEE                   ")
@@ -279,5 +290,44 @@ class RbcTransactionCleanerTest {
         transaction = rbcTransactionCleaner.clean(incoming).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("LINE OF CREDIT PAYMENT"));
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
+
+    @Test
+    public void visaPaymentTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setAmount(1302.53f)
+                .setName("PAYMENT - THANK YOU / PAI")
+                .setMemo("EMENT - MERCI")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("CREDIT CARD PAYMENT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
+
+    @Test
+    public void atmWithdrawalTest() {
+        OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.ATM)
+                .setAmount(-60.00f)
+                .setName("Withdrawal")
+                .setMemo("PTB CB WD- KB457813")
+                .build();
+
+        Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("ATM WITHDRAWAL"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
+
+        ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.ATM)
+                .setAmount(-240.00f)
+                .setName("Withdrawal")
+                .setMemo("PTB WD --- KB676931")
+                .build();
+
+        transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("ATM WITHDRAWAL"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.DEBIT));
     }
 }
