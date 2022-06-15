@@ -2,10 +2,7 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
-import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
-import ca.jonathanfritz.ofxcat.datastore.dto.Category;
-import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -181,5 +178,42 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // and select it by fitId
         final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).orElse(null);
         Assertions.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void findUnlinkedTransfersTest() {
+        // we need the TRANSFER category
+        final CategoryDao categoryDao = new CategoryDao(connection);
+        final Category category = categoryDao.select(1).orElse(null);
+
+        // as well as two accounts
+        final AccountDao accountDao = new AccountDao(connection);
+        final Account sourceAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Account sinkAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        // and two transactions that represent that transfer of money from one account to the other
+        final CategorizedTransactionDao categorizedTransactionDao = new CategorizedTransactionDao(connection, accountDao, categoryDao);
+        final CategorizedTransaction source = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(sourceAccount), category)
+        ).orElse(null);
+        final CategorizedTransaction sink = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(sinkAccount), category)
+        ).orElse(null);
+
+        // both transactions should be returned if we find unlinked transactions
+        final Map<Account, List<Transaction>> unlinkedTransfers = categorizedTransactionDao.findUnlinkedTransfers();
+        Assertions.assertEquals(2, unlinkedTransfers.size());
+        Assertions.assertEquals(Set.of(sourceAccount, sinkAccount), unlinkedTransfers.keySet());
+        Assertions.assertEquals(1, unlinkedTransfers.get(sourceAccount).size());
+        Assertions.assertEquals(1, unlinkedTransfers.get(sinkAccount).size());
+        Assertions.assertEquals(source.getTransaction(), unlinkedTransfers.get(sourceAccount).get(0));
+        Assertions.assertEquals(sink.getTransaction(), unlinkedTransfers.get(sinkAccount).get(0));
+
+        // but if we recognize those transactions as a part of a transfer...
+        final TransferDao transferDao = new TransferDao(connection, categorizedTransactionDao);
+        transferDao.insert(new Transfer(source, sink));
+
+        // then they are no longer returned by the unlinked transactions method
+        Assertions.assertEquals(0, categorizedTransactionDao.findUnlinkedTransfers().size());
     }
 }

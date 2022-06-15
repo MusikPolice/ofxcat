@@ -19,7 +19,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CategorizedTransactionDao {
 
@@ -162,6 +165,29 @@ public class CategorizedTransactionDao {
         }, categorizedTransactionDeserializer);
     }
 
+    /**
+     * Finds all TRANSFER type transactions that are not a source or sink in the Transfer table.
+     */
+    public Map<Account, List<Transaction>> findUnlinkedTransfers() {
+        logger.debug("Attempting to find CategorizedTransactions with Category TRANSFER that have not been used as the source or sink of a Transfer");
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            final String selectStatement = "SELECT DISTINCT * " +
+                    "FROM CategorizedTransaction " +
+                    "WHERE category_id = 1 " +
+                    "AND id NOT IN (" +
+                    "  SELECT source_id FROM Transfer UNION ALL SELECT sink_id FROM Transfer " +
+                    ");";
+            return t.query(selectStatement, categorizedTransactionDeserializer).stream()
+                    .collect(Collectors.toMap(
+                            Transaction::getAccount,
+                            categorizedTransaction -> List.of(categorizedTransaction.getTransaction()),
+                            (list1, list2) -> Stream.concat(list1.stream(), list2.stream()).collect(Collectors.toList())
+                        ));
+        } catch (SQLException ex) {
+            logger.error("Failed to find CategorizedTransactions with Category TRANSFER that have not been used as the source or sink of a Transfer");
+            return new HashMap<>();
+        }
+    }
 
     /**
      * Inserts the specified {@link CategorizedTransaction} into the database
