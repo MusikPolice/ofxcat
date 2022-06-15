@@ -121,7 +121,7 @@ class RbcTransactionCleanerTest {
     }
 
     @Test
-    public void interacEtransferTest() {
+    public void interacEtransferOutgoingTest() {
         final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
                 .setType(TransactionType.DEBIT)
                 .setAmount(-10f)
@@ -131,6 +131,19 @@ class RbcTransactionCleanerTest {
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("OUTGOING INTERAC E-TRANSFER"));
+    }
+
+    @Test
+    public void interacEtransferIncomingTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setAmount(1000f)
+                .setName("Email Trfs Can")
+                .setMemo("INT E-TRF CAN- 4541")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INCOMING INTERAC E-TRANSFER"));
     }
 
     @Test

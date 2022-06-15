@@ -113,6 +113,18 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                         .setAmount(ofxTransaction.getAmount())
                         .setDescription("INCOMING INTERAC E-TRANSFER AUTO-DEPOSIT")));
 
+        // incoming Interac e-transfer
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
+                .withName(Pattern.compile("^Email Trfs Can.*$", Pattern.CASE_INSENSITIVE))
+                .withMemo(Pattern.compile("^INT E-TRF CAN.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.CREDIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("INCOMING INTERAC E-TRANSFER")));
+
         // outgoing Interac e-transfer
         rules.add(TransactionMatcherRule.newBuilder()
                 .withType(TransactionType.DEBIT)
