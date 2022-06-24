@@ -4,24 +4,35 @@ import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
+import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import org.apache.commons.lang3.Range;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static ca.jonathanfritz.ofxcat.datastore.dto.Category.TRANSFER;
+import static ca.jonathanfritz.ofxcat.datastore.dto.Category.UNKNOWN;
+import static ca.jonathanfritz.ofxcat.service.ReportingService.CSV_DELIMITER;
+import static ca.jonathanfritz.ofxcat.service.ReportingService.CURRENCY_FORMATTER;
 
 class ReportingServiceTest extends AbstractDatabaseTest {
 
+    private final CategorizedTransactionDao categorizedTransactionDao;
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
 
     ReportingServiceTest() {
+        this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
     }
@@ -69,41 +80,118 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
-    @Disabled("Reporting has been temporarily changed. See https://github.com/MusikPolice/ofxcat/issues/18")
-    void reportTransactionsTest() {
-        final Category groceries = new Category("GROCERIES");
-        final Category restaurants = new Category("RESTAURANTS");
-        final CategorizedTransaction t1 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(10f).build(), groceries);
-        final CategorizedTransaction t2 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(5f).build(), groceries);
-        final CategorizedTransaction t3 = new CategorizedTransaction(Transaction.newBuilder(UUID.randomUUID().toString()).setDate(LocalDate.now().minusDays(1)).setAmount(7f).build(), restaurants);
+    public void reportTransactionsMonthlyNoDataTest() {
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 6, 30);
 
-        // mock transactions dao will return some categorized transactions
-        //final CategorizedTransactionDao mockTransactionsDao = Mockito.mock(CategorizedTransactionDao.class);
-        final LocalDate startDate = LocalDate.now().minusDays(3);
-        final LocalDate endDate = LocalDate.now();
-        /*when(mockTransactionsDao.selectGroupByCategory(startDate, endDate)).thenReturn(Map.of(
-                groceries, Arrays.asList(t1, t2),
-                restaurants, Collections.singletonList(t3)
-        ));*/
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService = new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
-        // we expect the summarized transactions to be printed to the CLI
-        /*final CLI mockCli = Mockito.mock(CLI.class);
-        doNothing().when(mockCli).println(anyListOf(String.class));*/
+        // there are no transactions, but the category headers should still be printed along with one row for each month
+        reportingService.reportTransactionsMonthly(start, end);
+        Assertions.assertEquals(7, spyCli.getCapturedLines().size());
+        Assertions.assertEquals("TRANSFER, UNKNOWN" + System.lineSeparator(), spyCli.getCapturedLines().get(0));
+        Assertions.assertEquals("January 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(1));
+        Assertions.assertEquals("February 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(2));
+        Assertions.assertEquals("March 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(3));
+        Assertions.assertEquals("April 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(4));
+        Assertions.assertEquals("May 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(5));
+        Assertions.assertEquals("June 2022, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(6));
+    }
 
-        // run the test
-        //final ReportingService reportingService = new ReportingService(mockTransactionsDao, null, null, mockCli);
-        //reportingService.reportTransactions(startDate, endDate);
+    @Test
+    public void reportTransactionsMonthlyAllCategoriesTest() {
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 1, 30);
 
-        // ensure that the right thing was printed - categories should be ordered by amount spent descending
-        final List<String> expectedLines = Arrays.asList(
-                "Category, Spend",
-                String.format("%s,$15.00", groceries.getName()),
-                String.format("%s,$7.00", restaurants.getName())
-        );
-        /*Mockito.verify(mockTransactionsDao, times(1)).selectGroupByCategory(any(LocalDate.class), any(LocalDate.class));
-        Mockito.verify(mockCli, times(1)).println(anyString());
-        Mockito.verify(mockCli, times(1)).println(expectedLines);
-        Mockito.verifyNoMoreInteractions(mockTransactionsDao, mockCli);*/
+        // add three categories to the default set of TRANSFER and UNKNOWN
+        final List<Category> categories = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            categories.add(categoryDao.insert(TestUtils.createRandomCategory()).orElse(null));
+        }
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService = new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+
+        // the category headers should be printed in alphabetical order
+        final String expected = Stream.concat(categories.stream(), Stream.of(TRANSFER, UNKNOWN))
+                .map(Category::getName).sorted()
+                .collect(Collectors.joining(CSV_DELIMITER));
+        reportingService.reportTransactionsMonthly(start, end);
+        Assertions.assertEquals(2, spyCli.getCapturedLines().size());
+        Assertions.assertEquals(expected + System.lineSeparator(), spyCli.getCapturedLines().get(0));
+
+        // and there will be one row printed for january with one decimal value column for each of the five categories
+        Assertions.assertEquals("January 2022, 0.00, 0.00, 0.00, 0.00, 0.00" + System.lineSeparator(), spyCli.getCapturedLines().get(1));
+    }
+
+    @Test
+    public void reportTransactionsMonthlyTest() {
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 6, 30);
+
+        // we need a random account
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        // create five transactions for each month and category, keeping track of their sums
+        final List<Map<Category, Float>> expected = new ArrayList<>();
+        for (int month = 1; month < 7; month++) {
+            final Map<Category, Float> categorySpend = new HashMap<>();
+            for (Category category : Arrays.asList(TRANSFER, UNKNOWN)) {
+                float sum = 0;
+                for (int day = 1; day < 6; day++) {
+                    final Transaction t = TestUtils.createRandomTransaction(account, LocalDate.of(2022, month, day));
+                    categorizedTransactionDao.insert(new CategorizedTransaction(t, category));
+                    sum += t.getAmount();
+                }
+                categorySpend.put(category, sum);
+            }
+            expected.add(categorySpend);
+        }
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService = new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+
+        // the category headers should still be printed along with one row for each month
+        reportingService.reportTransactionsMonthly(start, end);
+        Assertions.assertEquals(7, spyCli.getCapturedLines().size());
+        Assertions.assertEquals("TRANSFER, UNKNOWN" + System.lineSeparator(), spyCli.getCapturedLines().get(0));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "January 2022",
+                CURRENCY_FORMATTER.format(expected.get(0).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(0).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(1));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "February 2022",
+                CURRENCY_FORMATTER.format(expected.get(1).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(1).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(2));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "March 2022",
+                CURRENCY_FORMATTER.format(expected.get(2).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(2).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(3));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "April 2022",
+                CURRENCY_FORMATTER.format(expected.get(3).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(3).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(4));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "May 2022",
+                CURRENCY_FORMATTER.format(expected.get(4).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(4).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(5));
+
+        Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
+                "June 2022",
+                CURRENCY_FORMATTER.format(expected.get(5).get(TRANSFER)),
+                CURRENCY_FORMATTER.format(expected.get(5).get(UNKNOWN)))
+        ) + System.lineSeparator(),spyCli.getCapturedLines().get(6));
     }
 
     private static class SpyCli extends CLI {

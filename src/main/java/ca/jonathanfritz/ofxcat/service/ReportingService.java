@@ -12,22 +12,28 @@ import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
 
 import javax.inject.Inject;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ReportingService {
 
+    public static final DecimalFormat CURRENCY_FORMATTER = new DecimalFormat("0.00");
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CLI cli;
+
+    public static final String CSV_DELIMITER = ", ";
 
     @Inject
     public ReportingService(CategorizedTransactionDao categorizedTransactionDao, AccountDao accountDao, CategoryDao categoryDao, CLI cli) {
@@ -37,65 +43,65 @@ public class ReportingService {
         this.cli = cli;
     }
 
-    /**
-     * Prints out a CSV list of categories and the total amount spent in each between the specified dates
-     * TODO: add a table-formatted option
-     * TODO: print a matrix with categories on x, months on y, so that we can graph expenses in each category over time
-     */
-    public void reportTransactions(LocalDate startDate, LocalDate endDate) {
-        // get all transactions in the specified date range, grouped by category
-        final Map<Category, List<CategorizedTransaction>> categorizedTransactions =
-                categorizedTransactionDao.selectGroupByCategory(startDate, endDate);
+    public void reportTransactionsMonthly(final LocalDate startDate, final LocalDate endDate) {
+        // each list entry represents the start and end of a month within the specified date range
+        LocalDate startMonth = startDate.withDayOfMonth(1);
+        final List<LocalDateRange> months = new ArrayList<>();
+        do {
+            months.add(new LocalDateRange(startMonth, startMonth.withDayOfMonth(startMonth.lengthOfMonth())));
+            startMonth = startMonth.plusMonths(1);
+        } while (startMonth.isBefore(endDate));
 
-        // determine the effective start and end dates of the returned transactions
-        final LocalDate minDate = categorizedTransactions.values().stream()
-                .flatMap((Function<List<CategorizedTransaction>, Stream<CategorizedTransaction>>) Collection::stream)
-                .map(Transaction::getDate)
-                .min(Comparator.naturalOrder())
-                .orElse(startDate);
-        final LocalDate maxDate = categorizedTransactions.values().stream()
-                .flatMap((Function<List<CategorizedTransaction>, Stream<CategorizedTransaction>>) Collection::stream)
-                .map(Transaction::getDate)
-                .max(Comparator.naturalOrder())
-                .orElse(endDate);
+        // get amount spent in each category for every 1 month long bucket
+        final Map<LocalDate, Map<Category, Float>> dateSpend = months.stream().map(localDateRange -> {
+            final Map<Category, List<CategorizedTransaction>> categorizedTransactions =
+                    categorizedTransactionDao.selectGroupByCategory(localDateRange.start, localDateRange.end);
 
-        final long days = Math.abs(ChronoUnit.DAYS.between(minDate, maxDate));
-        final float months = days / (365/12F);
+            return Pair.of(
+                    localDateRange.start,
+                    categorizedTransactions.entrySet().stream()
+                            .map(categoryListEntry -> Pair.of(
+                                    categoryListEntry.getKey(),
+                                    categoryListEntry.getValue().stream()
+                                            .map(Transaction::getAmount)
+                                            .reduce(0f, Float::sum))
+                            ).collect(Collectors.toMap(Pair::getKey, Pair::getValue))
+            );
+        }).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
-        // figure out how much money was spent in each category over the entirety of the specified date range
-        final Map<Category, Float> categorySums = categorizedTransactions.entrySet().stream()
-                .map(entry -> Pair.of(
-                        entry.getKey(),
-                        entry.getValue().stream()
-                                .reduce(0f, (sum, t) -> sum + t.getAmount(), Float::sum))
-                )
-                .collect(Collectors.toMap(Pair::getKey, Pair::getValue, Float::sum));
+        // all categories, sorted by name
+        final List<Category> categories = categoryDao.select().stream()
+                .sorted((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()))
+                .toList();
 
-        // print categories sorted by total amount spent descending
-        cli.println(String.format("Total spending from %s to %s", minDate, maxDate));
-        cli.println(Streams.concat(
-                Stream.of("Category, Spend"),
-                categorySums.entrySet().stream()
-                        .sorted(Map.Entry.comparingByValue(absoluteValueDescendingComparator()))
-                        .map(this::printCategorySpend)
-            ).collect(Collectors.toList())
-        );
+        // print a matrix with categories along the x axis, months along the y axis, category spend for each month at the intersection
+        final List<String> lines = new ArrayList<>();
+        lines.add(categories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)) + System.lineSeparator());
 
-        // print categories sorted by total amount spent descending
-        cli.println("\n\n");
-        cli.println(String.format("Average Monthly spending from %s to %s", minDate, maxDate));
-        cli.println(Streams.concat(
-                        Stream.of("Category, Spend"),
-                        categorySums.entrySet().stream()
-                                .map(categoryFloatEntry ->
-                                        // divide each spend amount by the number of months spanned by our date range
-                                        Map.entry(categoryFloatEntry.getKey(), categoryFloatEntry.getValue() / months)
-                                )
-                                .sorted(Map.Entry.comparingByValue(absoluteValueDescendingComparator()))
-                                .map(this::printCategorySpend)
-                ).collect(Collectors.toList())
-        );
+        for (Map.Entry<LocalDate, Map<Category, Float>> entry : dateSpend.entrySet()) {
+            // first column is the month/year
+            final StringBuilder sb = new StringBuilder();
+            sb.append(entry.getKey().format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+            sb.append(CSV_DELIMITER);
+
+            // subsequent columns hold sum of transactions for that month and category
+            // TODO: unit tests suggest that this reporting code is ok - check the database to see if transactions are miscategorized?
+            sb.append(
+                    categories.stream()
+                            .map(category -> entry.getValue().getOrDefault(category, 0f))
+                            .map(CURRENCY_FORMATTER::format)
+                            .collect(Collectors.joining(CSV_DELIMITER))
+            );
+            sb.append(System.lineSeparator());
+            lines.add(sb.toString());
+        }
+
+        // TODO: add rows for p50, p90, average, and total
+
+        cli.println(lines);
     }
+
+    private record LocalDateRange(LocalDate start, LocalDate end) { }
 
     private Comparator<Float> absoluteValueDescendingComparator() {
         return (sum1, sum2) -> {

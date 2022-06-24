@@ -90,7 +90,7 @@ public class OfxCat {
     }
 
     private void reportTransactions(OfxCatOptions options) {
-        reportingService.reportTransactions(options.startDate, options.endDate);
+        reportingService.reportTransactionsMonthly(options.startDate, options.endDate);
     }
 
     private void reportAccounts() {
@@ -101,6 +101,10 @@ public class OfxCat {
         reportingService.reportCategories();
     }
 
+    // TODO: add support for 'get transactions --category CATEGORY_NAME'
+    //  it should print out a csv table containing one row for each transaction in the specified category
+    //  can be combined with --start-date and --end-date to bound the report
+    //  this will help to debug the monthly report matrix
     private void printHelp() {
         cli.println(Arrays.asList(
                 "ofxcat import [FILENAME]",
