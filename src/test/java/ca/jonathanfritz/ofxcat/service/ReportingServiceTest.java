@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -62,6 +63,9 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     void reportCategoriesTest() {
         // create a test category
         final Category testCategory = categoryDao.insert(TestUtils.createRandomCategory()).get();
+        final List<Category> expectedCategories = Stream.of(testCategory, TRANSFER, UNKNOWN)
+                .sorted((o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()))
+                .toList();
 
         // we expect that category to be printed to the CLI
         final SpyCli spyCli = new SpyCli();
@@ -71,10 +75,13 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         reportingService.reportCategories();
 
         // ensure that the right thing was printed - category name should be uppercase!
-        final List<String> expectedLines = Arrays.asList(
-                "Category Name",
-                testCategory.getName().toUpperCase()
-        );
+        final List<String> expectedLines = Stream.concat(
+                Stream.of("ID" + CSV_DELIMITER + "NAME"),
+                expectedCategories.stream().map(category ->
+                            category.getId() + CSV_DELIMITER + category.getName().toUpperCase()
+                )
+        ).collect(Collectors.toList());
+
         final List<String> actualLines = spyCli.getCapturedLines();
         Assertions.assertEquals(expectedLines, actualLines);
     }

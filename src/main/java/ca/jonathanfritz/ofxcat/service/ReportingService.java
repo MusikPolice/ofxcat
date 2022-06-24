@@ -103,23 +103,6 @@ public class ReportingService {
 
     private record LocalDateRange(LocalDate start, LocalDate end) { }
 
-    private Comparator<Float> absoluteValueDescendingComparator() {
-        return (sum1, sum2) -> {
-                // sort by absolute value descending
-                return Float.compare(Math.abs(sum1), Math.abs(sum2)) * -1;
-            };
-    }
-
-    private String printCategorySpend(Map.Entry<Category, Float> entry) {
-        final String category = entry.getKey().getName();
-        final float spend = entry.getValue();
-        if (spend > 0) {
-            return String.format("%s,$%.2f", category, spend);
-        } else {
-            return String.format("%s,-$%.2f", category, spend * -1);
-        }
-    }
-
     /**
      * Prints out a CSV list of accounts in the database
      * TODO: add a table-formatted option
@@ -139,14 +122,15 @@ public class ReportingService {
      * TODO: add a table-formatted option
      */
     public void reportCategories() {
-        final List<Category> categories = categoryDao.select();
-        cli.println(Streams.concat(
-                Stream.of("Category Name"),
-                categories.stream()
-                        .filter(c -> !Category.UNKNOWN.equals(c))
-                        .filter(c -> !Category.TRANSFER.equals(c))
-                        .map(Category::getName)
-            )
-            .collect(Collectors.toList()));
+        final List<String> lines = new ArrayList<>();
+        lines.add("ID" + CSV_DELIMITER + "NAME");
+
+        // print category ids and names, sorted by name alphabetically
+        categoryDao.select().stream()
+                .sorted((o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()))
+                .forEach(category ->
+                        lines.add(category.getId() + CSV_DELIMITER + category.getName())
+                );
+        cli.println(lines);
     }
 }
