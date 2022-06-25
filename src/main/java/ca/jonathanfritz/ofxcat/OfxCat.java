@@ -90,7 +90,11 @@ public class OfxCat {
     }
 
     private void reportTransactions(OfxCatOptions options) {
-        reportingService.reportTransactionsMonthly(options.startDate, options.endDate);
+        if (options.categoryId != null) {
+            reportingService.reportTransactionsInCategory(options.categoryId, options.startDate, options.endDate);
+        } else {
+            reportingService.reportTransactionsMonthly(options.startDate, options.endDate);
+        }
     }
 
     private void reportAccounts() {
@@ -101,23 +105,21 @@ public class OfxCat {
         reportingService.reportCategories();
     }
 
-    // TODO: add support for 'get transactions --category CATEGORY_NAME'
-    //  it should print out a csv table containing one row for each transaction in the specified category
-    //  can be combined with --start-date and --end-date to bound the report
-    //  this will help to debug the monthly report matrix
     private void printHelp() {
         cli.println(Arrays.asList(
                 "ofxcat import [FILENAME]",
-                "   Imports the transactions in the specified *.ofx file",
+                "   Imports the transactions in the specified *.ofx file.",
                 "ofxcat get accounts",
-                "   Prints a list of known accounts in CSV format",
+                "   Prints a list of known accounts in CSV format.",
                 "ofxcat get categories",
-                "   Prints a list of known transaction categories in CSV format",
+                "   Prints a list of known transaction categories in CSV format.",
                 "ofxcat get transactions --start-date=[START DATE] [OPTIONS]",
-                "   Prints the amount spent in each known transaction category",
+                "   Prints the amount spent in each known transaction category.",
                 "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
                 "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
-                "               Defaults to today if not specified",
+                "               Defaults to today if not specified.",
+                "   --category-id: Optional. If specified, only transactions that belong" +
+                " to the specified category will be printed." +
                 "ofxcat help",
                 "   Displays this help text"
         ));
@@ -141,17 +143,13 @@ public class OfxCat {
                 case GET:
                     // if mode is GET, determine which concern needs to be got
                     switch (getConcern(args)) {
-                        case TRANSACTIONS:
-                            // TODO: add a way to export actual transactions, not just category sums
-                            ofxCat.reportTransactions(getOptions(args));
-                            break;
-                        case ACCOUNTS:
-                            ofxCat.reportAccounts();
-                            break;
-                        case CATEGORIES:
-                            // TODO: need a way to edit categories and category descriptions
-                            ofxCat.reportCategories();
-                            break;
+                        case TRANSACTIONS ->
+                                // TODO: add a way to export actual transactions, not just category sums
+                                ofxCat.reportTransactions(getOptions(args));
+                        case ACCOUNTS -> ofxCat.reportAccounts();
+                        case CATEGORIES ->
+                                // TODO: need a way to edit categories and category descriptions
+                                ofxCat.reportCategories();
                     }
                     break;
                 case HELP:
@@ -221,12 +219,21 @@ public class OfxCat {
                     .hasArg(true)
                     .required(false)
                     .build());
+            options.addOption(Option.builder()
+                    .argName("c")
+                    .longOpt("category-id")
+                    .desc("Unique id of the Category with which to filter results")
+                    .hasArg(true)
+                    .required(false)
+                    .build());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
             final LocalDate startDate = toLocalDate(commandLine.getOptionValue("start-date"));
             final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
-            return new OfxCatOptions(startDate, endDate);
+            final String categoryIdOptionValue = commandLine.getOptionValue("category-id");
+            final Long categoryId = categoryIdOptionValue != null ? Long.parseLong(categoryIdOptionValue) : null;
+            return new OfxCatOptions(startDate, endDate, categoryId);
         } catch (ParseException e) {
             throw new CliException("Failed to parse options", e);
         }
@@ -250,13 +257,5 @@ public class OfxCat {
         }
     }
 
-    private static class OfxCatOptions {
-        final LocalDate startDate;
-        final LocalDate endDate;
-
-        private OfxCatOptions(LocalDate startDate, LocalDate endDate) {
-            this.startDate = startDate;
-            this.endDate = endDate;
-        }
-    }
+    private record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) { }
 }

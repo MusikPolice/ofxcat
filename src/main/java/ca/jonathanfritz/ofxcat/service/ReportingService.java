@@ -18,10 +18,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.BinaryOperator;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,7 +73,7 @@ public class ReportingService {
 
         // print a matrix with categories along the x axis, months along the y axis, category spend for each month at the intersection
         final List<String> lines = new ArrayList<>();
-        lines.add(categories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)) + System.lineSeparator());
+        lines.add("MONTH" + CSV_DELIMITER + categories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)));
 
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : dateSpend.entrySet()) {
             // first column is the month/year
@@ -85,19 +82,47 @@ public class ReportingService {
             sb.append(CSV_DELIMITER);
 
             // subsequent columns hold sum of transactions for that month and category
-            // TODO: unit tests suggest that this reporting code is ok - check the database to see if transactions are miscategorized?
             sb.append(
                     categories.stream()
                             .map(category -> entry.getValue().getOrDefault(category, 0f))
                             .map(CURRENCY_FORMATTER::format)
                             .collect(Collectors.joining(CSV_DELIMITER))
             );
-            sb.append(System.lineSeparator());
             lines.add(sb.toString());
         }
 
         // TODO: add rows for p50, p90, average, and total
 
+        cli.println(lines);
+    }
+
+    public void reportTransactionsInCategory(final Long categoryId, final LocalDate startDate, LocalDate endDate) {
+        // input validation
+        final Category category = categoryDao.select(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Category with id " + categoryId + " does not exist"));
+        if (startDate == null) {
+            throw new IllegalArgumentException("Start date must be specified");
+        }
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date " + startDate + " must be before end date " + endDate);
+        }
+
+        // get all transactions in the specified category
+        final List<String> lines = new ArrayList<>();
+        lines.add("DATE" + CSV_DELIMITER + "DESCRIPTION" + CSV_DELIMITER + "AMOUNT");
+
+        final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        categorizedTransactionDao.selectByCategory(category, startDate, endDate).stream()
+                .map(CategorizedTransaction::getTransaction)
+                .forEach(transaction ->
+                        lines.add(dateFormatter.format(transaction.getDate()) + CSV_DELIMITER +
+                                transaction.getDescription() + CSV_DELIMITER +
+                                CURRENCY_FORMATTER.format(transaction.getAmount())
+                        )
+                );
         cli.println(lines);
     }
 
