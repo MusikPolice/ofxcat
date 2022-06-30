@@ -48,6 +48,9 @@ public class RbcTransactionCleaner implements TransactionCleaner {
         rules.add(TransactionMatcherRule.newBuilder()
                 .withMemo(Pattern.compile("^WWW TRANSFER - \\d+.*$", Pattern.CASE_INSENSITIVE))
                 .build(interAccountTransferTransformer));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withName(Pattern.compile("^WWW TFR TIN0.*$", Pattern.CASE_INSENSITIVE))
+                .build(interAccountTransferTransformer));
 
         // scheduled transfer from one account to a line of credit
         rules.add(TransactionMatcherRule.newBuilder()
@@ -119,6 +122,16 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                 .withAmount(AmountMatcherRule.isGreaterThan(0))
                 .withName(Pattern.compile("^Email Trfs Can.*$", Pattern.CASE_INSENSITIVE))
                 .withMemo(Pattern.compile("^INT E-TRF CAN.*$", Pattern.CASE_INSENSITIVE))
+                .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
+                        .setType(Transaction.TransactionType.CREDIT)
+                        .setDate(ofxTransaction.getDate())
+                        .setAmount(ofxTransaction.getAmount())
+                        .setDescription("INCOMING INTERAC E-TRANSFER")));
+        rules.add(TransactionMatcherRule.newBuilder()
+                .withType(TransactionType.CREDIT)
+                .withAmount(AmountMatcherRule.isGreaterThan(0))
+                .withName(Pattern.compile("^Email Trfs.*$", Pattern.CASE_INSENSITIVE))
+                .withMemo(Pattern.compile("^INTERAC E-TRF-.*$", Pattern.CASE_INSENSITIVE))
                 .build(ofxTransaction -> Transaction.newBuilder(ofxTransaction.getFitId())
                         .setType(Transaction.TransactionType.CREDIT)
                         .setDate(ofxTransaction.getDate())

@@ -135,14 +135,24 @@ class RbcTransactionCleanerTest {
 
     @Test
     public void interacEtransferIncomingTest() {
-        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+        OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
                 .setType(TransactionType.CREDIT)
                 .setAmount(1000f)
                 .setName("Email Trfs Can")
                 .setMemo("INT E-TRF CAN- 4541")
                 .build();
 
-        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INCOMING INTERAC E-TRANSFER"));
+
+        ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.CREDIT)
+                .setAmount(80.21f)
+                .setName("Email Trfs")
+                .setMemo("INTERAC E-TRF- 7287")
+                .build();
+
+        transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("INCOMING INTERAC E-TRANSFER"));
     }
 
@@ -208,6 +218,19 @@ class RbcTransactionCleanerTest {
 
         final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
         MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER INTO ACCOUNT"));
+        MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
+    }
+
+    @Test
+    public void incomingInterAccountTransferWwwTfrTest() {
+        final OfxTransaction ofxTransaction = OfxTransaction.newBuilder()
+                .setType(TransactionType.DEBIT)
+                .setAmount(-500.00f)
+                .setName("WWW TFR TIN0-02617")
+                .build();
+
+        final Transaction transaction = rbcTransactionCleaner.clean(ofxTransaction).build();
+        MatcherAssert.assertThat(transaction.getDescription(), IsEqual.equalTo("TRANSFER OUT OF ACCOUNT"));
         MatcherAssert.assertThat(transaction.getType(), IsEqual.equalTo(Transaction.TransactionType.XFER));
     }
 

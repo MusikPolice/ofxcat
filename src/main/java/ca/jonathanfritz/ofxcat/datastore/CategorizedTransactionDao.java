@@ -117,6 +117,30 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Finds all categorized transactions that belong to the specified category, and that occurred between the specified dates
+     * @param category the category that returned transactions belong to
+     * @param startDate the earliest date on which a returned transaction can occur, inclusive
+     * @param endDate the latest date on which a returned transaction can occur, inclusive
+     * @return a list of matching {@link CategorizedTransaction}, sorted by date ascending
+     */
+    public List<CategorizedTransaction> selectByCategory(final Category category, final LocalDate startDate, final LocalDate endDate) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to get CategorizedTransactions in Category {} that occurred between {} and {}", category, startDate, endDate);
+            final String query = "SELECT * FROM CategorizedTransaction " +
+                    "WHERE category_id = ? AND date >= ? AND date <= ? " +
+                    "ORDER BY date ASC";
+            return t.query(query, ps -> {
+                ps.setLong(1, category.getId());
+                ps.setDate(2, Date.valueOf(startDate));
+                ps.setDate(3, Date.valueOf(endDate));
+            }, categorizedTransactionDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to get CategorizedTransactions in Category {} that occurred between {} and {}", category, startDate, endDate);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Checks to see if a transaction exists in the database that has the same fitId as the specified {@link Transaction}
      * @param t the {@link DatabaseTransaction} to perform this operation on
      * @param transaction the Transaction to look for
