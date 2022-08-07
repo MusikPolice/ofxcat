@@ -122,6 +122,7 @@ public class TransactionCategoryService {
                 .map(String::trim)
                 .filter(StringUtils::isNotBlank)
                 .filter(s -> !s.matches("^#?\\d*$")) // drop tokens that are entirely numeric or a # sign followed by a number - usually franchise store numbers
+                .filter(s -> !s.matches("^[0-9\\-]*$")) // drop tokens that look like phone numbers
                 .distinct()
                 .collect(Collectors.toList());
         final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, tokens);
