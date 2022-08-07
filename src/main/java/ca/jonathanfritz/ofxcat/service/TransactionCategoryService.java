@@ -19,6 +19,8 @@ import org.apache.logging.log4j.Logger;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 // TODO: Test me!
@@ -117,7 +119,9 @@ public class TransactionCategoryService {
     private Optional<CategorizedTransaction> categorizeTransactionPartialMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
         // try splitting the description up into tokens and partially matching on each
         final List<String> tokens = Arrays.stream(transaction.getDescription().split(" "))
+                .map(String::trim)
                 .filter(StringUtils::isNotBlank)
+                .filter(s -> !s.matches("^#?\\d*$")) // drop tokens that are entirely numeric or a # sign followed by a number - usually franchise store numbers
                 .distinct()
                 .collect(Collectors.toList());
         final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, tokens);
