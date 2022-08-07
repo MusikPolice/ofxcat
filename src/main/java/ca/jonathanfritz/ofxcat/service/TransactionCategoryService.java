@@ -141,7 +141,7 @@ public class TransactionCategoryService {
         logger.info("New transaction description partially matches that of {} existing transactions " +
                 "with categories {}", categorizedTransactions.size(), distinctCategories);
 
-        // rank the choices by fuzzy string match and prompt the user to choose
+        // rank the choices by fuzzy string match
         final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(
                 transaction.getDescription(),
                 categorizedTransactions,
@@ -156,20 +156,30 @@ public class TransactionCategoryService {
                     .filter(fm -> fm.getReferent().getCategory() == category)
                     .toList();
 
-            // compute the average score
+            // compute the average score for the category
             final Integer sum = categoryFuzzyMatches.stream()
                     .map(BoundExtractedResult::getScore)
                     .reduce(0, Integer::sum);
             final float average = sum / (float) categoryFuzzyMatches.size();
-            categoryScores.put(category, average);
+
+            // only keep categories with a score above 60%
+            // TODO: should this threshold be configurable?
+            if (average >= 60) {
+                categoryScores.put(category, average);
+            }
         }
 
-        // get list of choices ranked by score descending for the user to choose from
+        // return the top five choices ranked by score descending for the user to choose from
         final List<Category> choices = categoryScores.entrySet().stream()
-            .sorted((entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue()) * -1)
+                .sorted((entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue()) * -1)
                 .map(Map.Entry::getKey)
+                .limit(5)
                 .collect(Collectors.toList());
 
+        // edge case - if there are no choices exceeding the fuzzy score threshold, return all found categories
+        if (choices.isEmpty()) {
+            return chooseCategoryFromList(transaction, distinctCategories);
+        }
         return chooseCategoryFromList(transaction, choices);
     }
 
