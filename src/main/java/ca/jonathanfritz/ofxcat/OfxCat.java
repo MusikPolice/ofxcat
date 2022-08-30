@@ -157,8 +157,8 @@ public class OfxCat {
                     break;
             }
         } catch (OfxCatException ex) {
+            logger.error("Caught unhandled exception", ex);
             ofxCat.printHelp();
-            throw ex;
         }
     }
 
