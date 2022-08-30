@@ -173,6 +173,14 @@
                         <manifest>
                             <mainClass>ca.jonathanfritz.ofxcat.OfxCat</mainClass>
                         </manifest>
+
+                        <!--
+                        suppress the "WARNING: sun.reflect.Reflection.getCallerClass is not supported. This will impact
+                        performance." warning that is printed at runtime. see https://stackoverflow.com/a/57616897/591374
+                        -->
+                        <manifestEntries>
+                            <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
                     </archive>
                 </configuration>
                 <executions>
