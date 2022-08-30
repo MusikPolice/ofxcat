@@ -16,7 +16,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <junit-platform.version>5.8.2</junit-platform.version>
         <maven-surefire-failsafe-plugin.version>2.22.2</maven-surefire-failsafe-plugin.version>
-        <log4j-version>2.17.2</log4j-version>
+        <log4j-version>2.18.0</log4j-version>
     </properties>
 
     <dependencies>
@@ -32,6 +32,16 @@
             <groupId>org.beryx</groupId>
             <artifactId>text-io</artifactId>
             <version>3.4.1</version>
+            <exclusions>
+                <!--
+                suppress the SLF4J no providers found warning at runtime. we explicitly include log4j below. see the
+                comment in ca.jonathanfritz.ofxcat.utils.Log4jLogger for an explanation of why.
+                -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- parses ofx files -->
