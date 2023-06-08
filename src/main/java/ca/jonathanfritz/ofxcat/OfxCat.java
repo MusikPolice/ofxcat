@@ -163,7 +163,10 @@ public class OfxCat {
     }
 
     private static OfxCat initializeApplication(PathUtils pathUtils) {
-        final Injector injector = Guice.createInjector(new CLIModule(), new DatastoreModule(pathUtils.getDatabaseConnectionString()));
+        final Injector injector = Guice.createInjector(
+                new CLIModule(),
+                DatastoreModule.onDisk(pathUtils.getDatabaseConnectionString())
+        );
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
         ofxCat.migrateDatabase();
         return ofxCat;

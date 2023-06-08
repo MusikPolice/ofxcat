@@ -7,6 +7,7 @@ import com.google.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.configuration.FluentConfiguration;
 import org.sqlite.SQLiteDataSource;
 
 import javax.sql.DataSource;
@@ -16,22 +17,27 @@ import java.sql.SQLException;
 public class DatastoreModule extends AbstractModule {
 
     private final String connectionString;
+    private final Boolean isCleanEnabled;
 
     private static final Logger logger = LogManager.getLogger(DatastoreModule.class);
 
     /**
      * Wires up a connection to the specified database
      */
-    public DatastoreModule(String connectionString) {
-        this.connectionString = connectionString;
-        logger.info("Database connection string is {}", connectionString);
+    public static DatastoreModule onDisk(String connectionString) {
+        return new DatastoreModule(connectionString, false);
     }
 
     /**
      * Wires up an in-memory database for testing purposes
      */
-    public DatastoreModule() {
-        this.connectionString = "jdbc:sqlite:file::memory:?cache=shared";
+    public static DatastoreModule inMemory() {
+        return new DatastoreModule("jdbc:sqlite:file::memory:?cache=shared", true);
+    }
+
+    private DatastoreModule(String connectionString, Boolean isCleanEnabled) {
+        this.connectionString = connectionString;
+        this.isCleanEnabled = isCleanEnabled;
         logger.info("Database connection string is {}", connectionString);
     }
 
@@ -68,6 +74,9 @@ public class DatastoreModule extends AbstractModule {
         // note that Flyway will use the DataSource to create its own Connection to the database, so in-memory databases
         // must be named, or else Flyway will act on a different database than the application.
         // this limitation does not apply to on-disk databases.
-        return Flyway.configure().dataSource(dataSource).load();
+        return Flyway.configure()
+                .dataSource(dataSource)
+                .cleanDisabled(!isCleanEnabled) // allow for wiping the db in tests
+                .load();
     }
 }

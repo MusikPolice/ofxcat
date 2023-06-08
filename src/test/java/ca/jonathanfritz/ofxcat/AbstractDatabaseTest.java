@@ -20,7 +20,7 @@ public abstract class AbstractDatabaseTest {
 
     public AbstractDatabaseTest() {
         // get a connection to an in-memory database for child classes to use
-        injector = Guice.createInjector(new DatastoreModule());
+        injector = Guice.createInjector(DatastoreModule.inMemory());
         connection = injector.getInstance(Connection.class);
     }
 
