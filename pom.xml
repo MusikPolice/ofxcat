@@ -16,7 +16,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <junit-platform.version>5.8.2</junit-platform.version>
         <maven-surefire-failsafe-plugin.version>2.22.2</maven-surefire-failsafe-plugin.version>
-        <log4j-version>2.18.0</log4j-version>
+        <log4j-version>2.20.0</log4j-version>
     </properties>
 
     <dependencies>
