@@ -67,6 +67,8 @@ java {
 
 application {
     mainClass = 'ca.jonathanfritz.ofxcat.OfxCat'
+    // Ensure native access warnings are suppressed when running via Gradle or generated scripts
+    applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED']
 }
 
 // Build an executable fat JAR similar to Maven assembly "jar-with-dependencies"
@@ -84,6 +86,8 @@ shadowJar {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    // Suppress JDK 22+ native-access warnings during tests
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
 // Make the default jar also include the manifest for convenience
