@@ -1,0 +1,97 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+repositories {
+    mavenCentral()
+}
+
+group = 'ca.jonathanfritz'
+version = '1.0-SNAPSHOT'
+
+dependencies {
+    // BOMs to keep families consistent at latest stable
+    implementation platform('org.apache.logging.log4j:log4j-bom:latest.release')
+    implementation platform('com.fasterxml.jackson:jackson-bom:latest.release')
+    // Pin JUnit to a compatible version to avoid launcher/engine mismatch
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+
+    // CLI parsing
+    implementation 'commons-cli:commons-cli:latest.release'
+
+    // Interactive CLI (exclude slf4j to avoid conflicting logging setup)
+    implementation('org.beryx:text-io:latest.release') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+
+    // OFX parsing
+    implementation 'com.webcohesion.ofx4j:ofx4j:latest.release'
+
+    // Fuzzy string matching
+    implementation 'me.xdrop:fuzzywuzzy:latest.release'
+
+    // Classpath scanning
+    implementation 'io.github.classgraph:classgraph:latest.release'
+
+    // Dependency injection
+    implementation 'com.google.inject:guice:latest.release'
+
+    // Data storage
+    implementation 'org.xerial:sqlite-jdbc:latest.release'
+    implementation 'org.flywaydb:flyway-core:latest.release'
+
+    // Commons
+    implementation 'org.apache.commons:commons-lang3:latest.release'
+
+    // Logging (managed by BOM)
+    implementation 'org.apache.logging.log4j:log4j-core'
+    implementation 'org.apache.logging.log4j:log4j-api'
+
+    // Jackson (managed by BOM)
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // Tests
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    // Use the unified Hamcrest artifact
+    testImplementation 'org.hamcrest:hamcrest:2.2'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+application {
+    mainClass = 'ca.jonathanfritz.ofxcat.OfxCat'
+}
+
+// Build an executable fat JAR similar to Maven assembly "jar-with-dependencies"
+shadowJar {
+    // Match the historical Maven classifier for minimal disruption
+    archiveClassifier.set('jar-with-dependencies')
+    mergeServiceFiles()
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass,
+                'Multi-Release': 'true'
+        )
+    }
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+// Make the default jar also include the manifest for convenience
+jar {
+    manifest {
+        attributes(
+                'Main-Class': application.mainClass,
+                'Multi-Release': 'true'
+        )
+    }
+}

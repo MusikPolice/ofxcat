@@ -9,7 +9,7 @@ import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
-import com.google.inject.Inject;
+import jakarta.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;

@@ -9,13 +9,13 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import com.google.inject.Inject;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.BoundExtractedResult;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;

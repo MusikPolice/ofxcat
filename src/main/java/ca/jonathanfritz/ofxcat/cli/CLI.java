@@ -5,7 +5,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import com.google.inject.Inject;
+import jakarta.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 import org.beryx.textio.InputReader;
 import org.beryx.textio.TextIO;

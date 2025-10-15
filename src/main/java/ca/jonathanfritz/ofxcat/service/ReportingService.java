@@ -11,7 +11,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;

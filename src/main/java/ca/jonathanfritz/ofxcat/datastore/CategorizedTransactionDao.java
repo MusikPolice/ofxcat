@@ -9,10 +9,10 @@ import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
 import com.google.common.collect.Streams;
-import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.ResultSet;

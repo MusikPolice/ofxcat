@@ -2,7 +2,7 @@ package ca.jonathanfritz.ofxcat.cli;
 
 import org.beryx.textio.TextIO;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.util.List;
 
 /**
