@@ -12,38 +12,38 @@ group = 'ca.jonathanfritz'
 version = '1.0-SNAPSHOT'
 
 dependencies {
-    // BOMs to keep families consistent at latest stable
-    implementation platform('org.apache.logging.log4j:log4j-bom:latest.release')
-    implementation platform('com.fasterxml.jackson:jackson-bom:latest.release')
-    // Pin JUnit to a compatible version to avoid launcher/engine mismatch
+    // BOMs pinned to stable
+    implementation platform('org.apache.logging.log4j:log4j-bom:2.24.1')
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.20.0')
+    // JUnit BOM pinned for stability
     testImplementation platform('org.junit:junit-bom:5.10.2')
 
     // CLI parsing
-    implementation 'commons-cli:commons-cli:latest.release'
+    implementation 'commons-cli:commons-cli:1.10.0'
 
     // Interactive CLI (exclude slf4j to avoid conflicting logging setup)
-    implementation('org.beryx:text-io:latest.release') {
+    implementation('org.beryx:text-io:3.4.1') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
     // OFX parsing
-    implementation 'com.webcohesion.ofx4j:ofx4j:latest.release'
+    implementation 'com.webcohesion.ofx4j:ofx4j:1.39'
 
     // Fuzzy string matching
-    implementation 'me.xdrop:fuzzywuzzy:latest.release'
+    implementation 'me.xdrop:fuzzywuzzy:1.4.0'
 
     // Classpath scanning
-    implementation 'io.github.classgraph:classgraph:latest.release'
+    implementation 'io.github.classgraph:classgraph:4.8.184'
 
     // Dependency injection
-    implementation 'com.google.inject:guice:latest.release'
+    implementation 'com.google.inject:guice:7.0.0'
 
     // Data storage
-    implementation 'org.xerial:sqlite-jdbc:latest.release'
-    implementation 'org.flywaydb:flyway-core:latest.release'
+    implementation 'org.xerial:sqlite-jdbc:3.50.3.0'
+    implementation 'org.flywaydb:flyway-core:11.14.1'
 
     // Commons
-    implementation 'org.apache.commons:commons-lang3:latest.release'
+    implementation 'org.apache.commons:commons-lang3:3.19.0'
 
     // Logging (managed by BOM)
     implementation 'org.apache.logging.log4j:log4j-core'
@@ -55,7 +55,6 @@ dependencies {
 
     // Tests
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    // Use the unified Hamcrest artifact
     testImplementation 'org.hamcrest:hamcrest:2.2'
 }
 
