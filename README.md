@@ -94,6 +94,32 @@ You can run the application with:
 java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
+### Known Issues
+When running the application, you may see a warning about unsafe method usage:
+```bash
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by org.fusesource.hawtjni.runtime.Library in an unnamed module (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar)       
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+```
+
+This warning originates in the `com.google.guava` library, which is a transitive dependency of both guice and ofx4j:
+```bash
+com.google.guava:guava:31.0.1-jre
+\--- com.google.inject:guice:7.0.0
+     \--- runtimeClasspath
+
+com.google.guava:guava:18.0 -> 31.0.1-jre
+\--- org.reflections:reflections:0.9.10
+     \--- com.webcohesion.ofx4j:ofx4j:1.39
+          \--- runtimeClasspath
+```
+For now, the warning can be safely ignored. It should be fixed in subsequent releases of the affected libraries. More info is available [here](https://github.com/google/guava/issues/6806).
+
 ## Contributing
 
 ### Adding support for a new institution

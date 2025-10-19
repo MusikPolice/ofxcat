@@ -12,50 +12,47 @@ group = 'ca.jonathanfritz'
 version = '1.0-SNAPSHOT'
 
 dependencies {
-    // BOMs pinned to stable
-    implementation platform('org.apache.logging.log4j:log4j-bom:2.24.1')
-    implementation platform('com.fasterxml.jackson:jackson-bom:2.20.0')
-    // JUnit BOM pinned for stability
-    testImplementation platform('org.junit:junit-bom:5.10.2')
-
-    // CLI parsing
+    // interactive CLI
     implementation 'commons-cli:commons-cli:1.10.0'
-
-    // Interactive CLI (exclude slf4j to avoid conflicting logging setup)
     implementation('org.beryx:text-io:3.4.1') {
+        // exclude slf4j to avoid conflicting logging setup
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
     // OFX parsing
     implementation 'com.webcohesion.ofx4j:ofx4j:1.39'
 
-    // Fuzzy string matching
+    // fuzzy string matching
     implementation 'me.xdrop:fuzzywuzzy:1.4.0'
 
-    // Classpath scanning
+    // dependency injection
+    implementation 'com.google.inject:guice:7.0.0'
     implementation 'io.github.classgraph:classgraph:4.8.184'
 
-    // Dependency injection
-    implementation 'com.google.inject:guice:7.0.0'
-
-    // Data storage
-    implementation 'org.xerial:sqlite-jdbc:3.50.3.0'
+    // data storage
     implementation 'org.flywaydb:flyway-core:11.14.1'
+    implementation 'org.xerial:sqlite-jdbc:3.50.3.0'
 
     // Commons
     implementation 'org.apache.commons:commons-lang3:3.19.0'
 
-    // Logging (managed by BOM)
+    // logging
+    implementation platform('org.apache.logging.log4j:log4j-bom:2.25.2')
     implementation 'org.apache.logging.log4j:log4j-core'
     implementation 'org.apache.logging.log4j:log4j-api'
 
-    // Jackson (managed by BOM)
+    // JSON serialization
+    // Note that com.fasterxml.jackson has been moved to tools.jackson, but log4j still expects the old coordinates
+    // when parsing the src/main/resources/log4j2.yaml configuration file
+    implementation('com.fasterxml.jackson:jackson-bom:2.20.0')
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // Tests
+    // tests
+    testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.hamcrest:hamcrest:2.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.hamcrest:hamcrest:3.0'
 }
 
 java {
