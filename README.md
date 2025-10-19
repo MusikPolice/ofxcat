@@ -76,8 +76,7 @@ If that doesn't work, create an issue, and I'll do my best to help you out as so
 ## Building the application
 To build ofxcat, you'll need the following software:
 * git
-* maven
-* JDK 17+
+* JDK 25+
 
 Start by cloning the `master` branch of this repository:
 ```bash
@@ -86,7 +85,13 @@ cd ofxcat
 ```
 Build with maven:
 ```bash
-mvn clean install
+./gradlew clean build shadowJar
+```
+
+A fat jar that contains the application and its dependencies will be created at `build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar`. 
+You can run the application with:
+```bash
+java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
 ## Contributing
