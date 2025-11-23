@@ -57,7 +57,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -78,12 +78,6 @@ shadowJar {
                 'Multi-Release': 'true'
         )
     }
-}
-
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-    // Suppress JDK 22+ native-access warnings during tests
-    jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
 // Make the default jar also include the manifest for convenience

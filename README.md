@@ -76,14 +76,14 @@ If that doesn't work, create an issue, and I'll do my best to help you out as so
 ## Building the application
 To build ofxcat, you'll need the following software:
 * git
-* JDK 25+
+* JDK 21
 
 Start by cloning the `master` branch of this repository:
 ```bash
 git clone https://github.com/MusikPolice/ofxcat.git
 cd ofxcat
 ```
-Build with maven:
+Build with gradle:
 ```bash
 ./gradlew clean build shadowJar
 ```
