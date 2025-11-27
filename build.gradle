@@ -93,5 +93,41 @@ jar {
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)
 test {
     useJUnitPlatform()
+
+    // Enhanced test logging for better debugging and visibility
+    testLogging {
+        // Show these test events in the console
+        events "passed", "skipped", "failed", "standard_error"
+
+        // Show full exception details when tests fail
+        exceptionFormat "full"
+        showStackTraces true
+        showCauses true
+        showStandardStreams false
+
+        // Show individual test results
+        showExceptions true
+
+        // Display a summary after the test suite completes
+        afterSuite { desc, result ->
+            if (!desc.parent) { // Only print for the top-level test suite
+                println ""
+                println "========================================="
+                println "TEST RESULTS: ${result.resultType}"
+                println "========================================="
+                println "Tests run    : ${result.testCount}"
+                println "Passed       : ${result.successfulTestCount}"
+                println "Failed       : ${result.failedTestCount}"
+                println "Skipped      : ${result.skippedTestCount}"
+                println "========================================="
+
+                if (result.failedTestCount > 0) {
+                    println "⚠️  See detailed report at:"
+                    println "   ${project.buildDir}/reports/tests/test/index.html"
+                    println "========================================="
+                }
+            }
+        }
+    }
 }
 
