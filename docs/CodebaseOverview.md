@@ -1,0 +1,717 @@
+# ofxcat Codebase Overview
+
+**Last Updated:** November 26, 2025  
+**Purpose:** Comprehensive technical documentation for developers maintaining and extending this application.
+
+---
+
+## Table of Contents
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Command Line Interface](#command-line-interface)
+4. [Dependencies](#dependencies)
+5. [Code Structure](#code-structure)
+6. [Database Schema](#database-schema)
+7. [Key Algorithms](#key-algorithms)
+8. [Configuration & Storage](#configuration--storage)
+9. [Testing](#testing)
+10. [Known Issues](#known-issues)
+11. [Areas for Improvement](#areas-for-improvement)
+
+---
+
+## Overview
+
+ofxcat is a Java 21 command-line application that imports and categorizes financial transactions from OFX (Open Financial Exchange) files. The application uses intelligent fuzzy matching to automatically categorize transactions based on historical patterns and prompts users interactively when needed.
+
+**Core Functionality:**
+- Parse OFX files exported from banking institutions
+- Store transactions in a local SQLite database
+- Automatically detect inter-account transfers
+- Categorize transactions using exact and fuzzy string matching
+- Generate CSV reports showing spending by category over time
+- Learn from user input to improve categorization accuracy
+
+---
+
+## Architecture
+
+### Design Pattern
+The application follows a **layered architecture** with dependency injection:
+
+```
+┌─────────────────────────────────────┐
+│     CLI Layer (OfxCat, CLI)         │  ← Entry point, argument parsing
+├─────────────────────────────────────┤
+│  Service Layer (Import, Category,   │  ← Business logic
+│   Reporting, TransferMatching)      │
+├─────────────────────────────────────┤
+│    DAO Layer (AccountDao, etc)      │  ← Data access
+├─────────────────────────────────────┤
+│  Database (SQLite + Flyway)         │  ← Persistence
+└─────────────────────────────────────┘
+```
+
+### Dependency Injection
+Uses **Google Guice** for dependency injection with two modules:
+- `CLIModule`: Provides TextIO for interactive terminal UI
+- `DatastoreModule`: Configures database connection, can be on-disk or in-memory (for testing)
+
+### Key Patterns
+- **Factory Pattern**: `TransactionCleanerFactory` uses classpath scanning to discover bank-specific cleaners
+- **Builder Pattern**: DTOs like `Transaction`, `OfxAccount` use builders
+- **DAO Pattern**: All database access goes through DAO classes
+- **Strategy Pattern**: `TransactionCleaner` interface with bank-specific implementations
+
+---
+
+## Command Line Interface
+
+### Entry Point
+**Class:** `ca.jonathanfritz.ofxcat.OfxCat`  
+**Build Output:** `build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar`
+
+### Commands
+
+#### Import Transactions
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar import <filename.ofx>
+```
+- Parses OFX file
+- Prompts for account names on first encounter
+- Automatically categorizes transactions (with user prompts when needed)
+- Detects inter-account transfers
+- Backs up imported file to `~/.ofxcat/imported/`
+- Optionally deletes the original file
+
+#### Get Accounts
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get accounts
+```
+Outputs all known accounts in CSV format.
+
+#### Get Categories
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get categories
+```
+Outputs all known categories in CSV format.
+
+#### Get Transactions Report
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get transactions \
+  --start-date=2022-01-01 \
+  --end-date=2022-12-31 \
+  [--category-id=<id>]
+```
+- `--start-date`: Required, format `yyyy-MM-dd`
+- `--end-date`: Optional, defaults to today
+- `--category-id`: Optional, filters to specific category
+
+Outputs a matrix with months as rows and categories as columns, showing total spending per category per month. Includes p50, p90, average, and total rows.
+
+#### Help
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar help
+```
+
+### Interactive Prompts
+Uses **TextIO** library for rich terminal interaction:
+- Yes/No prompts for decisions
+- List selection for categories
+- Text input for account/category names
+- Colored/formatted output for readability
+
+---
+
+## Dependencies
+
+### Core Libraries
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| **JDK** | 21 | Language platform |
+| **Gradle** | 8.x | Build system (wrapper included) |
+| **Google Guice** | 7.0.0 | Dependency injection |
+| **SQLite JDBC** | 3.50.3.0 | Database driver |
+| **Flyway** | 11.14.1 | Database migrations |
+| **ofx4j** | 1.39 | OFX file parsing |
+| **TextIO** | 3.4.1 | Interactive CLI |
+| **FuzzyWuzzy** | 1.4.0 | Fuzzy string matching |
+| **Commons CLI** | 1.10.0 | Command-line parsing |
+| **Commons Lang3** | 3.19.0 | Utility functions |
+| **Log4j2** | 2.25.2 | Logging |
+| **Jackson** | 2.20.0 | YAML parsing (for log config) |
+| **ClassGraph** | 4.8.184 | Classpath scanning |
+
+### Test Dependencies
+- **JUnit Jupiter** 6.0.0
+- **Hamcrest** 3.0
+
+### Build Plugins
+- **Shadow** 8.1.1 - Creates fat JAR with dependencies
+
+---
+
+## Code Structure
+
+### Package Organization
+```
+ca.jonathanfritz.ofxcat/
+├── cleaner/               # Transaction cleaning/normalization
+│   ├── rules/             # Matching rules for transaction patterns
+│   ├── TransactionCleaner.java
+│   ├── TransactionCleanerFactory.java
+│   ├── DefaultTransactionCleaner.java
+│   └── RbcTransactionCleaner.java
+├── cli/                   # Command-line interface
+│   ├── CLI.java
+│   ├── CLIModule.java
+│   └── TextIOWrapper.java
+├── datastore/             # Database access layer
+│   ├── dto/               # Data transfer objects
+│   │   ├── Account.java
+│   │   ├── Category.java
+│   │   ├── Transaction.java
+│   │   ├── CategorizedTransaction.java
+│   │   ├── DescriptionCategory.java
+│   │   └── Transfer.java
+│   ├── utils/             # Database utilities
+│   │   ├── DatabaseTransaction.java
+│   │   ├── DatastoreModule.java
+│   │   ├── Entity.java
+│   │   ├── ResultSetDeserializer.java
+│   │   ├── SqlConsumer.java
+│   │   └── SqlFunction.java
+│   ├── AccountDao.java
+│   ├── CategoryDao.java
+│   ├── CategorizedTransactionDao.java
+│   ├── DescriptionCategoryDao.java
+│   └── TransferDao.java
+├── exception/             # Custom exceptions
+│   ├── OfxCatException.java
+│   └── CliException.java
+├── io/                    # OFX parsing
+│   ├── OfxParser.java
+│   ├── OfxAccount.java
+│   ├── OfxBalance.java
+│   ├── OfxExport.java
+│   └── OfxTransaction.java
+├── service/               # Business logic
+│   ├── TransactionImportService.java
+│   ├── TransactionCategoryService.java
+│   ├── TransferMatchingService.java
+│   └── ReportingService.java
+├── utils/                 # Utilities
+│   ├── Accumulator.java
+│   ├── Log4jLogger.java
+│   ├── PathUtils.java
+│   └── StringUtils.java
+└── OfxCat.java           # Application entry point
+```
+
+### Custom SLF4J Shim
+**Notable:** The codebase includes custom implementations of `org.slf4j.Logger` and `org.slf4j.LoggerFactory` that delegate to Log4j2. This avoids dependency conflicts between libraries expecting SLF4J.
+
+---
+
+## Database Schema
+
+### Storage Location
+`~/.ofxcat/ofxcat.db` (SQLite3)
+
+### Schema Evolution
+Managed by **Flyway** migrations in `src/main/resources/db/migration/`
+
+### Tables
+
+#### Category
+```sql
+CREATE TABLE Category (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+```
+Stores transaction categories (e.g., GROCERIES, MORTGAGE). Two default categories are created:
+- UNKNOWN (V8 migration)
+- TRANSFER (V9 migration)
+
+#### DescriptionCategory
+```sql
+CREATE TABLE DescriptionCategory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    category_id INTEGER REFERENCES Category (id) ON DELETE CASCADE
+);
+```
+Maps transaction descriptions to categories. Used for automatic categorization based on learned patterns.
+
+#### Account
+```sql
+CREATE TABLE Account (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bank_number TEXT,
+    account_number TEXT NOT NULL,
+    account_type TEXT,
+    name TEXT NOT NULL
+);
+```
+Stores bank accounts. User-assigned friendly names map to OFX account IDs.
+
+#### CategorizedTransaction
+```sql
+CREATE TABLE CategorizedTransaction (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,
+    date DATE NOT NULL,
+    amount FLOAT NOT NULL,
+    description TEXT NOT NULL,
+    account_id INTEGER REFERENCES Account (id) ON DELETE CASCADE,
+    category_id INTEGER REFERENCES Category (id) ON DELETE CASCADE,
+    balance FLOAT,              -- Added in V5
+    fit_id TEXT                 -- Added in V7
+);
+```
+Core table storing all imported transactions with their categories. `fit_id` is the unique transaction identifier from the OFX file.
+
+#### Transfer
+```sql
+CREATE TABLE Transfer (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER REFERENCES CategorizedTransaction (id) ON DELETE CASCADE,
+    sink_id INTEGER REFERENCES CategorizedTransaction (id) ON DELETE CASCADE
+);
+```
+Links pairs of transactions that represent inter-account transfers.
+
+### Migration History
+- V1: Category table
+- V2: DescriptionCategory table
+- V3: Account table
+- V4: CategorizedTransaction table
+- V5: Added balance column
+- V6: Fixed rounding issues
+- V7: Added fit_id column
+- V8: Created UNKNOWN default category
+- V9: Created TRANSFER default category
+- V10: Transfer table
+
+---
+
+## Key Algorithms
+
+### 1. Transaction Import Flow
+
+**Class:** `TransactionImportService`
+
+```
+1. Parse OFX file → List<OfxExport>
+2. For each account in exports:
+   a. Find or create Account (prompts user for name if new)
+   b. Calculate initial balance from final balance - sum(transactions)
+   c. Sort transactions by date
+   d. Apply bank-specific cleaning via TransactionCleaner
+   e. Calculate running balance for each transaction
+3. Identify inter-account transfers
+4. For remaining transactions:
+   a. Check if duplicate (skip if yes)
+   b. Attempt auto-categorization
+   c. Insert into database
+```
+
+### 2. Transaction Categorization Algorithm
+
+**Class:** `TransactionCategoryService`
+
+The categorization process uses a **three-tier matching strategy**:
+
+#### Tier 1: Exact Match
+```java
+categorizeTransactionExactMatch(transaction)
+```
+1. Search for transactions with identical description
+2. Extract distinct categories from matches (excluding UNKNOWN)
+3. If **exactly one** category found → auto-categorize
+4. If **multiple** categories → prompt user to choose
+5. If **zero** matches → proceed to Tier 2
+
+#### Tier 2: Partial Match (Fuzzy)
+```java
+categorizeTransactionPartialMatch(transaction)
+```
+1. Tokenize description (split on spaces)
+2. Filter out noise:
+   - Pure numbers or "#" + numbers (store numbers)
+   - Phone number patterns
+3. Search for transactions containing any tokens
+4. Apply **FuzzyWuzzy** string matching
+5. Score each category by average fuzzy match score
+6. Keep categories with score ≥ 60%
+7. Return top 5 categories ranked by score
+8. Prompt user to choose from ranked list
+
+#### Tier 3: Manual Selection
+```java
+chooseExistingCategoryOrAddNew(transaction)
+```
+1. Prompt user to choose from all existing categories
+2. Allow creation of new category
+
+### 3. Transfer Detection
+
+**Class:** `TransferMatchingService`
+
+Identifies inter-account transfers:
+```
+1. Extract all XFER-type transactions
+2. Separate into source (negative amount) and sink (positive amount)
+3. For each source:
+   a. Find sinks with:
+      - Same date
+      - Amount = source.amount * -1
+      - Different account
+   b. If exactly one match → create Transfer
+4. Remove matched transactions from import queue
+5. Categorize as TRANSFER
+```
+
+**Limitation:** Only matches transfers that occur on the same day with exact amounts. Does not handle delayed transfers or transactions with fees.
+
+### 4. Transaction Cleaning (Bank-Specific)
+
+**Class:** `RbcTransactionCleaner` (example)
+
+Uses **rule-based pattern matching** to normalize transaction descriptions:
+
+```java
+TransactionMatcherRule.newBuilder()
+    .withName(Pattern.compile("^WWW TRF DDA - \\d+.*$"))
+    .build(ofxTransaction -> 
+        Transaction.newBuilder()
+            .setType(XFER)
+            .setDescription("TRANSFER OUT OF ACCOUNT")
+    )
+```
+
+Rules match on:
+- Transaction name pattern
+- Memo pattern
+- Type (DEBIT/CREDIT)
+- Amount range
+
+**Factory Discovery:** `TransactionCleanerFactory` uses ClassGraph to scan the classpath for all `TransactionCleaner` implementations, caching them by `bankId`.
+
+---
+
+## Configuration & Storage
+
+### File Locations
+
+| File | Location | Purpose |
+|------|----------|---------|
+| Database | `~/.ofxcat/ofxcat.db` | SQLite database |
+| Logs | `~/.ofxcat/ofxcat.log` | Application logs |
+| Imported Files | `~/.ofxcat/imported/` | Backup copies of OFX files |
+
+**Security Note:** All files may contain sensitive financial information. The README warns users to protect these files appropriately.
+
+### Logging Configuration
+
+**File:** `src/main/resources/log4j2.yaml`
+
+- Main application: ALL level
+- Flyway: INFO level
+- Output: `~/.ofxcat/ofxcat.log`
+- Format: `HH:mm:ss.SSS [thread] LEVEL logger - message`
+
+### TextIO Configuration
+
+**File:** `src/main/resources/textio.properties`
+
+Controls terminal styling and formatting (colors, prompts, etc.).
+
+---
+
+## Testing
+
+### Test Structure
+```
+src/test/java/ca/jonathanfritz/ofxcat/
+├── cleaner/
+│   ├── rules/
+│   ├── DefaultTransactionCleanerTest.java
+│   ├── RbcTransactionCleanerTest.java
+│   └── TransactionCleanerFactoryTest.java
+├── datastore/
+│   ├── AccountDaoTest.java
+│   ├── CategoryDaoTest.java
+│   ├── CategorizedTransactionDaoTest.java
+│   ├── DescriptionCategoryDaoTest.java
+│   └── TransferDaoTest.java
+├── io/
+│   └── OfxParserTest.java
+├── service/
+│   ├── ReportingServiceTest.java
+│   ├── TransactionCategoryServiceTest.java
+│   ├── TransactionImportServiceTest.java
+│   └── TransferMatchingServiceTest.java
+├── utils/
+│   └── PathUtilsTest.java
+├── AbstractDatabaseTest.java
+├── OfxCatTest.java
+└── TestUtils.java
+```
+
+### Test Resources
+Sample OFX files in `src/test/resources/`:
+- `creditcard.ofx`
+- `oneaccount.ofx`
+- `twoaccounts.ofx`
+- `twoaccountsonecreditcard.ofx`
+
+### Testing Approach
+- **DAO Tests:** Use in-memory SQLite (`DatastoreModule.inMemory()`)
+- **Service Tests:** Mix of unit and integration tests
+- **Database Tests:** Extend `AbstractDatabaseTest` for Flyway setup
+- **Test Utilities:** `TestUtils` provides helper methods
+
+### Current Test Coverage Gaps (see TODOs)
+- CLI not tested (marked "TODO: test me?")
+- `TransactionCategoryService` marked "TODO: Test me!"
+- `TransactionImportService` marked "TODO: Improve test coverage"
+- CLI parameter parsing not tested
+
+---
+
+## Known Issues
+
+### 1. Unsafe Method Warnings (Documented)
+```
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called
+```
+**Source:** Transitive dependency `com.google.guava:guava:31.0.1-jre`  
+**Impact:** Cosmetic only, functionality unaffected  
+**Status:** Waiting for library updates  
+**Workaround:** Use `--enable-native-access=ALL-UNNAMED` JVM flag (configured in build.gradle)
+
+### 2. Restricted Method Warnings
+```
+WARNING: java.lang.System::loadLibrary has been called
+```
+**Source:** HawtJNI (native library loading)  
+**Impact:** Cosmetic only  
+**Status:** Warning can be suppressed with JVM flags
+
+### 3. Transfer Detection Limitations
+**Issue:** Only matches same-day transfers with exact amounts  
+**Impact:** Multi-day transfers or transfers with fees are not detected  
+**Potential Fix:** Implement fuzzy date/amount matching within configurable thresholds
+
+### 4. Fuzzy Match Threshold Hardcoded
+**File:** `TransactionCategoryService.java:169`  
+**Issue:** 60% threshold is hardcoded  
+**TODO:** "should this threshold be configurable?"
+
+### 5. LCBO/RAO Categorization Issue
+**File:** `TransactionCategoryService.java:75`  
+**TODO:** "why does LCBO/RAO not auto-categorize?"  
+**Status:** Specific vendor not being matched, needs investigation
+
+---
+
+## Areas for Improvement
+
+### High Priority
+
+#### 1. Missing Test Coverage
+**Impact:** High risk of regressions
+
+- **CLI class** (`cli/CLI.java`) - No tests
+- **CLI parameter parsing** (`OfxCatTest.java`) - Empty test class
+- **TransactionCategoryService** - Critical business logic untested
+- **TransactionImportService** - Incomplete coverage
+
+**Recommendation:** Achieve >80% coverage on service layer before adding features.
+
+#### 2. Missing Features (TODOs)
+
+From `OfxCat.java`:
+- **Line 128:** "add a mode that allows reprocessing of transactions from some category"
+  - Use case: User miscategorized transactions and wants to fix them
+- **Line 147:** "add a way to export actual transactions, not just category sums"
+  - Current reports only show aggregates
+- **Line 151:** "need a way to edit categories and category descriptions"
+  - Currently no way to rename/merge categories
+- **Line 209:** "add group-by arg, values are category, day, week, month, year, type"
+  - Reporting flexibility
+
+From `ReportingService.java`:
+- **Lines 198, 212:** "add a table-formatted option"
+  - Alternative to CSV output for terminal viewing
+
+#### 3. Performance Concerns
+
+**CategorizedTransactionDao.java:40**
+> "some kind of cache for Account and Category objects would be a good idea..."
+
+**Issue:** Repeated database lookups for the same reference data  
+**Impact:** Import performance degrades with large OFX files  
+**Recommendation:** Implement simple in-memory cache with weak references
+
+#### 4. Code Quality Issues
+
+**DescriptionCategoryDao.java:38**
+> "it isn't clear that this is the best approach - on one hand, we reduce code duplication..."
+
+**Issue:** Design uncertainty noted in comment  
+**Recommendation:** Review and refactor if needed, remove uncertain comments
+
+#### 5. UI/UX Improvements
+
+From `OfxCat.java`:
+- **Line 63:** "show a progress bar?" - Large imports have no progress indication
+- **Line 64:** "retain scrolling list of categorizations on screen" - User loses context
+
+### Medium Priority
+
+#### 6. Better CSV Handling
+**Issue:** Category names can't contain commas (checked in `CLI.java`)  
+**Recommendation:** Use proper CSV library (Apache Commons CSV or OpenCSV)
+
+#### 7. Bank Support Expansion
+**Current:** Only RBC officially supported  
+**Opportunity:** Community contributions for other banks  
+**Documentation:** Contributing guide exists but could be more prominent
+
+#### 8. Database Migrations Need Documentation
+**Issue:** Migration files lack comments explaining business context  
+**Recommendation:** Add comments to each migration explaining WHY changes were made
+
+### Low Priority
+
+#### 9. Logging Verbosity
+**Issue:** Main application logs at ALL level  
+**Impact:** Large log files  
+**Recommendation:** Use DEBUG for development, INFO for production
+
+#### 10. Error Handling
+**Issue:** Generic `OfxCatException` used throughout  
+**Recommendation:** Create specific exception types for different error conditions
+
+#### 11. Configuration Management
+**Issue:** Fuzzy match threshold, date tolerance, etc. are hardcoded  
+**Recommendation:** Create configuration file for tunable parameters
+
+---
+
+## Code Quality Observations
+
+### Strengths
+1. **Clean separation of concerns** - Layered architecture is well-executed
+2. **Dependency injection** - Properly used, makes testing easier
+3. **Builder pattern** - DTOs are immutable and safely constructed
+4. **Database migrations** - Schema changes are tracked and versioned
+5. **Logging** - Comprehensive logging at all levels
+6. **Fuzzy matching** - Smart categorization algorithm
+7. **Factory pattern** - Extensible bank support via classpath scanning
+
+### Weaknesses
+1. **Test coverage** - Critical gaps in service and CLI layers
+2. **TODO comments** - Many unresolved design questions
+3. **Error messages** - Generic exceptions lose context
+4. **Documentation** - Internal code comments sparse in places
+5. **Hardcoded values** - Magic numbers and thresholds throughout
+6. **CSV handling** - Naive string concatenation instead of proper library
+
+### Code Smells
+1. **Long methods** - Some service methods exceed 50 lines
+2. **God objects** - `TransactionImportService` does too much
+3. **Primitive obsession** - Float for currency (should use BigDecimal)
+4. **Feature envy** - Some methods in services primarily manipulate DTO internals
+
+---
+
+## Development Workflow
+
+### Building
+```bash
+./gradlew clean build shadowJar
+```
+
+### Running
+```bash
+java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
+```
+
+### Testing
+```bash
+./gradlew test
+```
+
+### Debugging Database
+```bash
+sqlite3 ~/.ofxcat/ofxcat.db
+```
+
+---
+
+## Security Considerations
+
+1. **Sensitive Data:** Database and logs contain account numbers, transaction details, balances
+2. **Storage:** Files stored in user home directory (~/.ofxcat/)
+3. **Permissions:** No explicit file permission setting - relies on OS defaults
+4. **Encryption:** Data stored in plaintext
+5. **Recommendation:** Document security best practices for users (file encryption, restrictive permissions)
+
+---
+
+## Extension Points
+
+### Adding Support for a New Bank
+
+1. Determine the bank's `BANKID` from an OFX export
+2. Create new class implementing `TransactionCleaner` in `ca.jonathanfritz.ofxcat.cleaner`
+3. Implement `getBankId()` to return the bank's ID
+4. Implement `clean()` using `TransactionMatcherRule` builders
+5. Add unit tests extending pattern from `RbcTransactionCleanerTest`
+6. No registration needed - `TransactionCleanerFactory` auto-discovers via classpath scan
+
+### Adding New Report Types
+
+1. Add method to `ReportingService`
+2. Add new `Concern` enum value in `OfxCat`
+3. Add DAO method if new query is needed
+4. Wire up in `OfxCat.main()` switch statement
+5. Update help text
+
+### Adding New Transaction Matchers
+
+1. Create new `Rule` class in `ca.jonathanfritz.ofxcat.cleaner.rules`
+2. Use existing `TransactionMatcherRule` and `AmountMatcherRule` as patterns
+3. Compose rules in bank-specific cleaner
+
+---
+
+## Technical Debt Summary
+
+| Issue | Severity | Effort | Priority |
+|-------|----------|--------|----------|
+| Missing test coverage | High | High | 1 |
+| Float for currency (should be BigDecimal) | High | Medium | 2 |
+| Hardcoded thresholds | Medium | Low | 3 |
+| Generic exceptions | Medium | Medium | 4 |
+| Missing cache for reference data | Medium | Low | 5 |
+| No progress indication | Low | Low | 6 |
+| CSV handling | Low | Low | 7 |
+
+---
+
+## Conclusion
+
+This is a well-architected, functional application with a solid foundation. The use of dependency injection, database migrations, and fuzzy matching demonstrates mature engineering. The main areas needing attention are:
+
+1. **Test coverage** - Critical for maintainability
+2. **BigDecimal for currency** - Current float usage risks precision errors
+3. **Completing TODO items** - Many features partially implemented
+
+The codebase is clean and readable, making it a good candidate for ongoing maintenance and feature additions. The extension points (bank cleaners, reports) are well-designed for community contributions.
+
