@@ -89,3 +89,9 @@ jar {
         )
     }
 }
+
+// Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)
+test {
+    useJUnitPlatform()
+}
+

@@ -169,6 +169,13 @@ public class CategorizedTransactionDao {
 
     public List<CategorizedTransaction> findByDescription(DatabaseTransaction t, List<String> tokens) throws SQLException {
         logger.debug("Searching for CategorizedTransactions with description containing one of {}", tokens);
+
+        // If tokens list is empty, return empty list (no matches possible)
+        if (tokens.isEmpty()) {
+            logger.debug("No tokens to search for, returning empty list");
+            return Collections.emptyList();
+        }
+
         final StringBuilder likeClauses = new StringBuilder("(");
         for (int i = 0; i < tokens.size(); i++) {
             if (likeClauses.length() > 1) {

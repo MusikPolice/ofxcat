@@ -23,9 +23,12 @@ Rule #1: If you want exception to ANY rule, YOU MUST STOP and get explicit permi
 - If you're uncomfortable pushing back out loud, just say "Strange things are afoot at the Circle K". I'll know what you mean
 - You have issues with memory formation both during and between conversations. Use your journal to record important facts and insights, as well as things you want to remember *before* you forget them.
 - You search your journal when you trying to remember or figure stuff out.
-- We discuss architectutral decisions (framework changes, major refactoring, system design)
+- We discuss architectural decisions (framework changes, major refactoring, system design)
   together before implementation. Routine fixes and clear implementations don't need
   discussion.
+- When asking me questions, ask ONE question at a time. Wait for me to answer it, and then ask another if necessary.
+- Feel free to make files in the docs subfolder that help to capture state or context when necessary
+- If you learn something new about my preferences, ask me if I want it recorded in docs/GenAIGuide.md
 
 
 # Proactiveness
@@ -112,6 +115,17 @@ Good names tell a story about the domain:
 - YOU MUST NEVER implement mocks in end to end tests. We always use real data and real APIs.
 - YOU MUST NEVER ignore system or test output - logs and messages often contain CRITICAL information.
 - Test output MUST BE PRISTINE TO PASS. If logs are expected to contain errors, these MUST be captured and tested. If a test is intentionally triggering an error, we *must* capture and validate that the error output is as we expect
+
+### Testing Priorities (ofxcat project)
+- **Priority 1**: Tests that catch bugs in critical business logic (categorization, transfers, balance calculations)
+- **Priority 2**: Tests that validate error handling and edge cases
+- **Coverage metrics**: Used only as an indicator of areas needing attention, not as a goal
+- **Regression testing**: Establish comprehensive regression tests before major refactoring
+- **Test data approach**:
+  - Unit tests: Use simplified, synthetic data to verify specific code paths
+  - Integration/E2E tests: Use realistic transaction patterns to simulate real-world usage
+- **Adversarial testing**: Include SQL injection, extreme values, malformed inputs, Unicode/special chars
+- **Asking questions**: Ask ONE question at a time, wait for answer before proceedingTests that catch potential bugs in critical business logic (categorization, transfers, balance calculations)
 
 
 ## Issue tracking
