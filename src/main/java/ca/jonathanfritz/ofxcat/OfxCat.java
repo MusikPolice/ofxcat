@@ -54,7 +54,8 @@ public class OfxCat {
         logger.info("Database schema migration complete");
     }
 
-    private void importTransactions(String path) throws OfxCatException {
+    // Package-private for testing
+    void importTransactions(String path) throws OfxCatException {
         final Path pathToImportFile = pathUtils.expand(path);
         if (!(Files.exists(pathToImportFile) && Files.isReadable(pathToImportFile))) {
             throw new CliException("Import file path either does not exist or cannot be read");
@@ -172,7 +173,8 @@ public class OfxCat {
         return ofxCat;
     }
 
-    private static Mode getMode(String[] args) throws CliException {
+    // Package-private for testing
+    static Mode getMode(String[] args) throws CliException {
         if (args.length == 0) {
             throw new CliException("Too few arguments specified");
         }
@@ -182,13 +184,16 @@ public class OfxCat {
                 .orElseThrow(() -> new CliException(String.format("Invalid mode %s specified", args[0])));
     }
 
-    private enum Mode {
+    // Package-private for testing
+    enum Mode {
         IMPORT,
         GET,
         HELP
 
     }
-    private static Concern getConcern(String[] args) {
+
+    // Package-private for testing
+    static Concern getConcern(String[] args) {
         if (args.length < 2) {
             throw new RuntimeException("Too few arguments specified");
         }
@@ -198,13 +203,15 @@ public class OfxCat {
                 .orElseThrow(() -> new RuntimeException(String.format("Invalid concern %s specified", args[1])));
     }
 
-    private enum Concern {
+    // Package-private for testing
+    enum Concern {
         TRANSACTIONS,
         ACCOUNTS,
         CATEGORIES
     }
 
-    private static OfxCatOptions getOptions(String[] args) throws CliException {
+    // Package-private for testing
+    static OfxCatOptions getOptions(String[] args) throws CliException {
         try {
             // TODO: add group-by arg, values are category, day, week, month, year, type
             final Options options = new Options();
@@ -242,14 +249,16 @@ public class OfxCat {
         }
     }
 
-    private static LocalDate toLocalDate(String dateToConvert, LocalDate defaultValue) {
+    // Package-private for testing
+    static LocalDate toLocalDate(String dateToConvert, LocalDate defaultValue) {
         if (StringUtils.isBlank(dateToConvert)) {
             return defaultValue;
         }
         return toLocalDate(dateToConvert);
     }
 
-    private static LocalDate toLocalDate(String dateToConvert) {
+    // Package-private for testing
+    static LocalDate toLocalDate(String dateToConvert) {
         if (StringUtils.isBlank(dateToConvert)) {
             throw new IllegalArgumentException("dateToConvert is null or blank");
         }
@@ -260,5 +269,6 @@ public class OfxCat {
         }
     }
 
-    private record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) { }
+    // Package-private for testing
+    record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) { }
 }

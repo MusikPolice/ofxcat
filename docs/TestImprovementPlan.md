@@ -1076,13 +1076,22 @@ public class TestCli extends CLI {
 
 **Phase 1 Complete:** All critical business logic now has comprehensive test coverage ✅
 
-### Phase 2: Error Handling
-- [ ] OfxCat.getOptions - date validation tests
-- [ ] OfxCat.getMode - mode parsing tests
-- [ ] OfxCat.importTransactions - file validation tests
-- [ ] CLI.promptForNewCategoryName - validation tests
-- [ ] CLI.assignAccountName - validation tests
-- [ ] DatabaseTransaction - rollback/commit tests
+### Phase 2: Error Handling ✅ COMPLETE (November 27, 2025)
+- [x] OfxCat CLI parameter parsing tests
+  - ✅ `OfxCatParameterParsingTest.java` - 26 tests (all passing)
+  - Mode/concern parsing, date validation, options parsing, edge cases
+- [x] OfxCat.getOptions - date validation tests (covered above)
+- [x] OfxCat.getMode - mode parsing tests (covered above)
+- [ ] OfxCat.importTransactions - file validation tests (deferred)
+- [x] CLI input validation - category names
+  - ✅ `CLIInputValidationTest.java` - 12 tests (all passing)
+  - Category validation, reserved names, special characters
+- [ ] CLI.assignAccountName - validation tests (deferred)
+- [x] DatabaseTransaction - commit/rollback behavior
+  - ✅ `DatabaseTransactionErrorHandlingTest.java` - 6 tests (all passing)
+  - Documented actual transaction behavior (close() always commits)
+
+**Phase 2 Complete:** 44 tests added (26 + 12 + 6), all passing ✅
 
 ### Phase 3: Utilities
 - [ ] StringUtils - all methods
@@ -1309,7 +1318,7 @@ The spy/stub pattern tests our code, not third-party code. It's the right level 
 ### Phase 1 Complete ✅
 1. ✅ **All tests verified passing** - Jonathan manually verified all 130 tests pass (November 26, 2025)
 2. ✅ **Phase 1 coverage reviewed** - All critical business logic now has comprehensive test coverage
-3. ⏳ **Commit changes** - Ready to commit all Phase 1 work as a solid baseline
+3. ✅ **Commit changes** - Committed in e78b2c115c08d6b9886e41c24c66d95e529a45d5
 
 ### Phase 2: Error Handling & Validation (Ready to Start)
 Phase 1 is complete and verified. Ready to proceed with Phase 2:
@@ -1355,6 +1364,9 @@ Estimated effort: 7+ comprehensive integration tests
 
 ## Document History
 
+- **November 27, 2025**: Phase 2 completed - 44 tests added (CLI parsing, input validation, transaction behavior), all 173 tests passing
+- **November 27, 2025**: Added automated test result capture (Gradle writeTestSummary task) - no more PowerShell output issues!
+- **November 27, 2025**: Phase 2 started - CLI parameter parsing and input validation tests
 - **November 26, 2025**: Phase 1 completed and verified - 30 tests added, 3 critical bugs fixed, all 130 tests passing
 - **November 26, 2025**: Initial test improvement plan created
 

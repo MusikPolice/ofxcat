@@ -109,6 +109,12 @@ public class AccountDao {
      */
     public Optional<Account> insert(Account accountToInsert) {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return insert(t, accountToInsert);
+        }
+    }
+
+    public Optional<Account> insert(DatabaseTransaction t, Account accountToInsert) {
+        try {
             logger.debug("Attempting to insert Account {}", accountToInsert);
             final String insertStatement = "INSERT INTO Account (bank_number, account_number, account_type, name) VALUES (?, ?, ?, ?);";
             return t.insert(insertStatement, ps -> {
