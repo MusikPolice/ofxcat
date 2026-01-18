@@ -1,0 +1,81 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Collaboration Rules
+
+See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD process, debugging framework, and testing priorities. Read it fully before starting work.
+
+## Build Commands
+
+```bash
+# Build everything including fat JAR
+./gradlew clean build shadowJar
+
+# Run tests
+./gradlew test
+
+# Run a single test class
+./gradlew test --tests "ca.jonathanfritz.ofxcat.datastore.AccountDaoTest"
+
+# Run a specific test method
+./gradlew test --tests "ca.jonathanfritz.ofxcat.datastore.AccountDaoTest.testSelectById"
+
+# Run the application
+java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
+```
+
+## Architecture Overview
+
+Java 21 CLI application for importing and categorizing OFX bank transactions using SQLite storage.
+
+### Layer Structure
+```
+OfxCat.java (entry point, argument parsing)
+    ↓
+Service Layer (TransactionImportService, TransactionCategoryService,
+               TransferMatchingService, ReportingService)
+    ↓
+DAO Layer (AccountDao, CategoryDao, CategorizedTransactionDao, etc.)
+    ↓
+SQLite + Flyway migrations (~/.ofxcat/ofxcat.db)
+```
+
+### Key Design Patterns
+- **Google Guice** for dependency injection (`CLIModule`, `DatastoreModule`)
+- **Factory + Classpath scanning**: `TransactionCleanerFactory` auto-discovers bank-specific cleaners
+- **Builder pattern**: DTOs like `Transaction`, `OfxAccount` are immutable with builders
+- **DAO pattern**: All database access through DAO classes
+
+### Transaction Categorization Algorithm (TransactionCategoryService)
+
+Three-tier matching strategy:
+1. **Exact match**: Find transactions with identical description → auto-categorize if single category
+2. **Fuzzy match**: Tokenize description, use FuzzyWuzzy scoring (≥60% threshold), prompt user to choose from top 5
+3. **Manual**: User chooses from all categories or creates new one
+
+### Transfer Detection (TransferMatchingService)
+Matches XFER-type transactions across accounts by: same date + opposite amounts + different accounts
+
+### Bank-Specific Cleaning
+Implement `TransactionCleaner` interface with rule-based pattern matching. Only RBC supported out of box. Factory auto-discovers implementations by scanning classpath for classes implementing the interface.
+
+## Testing
+
+- Tests extend `AbstractDatabaseTest` for Flyway setup with in-memory SQLite
+- Test OFX files in `src/test/resources/` (creditcard.ofx, oneaccount.ofx, etc.)
+- `TestUtils` provides helper methods for creating test data
+
+## Database
+
+Schema managed by Flyway migrations in `src/main/resources/db/migration/`. Key tables:
+- `Category` - transaction categories (includes UNKNOWN and TRANSFER defaults)
+- `Account` - bank accounts with user-assigned names
+- `CategorizedTransaction` - all imported transactions with categories and `fit_id` for deduplication
+- `Transfer` - links source/sink transaction pairs for inter-account transfers
+- `DescriptionCategory` - maps descriptions to categories for auto-categorization
+
+## Key Documentation
+
+- `docs/GenAIGuide.md` - Collaboration rules and coding standards (required reading)
+- `docs/CodebaseOverview.md` - Comprehensive technical documentation

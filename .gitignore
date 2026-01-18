@@ -53,3 +53,6 @@ gradle-app.setting
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+# Claude Code local settings and session state
+.claude/

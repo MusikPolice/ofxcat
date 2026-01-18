@@ -83,7 +83,7 @@ public class TransactionImportService {
     }
 
     // TODO: return number of ignored duplicate transactions so that this info can be displayed in UI
-    List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
+    public List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
             // figure out which account these transactions belong to
