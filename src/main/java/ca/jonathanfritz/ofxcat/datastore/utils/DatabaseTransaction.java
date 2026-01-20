@@ -132,6 +132,59 @@ public class DatabaseTransaction implements Closeable {
     }
 
     /**
+     * Executes a non-returning SQL statement (INSERT, UPDATE, DELETE).
+     * Use this for operations that don't need to return an Entity.
+     *
+     * @param statement the SQL statement to execute
+     * @param statementPreparer a consumer to populate any ? parameters
+     * @return the number of rows affected
+     * @throws SQLException if something goes wrong; the transaction will be rolled back
+     */
+    public int execute(String statement, SqlConsumer<PreparedStatement> statementPreparer) throws SQLException {
+        connection.setAutoCommit(false);
+
+        try (PreparedStatement ps = connection.prepareStatement(statement)) {
+            if (statementPreparer != null) {
+                statementPreparer.accept(ps);
+            }
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw rollback(e);
+        }
+    }
+
+    /**
+     * Executes a SELECT query and processes the ResultSet with a custom handler.
+     * Use this for queries that return non-Entity results (counts, simple values, etc.).
+     *
+     * @param selectStatement the SQL SELECT statement to execute
+     * @param statementPreparer a consumer to populate any ? parameters (can be null)
+     * @param resultHandler a function that processes the ResultSet and returns a result
+     * @param <T> the return type
+     * @return the result from the handler
+     * @throws SQLException if something goes wrong; the transaction will be rolled back
+     */
+    public <T> T queryRaw(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer,
+                          SqlFunction<ResultSet, T> resultHandler) throws SQLException {
+        connection.setAutoCommit(false);
+
+        if (!StringUtils.startsWith(selectStatement, "SELECT") && !StringUtils.startsWith(selectStatement, "WITH")) {
+            throw rollback(new SQLException("selectStatement must start with SELECT or WITH"));
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(selectStatement)) {
+            if (statementPreparer != null) {
+                statementPreparer.accept(ps);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return resultHandler.apply(rs);
+            }
+        } catch (SQLException e) {
+            throw rollback(e);
+        }
+    }
+
+    /**
      * Extracts tableName, assuming that insertStatement has format "INSERT INTO tableName ..."
      */
     private String getTableNameFromInsertStatement(String insertStatement) {
