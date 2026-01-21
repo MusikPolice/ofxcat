@@ -59,8 +59,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -93,8 +93,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -138,8 +138,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -182,8 +182,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -227,8 +227,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -277,8 +277,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
 
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,

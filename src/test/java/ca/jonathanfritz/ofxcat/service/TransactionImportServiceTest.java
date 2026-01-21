@@ -53,7 +53,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         // try to insert it
         final SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, null, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertEquals(1, categorizedTransactions.size());
@@ -122,7 +122,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         // try to insert them
         final SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, null, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
         final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -173,7 +173,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         // process the source OFX file
         SpyCli spyCli = new SpyCli();
-        TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
         List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(sourceOfxFile);
 
@@ -186,7 +186,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         // process the sink OFX file
         spyCli = new SpyCli();
-        transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        transactionCategoryService = createTransactionCategoryService(categoryDao, null, categorizedTransactionDao, spyCli);
         transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
         categorizedTransactions = transactionImportService.categorizeTransactions(sinkOfxFile);
 
@@ -231,7 +231,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         // insert the transfer for the first time
         SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, null, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao, transactionCleanerFactory, connection, categorizedTransactionDao, transactionCategoryService, categoryDao, transferMatchingService, transferDao);
         transactionImportService.categorizeTransactions(ofxExports);
 

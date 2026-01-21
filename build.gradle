@@ -22,9 +22,6 @@ dependencies {
     // OFX parsing
     implementation 'com.webcohesion.ofx4j:ofx4j:1.39'
 
-    // fuzzy string matching
-    implementation 'me.xdrop:fuzzywuzzy:1.4.0'
-
     // dependency injection
     implementation 'com.google.inject:guice:7.0.0'
     implementation 'io.github.classgraph:classgraph:4.8.184'

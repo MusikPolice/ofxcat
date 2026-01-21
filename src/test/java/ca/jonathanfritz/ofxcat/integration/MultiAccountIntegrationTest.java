@@ -86,8 +86,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
         // Execute import
         SpyCli spyCli = new SpyCli();
-        TransactionCategoryService tcs = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService tcs = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
@@ -154,8 +154,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
         // Execute
         SpyCli spyCli = new SpyCli(expense);
-        TransactionCategoryService tcs = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService tcs = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
@@ -210,8 +210,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         );
 
         SpyCli spyCli1 = new SpyCli();
-        TransactionCategoryService tcs1 = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli1);
+        TransactionCategoryService tcs1 = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli1);
         TransactionImportService tis1 = new TransactionImportService(
                 spyCli1, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao);
@@ -238,8 +238,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         );
 
         SpyCli spyCli2 = new SpyCli();
-        TransactionCategoryService tcs2 = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli2);
+        TransactionCategoryService tcs2 = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli2);
         TransactionImportService tis2 = new TransactionImportService(
                 spyCli2, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao);
@@ -283,8 +283,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
         // Execute with a CLI that provides account name
         SpyCliWithAccountNaming spyCli = new SpyCliWithAccountNaming(category, "My New Account");
-        TransactionCategoryService tcs = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService tcs = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);

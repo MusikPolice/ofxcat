@@ -2,9 +2,12 @@ package ca.jonathanfritz.ofxcat;
 
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
+import ca.jonathanfritz.ofxcat.config.AppConfig;
+import ca.jonathanfritz.ofxcat.config.AppConfigLoader;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
+import ca.jonathanfritz.ofxcat.matching.MatchingModule;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
@@ -129,7 +132,17 @@ public class OfxCat {
     // TODO: add a mode that allows reprocessing of transactions from some category
     public static void main(String[] args) {
         final PathUtils pathUtils = new PathUtils();
-        final OfxCat ofxCat = initializeApplication(pathUtils);
+
+        // Load configuration, creating default if needed
+        final AppConfigLoader configLoader = new AppConfigLoader();
+        final AppConfigLoader.LoadResult configResult = configLoader.loadOrCreate(pathUtils.getConfigPath());
+        if (configResult.wasCreated()) {
+            System.out.println("Created default configuration file at: " + configResult.configPath());
+            System.out.println("Edit this file to customize application behavior.");
+            System.out.println();
+        }
+
+        final OfxCat ofxCat = initializeApplication(pathUtils, configResult.config());
 
         try {
             // figure out which of the major modes we're in
@@ -163,13 +176,17 @@ public class OfxCat {
         }
     }
 
-    private static OfxCat initializeApplication(PathUtils pathUtils) {
+    private static OfxCat initializeApplication(PathUtils pathUtils, AppConfig appConfig) {
         final Injector injector = Guice.createInjector(
                 new CLIModule(),
-                DatastoreModule.onDisk(pathUtils.getDatabaseConnectionString())
+                DatastoreModule.onDisk(pathUtils.getDatabaseConnectionString()),
+                new MatchingModule(appConfig, pathUtils.getConfigPath())
         );
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
         ofxCat.migrateDatabase();
+        logger.debug("Application initialized with config: keyword_rules_path={}, overlap_threshold={}",
+                appConfig.getKeywordRulesPath(),
+                appConfig.getTokenMatching().getOverlapThreshold());
         return ofxCat;
     }
 

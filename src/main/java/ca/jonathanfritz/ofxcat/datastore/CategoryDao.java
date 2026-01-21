@@ -119,4 +119,38 @@ public class CategoryDao {
             return Optional.empty();
         }
     }
+
+    /**
+     * Gets the {@link Category} with the specified name from the database, creating it if it doesn't exist.
+     * This is useful when keyword rules reference categories that may not yet exist in the database.
+     *
+     * @param name the name of the Category to get or create
+     * @return an {@link Optional<Category>} containing the Category, or {@link Optional#empty()} if the operation fails
+     */
+    public Optional<Category> getOrCreate(String name) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return getOrCreate(t, name);
+        }
+    }
+
+    /**
+     * Gets the {@link Category} with the specified name from the database, creating it if it doesn't exist.
+     * Uses the provided transaction for atomic operation.
+     *
+     * @param t the database transaction to use
+     * @param name the name of the Category to get or create
+     * @return an {@link Optional<Category>} containing the Category, or {@link Optional#empty()} if the operation fails
+     */
+    public Optional<Category> getOrCreate(DatabaseTransaction t, String name) {
+        // First, try to find the existing category
+        Optional<Category> existing = select(t, name);
+        if (existing.isPresent()) {
+            logger.debug("Found existing Category with name {}", name);
+            return existing;
+        }
+
+        // If not found, create it
+        logger.info("Creating new Category with name {}", name);
+        return insert(t, new Category(name));
+    }
 }

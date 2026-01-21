@@ -4,14 +4,15 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import me.xdrop.fuzzywuzzy.FuzzySearch;
-import me.xdrop.fuzzywuzzy.model.BoundExtractedResult;
-import org.apache.commons.lang3.StringUtils;
+import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
+import ca.jonathanfritz.ofxcat.matching.TokenMatchingService;
+import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,30 +20,46 @@ import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-// TODO: Test me!
 public class TransactionCategoryService {
 
     private final CategoryDao categoryDao;
     private final DescriptionCategoryDao descriptionCategoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionTokenDao transactionTokenDao;
+    private final TokenNormalizer tokenNormalizer;
+    private final TokenMatchingService tokenMatchingService;
+    private final KeywordRulesConfig keywordRulesConfig;
     private final Connection connection;
     private final CLI cli;
 
     private static final Logger logger = LogManager.getLogger(TransactionCategoryService.class);
 
     @Inject
-    public TransactionCategoryService(CategoryDao categoryDao, DescriptionCategoryDao descriptionCategoryDao, CategorizedTransactionDao categorizedTransactionDao, Connection connection, CLI cli) {
+    public TransactionCategoryService(
+            CategoryDao categoryDao,
+            DescriptionCategoryDao descriptionCategoryDao,
+            CategorizedTransactionDao categorizedTransactionDao,
+            TransactionTokenDao transactionTokenDao,
+            TokenNormalizer tokenNormalizer,
+            TokenMatchingService tokenMatchingService,
+            KeywordRulesConfig keywordRulesConfig,
+            Connection connection,
+            CLI cli
+    ) {
         this.categoryDao = categoryDao;
         this.descriptionCategoryDao = descriptionCategoryDao;
         this.categorizedTransactionDao = categorizedTransactionDao;
+        this.transactionTokenDao = transactionTokenDao;
+        this.tokenNormalizer = tokenNormalizer;
+        this.tokenMatchingService = tokenMatchingService;
+        this.keywordRulesConfig = keywordRulesConfig;
         this.connection = connection;
         this.cli = cli;
     }
 
+    // TODO: only used by tests. Remove?
     public CategorizedTransaction put(Transaction newTransaction, Category newCategory) {
         try (final DatabaseTransaction t = new DatabaseTransaction(connection)) {
             return put(t, newTransaction, newCategory);
@@ -53,7 +70,8 @@ public class TransactionCategoryService {
     }
 
     /**
-     * Maps the specified transaction's description to the specified category
+     * Maps the specified transaction's description to the specified category.
+     * Also stores normalized tokens for future token-based matching.
      */
     public CategorizedTransaction put(DatabaseTransaction t, Transaction newTransaction, Category newCategory) throws SQLException {
         // if a DescriptionCategory with the specified description and category exists, use it. Otherwise, insert one
@@ -69,25 +87,80 @@ public class TransactionCategoryService {
                 })
                 .orElseThrow(() -> new SQLException("Failed to put categorized transaction"));
 
+        // Store normalized tokens for future token-based matching (only for non-UNKNOWN categories)
+        if (!Category.UNKNOWN.equals(newCategory)) {
+            Set<String> tokens = tokenNormalizer.normalize(newTransaction.getDescription());
+            if (!tokens.isEmpty()) {
+                try {
+                    transactionTokenDao.insertTokens(t, descriptionCategory.getId(), tokens);
+                    logger.debug("Stored {} tokens for transaction: {}", tokens.size(), tokens);
+                } catch (SQLException ex) {
+                    // Log but don't fail - tokens are an optimization, not critical
+                    logger.warn("Failed to store tokens for transaction: {}", ex.getMessage());
+                }
+            }
+        }
+
         return new CategorizedTransaction(newTransaction, descriptionCategory.getCategory());
     }
 
-    // TODO: why does LCBO/RAO not auto-categorize?
+    /**
+     * Categorizes a transaction using a multi-step matching strategy:
+     * 1. Keyword rules: Check if normalized tokens match any configured keyword rules
+     * 2. Exact match: Find transactions with identical description
+     * 3. Token match: Find similar transactions using token-based matching
+     * 4. Manual: Prompt user to choose or create a category
+     */
     public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
-        // try an exact match first
+        // Step 1: Try keyword rules matching first (auto-categorization based on rules)
+        if (keywordRulesConfig.isAutoCategorizeEnabled()) {
+            Optional<CategorizedTransaction> categorizedTransaction = categorizeTransactionByKeywordRules(transaction);
+            if (categorizedTransaction.isPresent()) {
+                return categorizedTransaction.get();
+            }
+        }
+
+        // Step 2: Try exact match next (respecting existing choices that user made in the past)
         Optional<CategorizedTransaction> categorizedTransaction = categorizeTransactionExactMatch(t, transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
         }
 
-        // if that doesn't work, try a partial match
-        categorizedTransaction = categorizeTransactionPartialMatch(t, transaction);
+        // Step 3: Try token-based matching (finding similar transactions)
+        categorizedTransaction = categorizeTransactionByTokenMatch(transaction);
         if (categorizedTransaction.isPresent()) {
             return categorizedTransaction.get();
         }
 
-        // there were no partial matches - just prompt for a new category name
+        // Step 4: No matches - prompt user to choose or create a category
         return chooseExistingCategoryOrAddNew(transaction);
+    }
+
+    /**
+     * Attempts to categorize a transaction using keyword rules.
+     * Normalizes the transaction description and checks against configured rules.
+     * TODO: what if multiple rules match? right now we take the first, but could prompt user to choose
+     */
+    private Optional<CategorizedTransaction> categorizeTransactionByKeywordRules(Transaction transaction) {
+        Set<String> tokens = tokenNormalizer.normalize(transaction.getDescription());
+        Optional<String> matchedCategoryName = keywordRulesConfig.findMatchingCategory(tokens);
+
+        if (matchedCategoryName.isEmpty()) {
+            logger.debug("No keyword rule matches for tokens: {}", tokens);
+            return Optional.empty();
+        }
+
+        String categoryName = matchedCategoryName.get();
+        logger.info("Keyword rule matched: {} -> {}", tokens, categoryName);
+
+        // Get or create the category in the database
+        Optional<Category> category = categoryDao.getOrCreate(categoryName);
+        if (category.isEmpty()) {
+            logger.error("Failed to get or create category: {}", categoryName);
+            return Optional.empty();
+        }
+
+        return Optional.of(new CategorizedTransaction(transaction, category.get()));
     }
 
     private Optional<CategorizedTransaction> categorizeTransactionExactMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
@@ -116,71 +189,37 @@ public class TransactionCategoryService {
         }
     }
 
-    private Optional<CategorizedTransaction> categorizeTransactionPartialMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
-        // try splitting the description up into tokens and partially matching on each
-        final List<String> tokens = Arrays.stream(transaction.getDescription().split(" "))
-                .map(String::trim)
-                .filter(StringUtils::isNotBlank)
-                .filter(s -> !s.matches("^#?\\d*$")) // drop tokens that are entirely numeric or a # sign followed by a number - usually franchise store numbers
-                .filter(s -> !s.matches("^[0-9\\-]*$")) // drop tokens that look like phone numbers
-                .distinct()
-                .collect(Collectors.toList());
-        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, tokens);
-
-        // count the number of categories that we found
-        final List<Category> distinctCategories = categorizedTransactions.stream()
-                .map(CategorizedTransaction::getCategory)
-                .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
-                .distinct()
-                .collect(Collectors.toList());
-
-        // short circuit if there were no partial matches
-        if (distinctCategories.isEmpty()) {
-            logger.info("There are no existing transactions that partially match the description of the specified Transaction");
-            return Optional.empty();
-        }
-        logger.info("New transaction description partially matches that of {} existing transactions " +
-                "with categories {}", categorizedTransactions.size(), distinctCategories);
-
-        // rank the choices by fuzzy string match
-        final List<BoundExtractedResult<CategorizedTransaction>> fuzzyMatches = FuzzySearch.extractAll(
-                transaction.getDescription(),
-                categorizedTransactions,
-                Transaction::getDescription
+    /**
+     * Attempts to categorize a transaction using token-based matching.
+     * Finds similar transactions by comparing normalized tokens and their overlap ratio.
+     */
+    private Optional<CategorizedTransaction> categorizeTransactionByTokenMatch(Transaction transaction) {
+        // Use TokenMatchingService to find matching categories
+        List<TokenMatchingService.CategoryMatch> matches = tokenMatchingService.findMatchingCategoriesForDescription(
+                transaction.getDescription()
         );
 
-        // score each category based on the fuzzy match score of all associated transactions
-        final Map<Category, Float> categoryScores = new HashMap<>();
-        for (Category category : distinctCategories) {
-            // find all matched transactions with this category
-            final List<BoundExtractedResult<CategorizedTransaction>> categoryFuzzyMatches = fuzzyMatches.stream()
-                    .filter(fm -> fm.getReferent().getCategory() == category)
-                    .toList();
-
-            // compute the average score for the category
-            final Integer sum = categoryFuzzyMatches.stream()
-                    .map(BoundExtractedResult::getScore)
-                    .reduce(0, Integer::sum);
-            final float average = sum / (float) categoryFuzzyMatches.size();
-
-            // only keep categories with a score above 60%
-            // TODO: should this threshold be configurable?
-            if (average >= 60) {
-                categoryScores.put(category, average);
-            }
+        if (matches.isEmpty()) {
+            logger.info("No token-based matches found for transaction description");
+            return Optional.empty();
         }
 
-        // return the top five choices ranked by score descending for the user to choose from
-        final List<Category> choices = categoryScores.entrySet().stream()
-                .sorted((entry1, entry2) -> entry1.getValue().compareTo(entry2.getValue()) * -1)
-                .map(Map.Entry::getKey)
+        logger.info("Found {} token-based category matches for transaction", matches.size());
+
+        // Extract the top categories (up to 5) ranked by overlap ratio
+        List<Category> choices = matches.stream()
+                .map(TokenMatchingService.CategoryMatch::category)
                 .limit(5)
                 .collect(Collectors.toList());
 
-        // edge case - if there are no choices exceeding the fuzzy score threshold, return all found categories
-        if (choices.isEmpty()) {
-            return chooseCategoryFromList(transaction, distinctCategories);
+        // If only one category matched, auto-categorize with it
+        if (choices.size() == 1) {
+            Category category = choices.get(0);
+            logger.info("Single token match found, auto-categorizing as: {}", category.getName());
+            return Optional.of(new CategorizedTransaction(transaction, category));
         }
+
+        // Multiple matches - prompt user to choose
         return chooseCategoryFromList(transaction, choices);
     }
 

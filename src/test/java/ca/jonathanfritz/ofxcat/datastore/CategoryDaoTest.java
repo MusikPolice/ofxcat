@@ -90,4 +90,64 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category1)));
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(category2)));
     }
+
+    @Test
+    void getOrCreateReturnsExistingCategory() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // First, insert a category
+        final Category inserted = categoryDao.insert(new Category("GROCERIES")).get();
+
+        // Now use getOrCreate with the same name
+        final Optional<Category> result = categoryDao.getOrCreate("GROCERIES");
+
+        // Should return the existing category, not create a new one
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(inserted.getId(), result.get().getId());
+        Assertions.assertEquals(inserted.getName(), result.get().getName());
+    }
+
+    @Test
+    void getOrCreateCreatesNewCategory() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // Use getOrCreate with a name that doesn't exist
+        final Optional<Category> result = categoryDao.getOrCreate("NEW_CATEGORY");
+
+        // Should create and return the new category
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("NEW_CATEGORY", result.get().getName());
+        Assertions.assertNotNull(result.get().getId());
+
+        // Verify it was actually saved to the database
+        final Optional<Category> fromDb = categoryDao.select("NEW_CATEGORY");
+        Assertions.assertTrue(fromDb.isPresent());
+        Assertions.assertEquals(result.get(), fromDb.get());
+    }
+
+    @Test
+    void getOrCreateIsCaseInsensitive() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // Insert a category with uppercase name
+        final Category inserted = categoryDao.insert(new Category("RESTAURANTS")).get();
+
+        // Use getOrCreate with different case
+        final Optional<Category> result = categoryDao.getOrCreate("restaurants");
+
+        // Should return the existing category
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(inserted.getId(), result.get().getId());
+    }
+
+    @Test
+    void getOrCreateReturnsDefaultCategoriesIfQueried() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // The UNKNOWN category should already exist from migrations
+        final Optional<Category> unknown = categoryDao.getOrCreate("UNKNOWN");
+
+        Assertions.assertTrue(unknown.isPresent());
+        Assertions.assertEquals(Category.UNKNOWN.getName(), unknown.get().getName());
+    }
 }

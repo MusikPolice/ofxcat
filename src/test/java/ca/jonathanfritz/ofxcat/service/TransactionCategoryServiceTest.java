@@ -43,7 +43,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         testAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
 
         // used to populate data here, but not a global variable because we want to use a custom version as a test fixture
-        final TransactionCategoryService transactionCategoryService = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
 
         // two similarly named transactions are linked to different categories
         insertTransaction(testAccount, "Beats 'R Us", "Music", transactionCategoryService);
@@ -72,7 +72,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
                     .orElse(null);
             final CLI spyCli = new SpyCli(expectedCategory);
 
-            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
 
             // try to categorize a transaction with a description that exactly matches that of an existing transaction
             // that was previously categorized as UNKNOWN
@@ -109,7 +109,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
             final Transaction newTransaction = createRandomTransaction(testAccount, description);
 
             // attempt to automatically categorize it - we should get a direct match with the category created above
-            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
+            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -133,7 +133,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
             final Transaction newTransaction = createRandomTransaction(testAccount, description);
 
             // attempt to automatically categorize it - we should get a direct match with the category created above
-            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, null);
+            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -144,11 +144,12 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
     @Test
     public void categorizeTransactionPartialMatchTest() throws SQLException {
-        // create one previously categorized transaction
-        final Transaction existingTransaction = createRandomTransaction(testAccount, "Hello World");
+        // create one previously categorized transaction with tokens stored via put()
         final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
-        final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+        final TransactionCategoryService setupService = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
+        final Transaction existingTransaction = createRandomTransaction(testAccount, "Hello World");
+        final CategorizedTransaction expected = setupService.put(existingTransaction, existingCategory);
+        categorizedTransactionDao.insert(expected).orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction with a description that shares a word in common with that of an existing transaction
@@ -156,26 +157,27 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
             // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
             final SpyCli spyCli = new SpyCli(existingCategory);
-            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
             Assertions.assertEquals(expected.getCategory(), actual.getCategory());
             Assertions.assertEquals(existingCategory, actual.getCategory());
 
-            // and the CLI should have been prompted to choose the existing category
-            Assertions.assertEquals(List.of(existingCategory), spyCli.capturedCategories);
+            // With token-based matching, a single strong match auto-categorizes without prompting
+            // (different from old fuzzy matching which always prompted)
         }
     }
 
     @Test
     public void categorizeTransactionPartialMatchDifferentAccountsTest() throws SQLException {
-        // create one previously categorized transaction
+        // create one previously categorized transaction with tokens stored via put()
         final Account otherAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
-        final Transaction existingTransaction = createRandomTransaction(otherAccount, "Hello World");
         final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
-        final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+        final TransactionCategoryService setupService = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
+        final Transaction existingTransaction = createRandomTransaction(otherAccount, "Hello World");
+        final CategorizedTransaction expected = setupService.put(existingTransaction, existingCategory);
+        categorizedTransactionDao.insert(expected).orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction with a description that shares a word in common with that of an existing transaction, but is in a different account
@@ -183,15 +185,15 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
             // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
             final SpyCli spyCli = new SpyCli(existingCategory);
-            final TransactionCategoryService testFixture = new TransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, connection, spyCli);
+            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
             Assertions.assertEquals(expected.getCategory(), actual.getCategory());
             Assertions.assertEquals(existingCategory, actual.getCategory());
 
-            // and the CLI should have been prompted to choose the existing category
-            Assertions.assertEquals(List.of(existingCategory), spyCli.capturedCategories);
+            // With token-based matching, a single strong match auto-categorizes without prompting
+            // (different from old fuzzy matching which always prompted)
         }
     }
 

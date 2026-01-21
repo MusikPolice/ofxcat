@@ -23,6 +23,14 @@ public class PathUtils {
         return getDataPath().resolve("imported");
     }
 
+    /**
+     * Returns the full path to the config directory (~/.ofxcat).
+     * This is where config.yaml and keyword-rules.yaml are stored.
+     */
+    public Path getConfigPath() {
+        return getDataPath();
+    }
+
     public String getDatabaseConnectionString() {
         final String connectionString = String.format("%s%s", "jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
         logger.info("Database connection string is " + connectionString);

@@ -975,6 +975,17 @@ Phase 4 new classes: `TokenMigrationService`, `MigrationReport`
 
 ## Resolved Questions
 
+### Implementation Decisions (January 2026)
+
+**Phase 4 Scope Refinement:**
+- **Config system**: Create `~/.ofxcat/config.yaml` as the central configuration file. It should include the path to keyword rules and other matching settings. If the config doesn't exist, auto-create it with sensible defaults and print a CLI message showing the location so users can customize it.
+- **Category lookup**: `KeywordRulesConfig.findMatchingCategory()` returns `Optional<String>` (category name). The service layer looks up the Category via CategoryDao. If a keyword rule references a category that doesn't exist in the database, implicitly create it.
+- **TransactionCategoryService integration**: Full integration of the new matching flow (keyword rules → exact match → token matching → manual) happens in Phase 4.
+- **Migration service**: `TokenMigrationService` and `MigrationReport` move to Phase 5, not Phase 4.
+- **DAO methods**: Add `updateCategory` and `updateOrInsert` methods as needed, using DatabaseTransaction pattern.
+
+### Original Resolved Questions
+
 1. **~~Should stemming be enabled by default?~~** **No.** Retailer names are proper nouns and remain consistent across transactions. Stemming adds complexity and false positive risk without meaningful benefit.
 
 2. **~~Should we support regex in keyword rules?~~** **No, not initially.** Tokenization already normalizes away variations (punctuation, case, spacing) that regex would typically handle. This keeps the rules file simple and user-friendly. Regex support can be added later if a clear need emerges.

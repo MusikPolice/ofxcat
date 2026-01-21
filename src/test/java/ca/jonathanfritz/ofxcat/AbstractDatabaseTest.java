@@ -1,6 +1,16 @@
 package ca.jonathanfritz.ofxcat;
 
+import ca.jonathanfritz.ofxcat.cli.CLI;
+import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
+import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
+import ca.jonathanfritz.ofxcat.matching.TokenMatchingConfig;
+import ca.jonathanfritz.ofxcat.matching.TokenMatchingService;
+import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
+import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.flywaydb.core.Flyway;
@@ -17,6 +27,10 @@ public abstract class AbstractDatabaseTest {
     protected final Injector injector;
     protected final Connection connection;
     private static Flyway flyway;
+
+    // Shared test dependencies for TransactionCategoryService
+    protected final TokenNormalizer tokenNormalizer = new TokenNormalizer();
+    protected final TokenMatchingConfig tokenMatchingConfig = TokenMatchingConfig.defaults();
 
     public AbstractDatabaseTest() {
         // get a connection to an in-memory database for child classes to use
@@ -35,5 +49,34 @@ public abstract class AbstractDatabaseTest {
     protected void cleanup() {
         flyway.clean();
         flyway.migrate();
+    }
+
+    /**
+     * Creates a TransactionCategoryService for testing with the specified CLI.
+     * Uses empty keyword rules to avoid auto-categorization from rules during tests.
+     */
+    protected TransactionCategoryService createTransactionCategoryService(
+            CategoryDao categoryDao,
+            DescriptionCategoryDao descriptionCategoryDao,
+            CategorizedTransactionDao categorizedTransactionDao,
+            CLI cli
+    ) {
+        TransactionTokenDao transactionTokenDao = new TransactionTokenDao(connection);
+        TokenMatchingService tokenMatchingService = new TokenMatchingService(
+                connection, transactionTokenDao, categoryDao, tokenNormalizer, tokenMatchingConfig
+        );
+        KeywordRulesConfig keywordRulesConfig = KeywordRulesConfig.empty();
+
+        return new TransactionCategoryService(
+                categoryDao,
+                descriptionCategoryDao,
+                categorizedTransactionDao,
+                transactionTokenDao,
+                tokenNormalizer,
+                tokenMatchingService,
+                keywordRulesConfig,
+                connection,
+                cli
+        );
     }
 }

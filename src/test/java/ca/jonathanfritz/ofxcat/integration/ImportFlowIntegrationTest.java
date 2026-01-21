@@ -94,8 +94,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute import with SpyCli that returns pre-defined categories
         SpyCli spyCli = new SpyCli(List.of(groceries, restaurants, utilities));
-        TransactionCategoryService transactionCategoryService = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
@@ -141,8 +141,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // First import
         SpyCli spyCli1 = new SpyCli(List.of(category));
-        TransactionCategoryService tcs1 = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli1);
+        TransactionCategoryService tcs1 = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli1);
         TransactionImportService tis1 = new TransactionImportService(
                 spyCli1, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao);
@@ -152,8 +152,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Second import of same file
         SpyCli spyCli2 = new SpyCli(List.of(category));
-        TransactionCategoryService tcs2 = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli2);
+        TransactionCategoryService tcs2 = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli2);
         TransactionImportService tis2 = new TransactionImportService(
                 spyCli2, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao);
@@ -192,8 +192,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute
         SpyCli spyCli = new SpyCli(List.of(category));
-        TransactionCategoryService tcs = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService tcs = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
@@ -237,8 +237,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute
         SpyCli spyCli = new SpyCli(List.of(income, expense));
-        TransactionCategoryService tcs = new TransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, connection, spyCli);
+        TransactionCategoryService tcs = createTransactionCategoryService(
+                categoryDao, null, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
