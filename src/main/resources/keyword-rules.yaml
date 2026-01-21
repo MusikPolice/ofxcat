@@ -1,0 +1,747 @@
+# Default Keyword Rules for OFXCat
+# This file defines automatic categorization rules based on keywords.
+# Rules are processed in order - first match wins.
+#
+# Each rule has:
+#   keywords: List of keywords to match (case-insensitive)
+#   category: The category to assign when matched
+#   match_all: (optional) If true, ALL keywords must be present. Default: false (any keyword matches)
+#
+# Keywords are matched against normalized tokens from transaction descriptions.
+# Normalization removes store numbers (#1234), phone numbers, punctuation, and converts to lowercase.
+#
+# To customize: copy this file to ~/.ofxcat/keyword-rules.yaml and edit.
+# User rules in ~/.ofxcat/ take precedence over defaults.
+
+version: 1
+
+settings:
+  # If true, keyword matches are applied automatically
+  # If false, keyword matches are suggestions only
+  auto_categorize: true
+
+rules:
+  # ============================================
+  # RESTAURANTS - Fast Food & Coffee Chains
+  # ============================================
+  - keywords: [starbucks]
+    category: RESTAURANTS
+
+  - keywords: [mcdonalds, mcdonald]
+    category: RESTAURANTS
+
+  - keywords: [tim, hortons]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [subway]
+    category: RESTAURANTS
+
+  - keywords: [wendys, wendy]
+    category: RESTAURANTS
+
+  - keywords: [burger, king]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [dairy, queen]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [kfc]
+    category: RESTAURANTS
+
+  - keywords: [popeyes]
+    category: RESTAURANTS
+
+  - keywords: [chipotle]
+    category: RESTAURANTS
+
+  - keywords: [taco, bell]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [pizza, hut]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [dominos, domino]
+    category: RESTAURANTS
+
+  - keywords: [papa, johns]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [little, caesars]
+    match_all: true
+    category: RESTAURANTS
+
+  # Canadian Restaurant Chains
+  - keywords: [swiss, chalet]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [harveys]
+    category: RESTAURANTS
+
+  - keywords: [mary, browns]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [st, hubert]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [boston, pizza]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [earls]
+    category: RESTAURANTS
+
+  - keywords: [milestones]
+    category: RESTAURANTS
+
+  - keywords: [montanas]
+    category: RESTAURANTS
+
+  - keywords: [kelseys]
+    category: RESTAURANTS
+
+  - keywords: [east, side, marios]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [caseys]
+    category: RESTAURANTS
+
+  # Coffee Shops
+  - keywords: [second, cup]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [dunkin]
+    category: RESTAURANTS
+
+  - keywords: [peets, coffee]
+    category: RESTAURANTS
+
+  # Other Restaurant Chains
+  - keywords: [panera]
+    category: RESTAURANTS
+
+  - keywords: [five, guys]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [dennys, denny]
+    category: RESTAURANTS
+
+  - keywords: [ihop]
+    category: RESTAURANTS
+
+  - keywords: [applebees, applebee]
+    category: RESTAURANTS
+
+  - keywords: [chilis]
+    category: RESTAURANTS
+
+  - keywords: [olive, garden]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [red, lobster]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [outback]
+    category: RESTAURANTS
+
+  - keywords: [cheesecake, factory]
+    match_all: true
+    category: RESTAURANTS
+
+  # Asian Food
+  - keywords: [panda, express]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [sushi]
+    category: RESTAURANTS
+
+  # Generic food keywords (lower priority)
+  - keywords: [pizza]
+    category: RESTAURANTS
+
+  - keywords: [grill]
+    category: RESTAURANTS
+
+  - keywords: [cafe]
+    category: RESTAURANTS
+
+  - keywords: [bistro]
+    category: RESTAURANTS
+
+  # ============================================
+  # GROCERIES - Supermarkets & Grocery Stores
+  # ============================================
+  # Loblaw Companies Banners
+  - keywords: [loblaws, loblaw]
+    category: GROCERIES
+
+  - keywords: [zehrs]
+    category: GROCERIES
+
+  - keywords: [no, frills]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [real, canadian, superstore]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [superstore]
+    category: GROCERIES
+
+  - keywords: [fortinos]
+    category: GROCERIES
+
+  - keywords: [valu, mart]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [independent]
+    category: GROCERIES
+
+  - keywords: [provigo]
+    category: GROCERIES
+
+  - keywords: [maxi]
+    category: GROCERIES
+
+  # Sobeys/Empire Banners
+  - keywords: [sobeys]
+    category: GROCERIES
+
+  - keywords: [safeway]
+    category: GROCERIES
+
+  - keywords: [freshco]
+    category: GROCERIES
+
+  - keywords: [foodland]
+    category: GROCERIES
+
+  - keywords: [farm, boy]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [thrifty, foods]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [iga]
+    category: GROCERIES
+
+  # Metro Banners
+  - keywords: [metro]
+    category: GROCERIES
+
+  - keywords: [food, basics]
+    match_all: true
+    category: GROCERIES
+
+  # Warehouse Clubs
+  - keywords: [costco]
+    category: GROCERIES
+
+  - keywords: [walmart, wal-mart]
+    category: GROCERIES
+
+  # US Chains in Canada
+  - keywords: [whole, foods]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [trader, joes]
+    match_all: true
+    category: GROCERIES
+
+  # Discount Grocers
+  - keywords: [aldi]
+    category: GROCERIES
+
+  - keywords: [lidl]
+    category: GROCERIES
+
+  # Ethnic/Specialty Grocers
+  - keywords: [tnt, supermarket]
+    category: GROCERIES
+
+  - keywords: [nations]
+    category: GROCERIES
+
+  # Convenience
+  - keywords: [7eleven, 7-eleven]
+    category: GROCERIES
+
+  - keywords: [circle, k]
+    match_all: true
+    category: GROCERIES
+
+  - keywords: [macs]
+    category: GROCERIES
+
+  # ============================================
+  # PHARMACY
+  # ============================================
+  - keywords: [shoppers, drug]
+    match_all: true
+    category: PHARMACY
+
+  - keywords: [rexall]
+    category: PHARMACY
+
+  - keywords: [pharmasave]
+    category: PHARMACY
+
+  - keywords: [london, drugs]
+    match_all: true
+    category: PHARMACY
+
+  - keywords: [cvs]
+    category: PHARMACY
+
+  - keywords: [walgreens]
+    category: PHARMACY
+
+  - keywords: [jean, coutu]
+    match_all: true
+    category: PHARMACY
+
+  - keywords: [pharmacy]
+    category: PHARMACY
+
+  # ============================================
+  # SHOPPING - General Retail
+  # ============================================
+  - keywords: [amazon]
+    category: SHOPPING
+
+  - keywords: [canadian, tire]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [home, depot]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [lowes, lowe]
+    category: SHOPPING
+
+  - keywords: [rona]
+    category: SHOPPING
+
+  - keywords: [home, hardware]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [ikea]
+    category: SHOPPING
+
+  - keywords: [dollarama]
+    category: SHOPPING
+
+  - keywords: [dollar, tree]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [winners]
+    category: SHOPPING
+
+  - keywords: [marshalls]
+    category: SHOPPING
+
+  - keywords: [homesense]
+    category: SHOPPING
+
+  - keywords: [bed, bath]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [staples]
+    category: SHOPPING
+
+  - keywords: [best, buy]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [the, source]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [walmart]
+    category: SHOPPING
+
+  - keywords: [target]
+    category: SHOPPING
+
+  - keywords: [hudson, bay]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [sears]
+    category: SHOPPING
+
+  - keywords: [nordstrom]
+    category: SHOPPING
+
+  - keywords: [simons]
+    category: SHOPPING
+
+  # Clothing
+  - keywords: [old, navy]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [gap]
+    category: SHOPPING
+
+  - keywords: [h&m, hm]
+    category: SHOPPING
+
+  - keywords: [zara]
+    category: SHOPPING
+
+  - keywords: [uniqlo]
+    category: SHOPPING
+
+  - keywords: [lululemon]
+    category: SHOPPING
+
+  - keywords: [roots]
+    category: SHOPPING
+
+  - keywords: [aritzia]
+    category: SHOPPING
+
+  - keywords: [marks, work]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [sport, chek]
+    match_all: true
+    category: SHOPPING
+
+  # Pet Stores
+  - keywords: [petsmart]
+    category: SHOPPING
+
+  - keywords: [petco]
+    category: SHOPPING
+
+  - keywords: [rens, pets]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [pet, valu]
+    match_all: true
+    category: SHOPPING
+
+  # Books & Crafts
+  - keywords: [indigo]
+    category: SHOPPING
+
+  - keywords: [chapters]
+    category: SHOPPING
+
+  - keywords: [michaels]
+    category: SHOPPING
+
+  # Electronics
+  - keywords: [apple, store]
+    match_all: true
+    category: SHOPPING
+
+  - keywords: [microsoft, store]
+    match_all: true
+    category: SHOPPING
+
+  # ============================================
+  # ENTERTAINMENT - Streaming & Subscriptions
+  # ============================================
+  - keywords: [netflix]
+    category: ENTERTAINMENT
+
+  - keywords: [spotify]
+    category: ENTERTAINMENT
+
+  - keywords: [apple, music]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [apple, bill]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [itunes]
+    category: ENTERTAINMENT
+
+  - keywords: [disney, plus]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [disneyplus]
+    category: ENTERTAINMENT
+
+  - keywords: [hulu]
+    category: ENTERTAINMENT
+
+  - keywords: [hbo, max]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [amazon, prime]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [primevideo]
+    category: ENTERTAINMENT
+
+  - keywords: [crave]
+    category: ENTERTAINMENT
+
+  - keywords: [paramount]
+    category: ENTERTAINMENT
+
+  - keywords: [youtube, premium]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [audible]
+    category: ENTERTAINMENT
+
+  - keywords: [kindle]
+    category: ENTERTAINMENT
+
+  # Gaming
+  - keywords: [steam, purchase]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [playstation]
+    category: ENTERTAINMENT
+
+  - keywords: [xbox]
+    category: ENTERTAINMENT
+
+  - keywords: [nintendo]
+    category: ENTERTAINMENT
+
+  # Movies & Events
+  - keywords: [cineplex]
+    category: ENTERTAINMENT
+
+  - keywords: [galaxy, cinema]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [landmark, cinema]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [ticketmaster]
+    category: ENTERTAINMENT
+
+  - keywords: [stubhub]
+    category: ENTERTAINMENT
+
+  # ============================================
+  # VEHICLES - Gas & Automotive
+  # ============================================
+  - keywords: [shell]
+    category: VEHICLES
+
+  - keywords: [esso]
+    category: VEHICLES
+
+  - keywords: [petro, canada]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [mobil]
+    category: VEHICLES
+
+  - keywords: [chevron]
+    category: VEHICLES
+
+  - keywords: [sunoco]
+    category: VEHICLES
+
+  - keywords: [ultramar]
+    category: VEHICLES
+
+  - keywords: [pioneer]
+    category: VEHICLES
+
+  - keywords: [husky]
+    category: VEHICLES
+
+  - keywords: [costco, gas]
+    match_all: true
+    category: VEHICLES
+
+  # Electric Charging
+  - keywords: [flo, charging]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [chargepoint]
+    category: VEHICLES
+
+  - keywords: [electrify]
+    category: VEHICLES
+
+  # Auto Parts & Service
+  - keywords: [napa, auto]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [partsource]
+    category: VEHICLES
+
+  - keywords: [midas]
+    category: VEHICLES
+
+  - keywords: [mister, lube]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [jiffy, lube]
+    match_all: true
+    category: VEHICLES
+
+  # Parking
+  - keywords: [impark]
+    category: VEHICLES
+
+  - keywords: [indigo, parking]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [parking]
+    category: VEHICLES
+
+  # ============================================
+  # ALCOHOL - Liquor & Beer
+  # ============================================
+  - keywords: [lcbo]
+    category: ALCOHOL
+
+  - keywords: [beer, store]
+    match_all: true
+    category: ALCOHOL
+
+  - keywords: [saq]
+    category: ALCOHOL
+
+  - keywords: [wine, rack]
+    match_all: true
+    category: ALCOHOL
+
+  - keywords: [liquor, store]
+    match_all: true
+    category: ALCOHOL
+
+  - keywords: [liquor, mart]
+    match_all: true
+    category: ALCOHOL
+
+  - keywords: [bc, liquor]
+    match_all: true
+    category: ALCOHOL
+
+  - keywords: [alberta, liquor]
+    match_all: true
+    category: ALCOHOL
+
+  # ============================================
+  # UTILITIES - Telecom & Services
+  # ============================================
+  - keywords: [rogers]
+    category: UTILITIES
+
+  - keywords: [bell]
+    category: UTILITIES
+
+  - keywords: [telus]
+    category: UTILITIES
+
+  - keywords: [shaw]
+    category: UTILITIES
+
+  - keywords: [fido]
+    category: UTILITIES
+
+  - keywords: [koodo]
+    category: UTILITIES
+
+  - keywords: [virgin, mobile]
+    match_all: true
+    category: UTILITIES
+
+  - keywords: [freedom, mobile]
+    match_all: true
+    category: UTILITIES
+
+  - keywords: [chatr]
+    category: UTILITIES
+
+  - keywords: [videotron]
+    category: UTILITIES
+
+  - keywords: [sasktel]
+    category: UTILITIES
+
+  # Internet
+  - keywords: [teksavvy]
+    category: UTILITIES
+
+  - keywords: [start, ca]
+    match_all: true
+    category: UTILITIES
+
+  # Hydro/Electric
+  - keywords: [hydro]
+    category: UTILITIES
+
+  - keywords: [enbridge]
+    category: UTILITIES
+
+  - keywords: [direct, energy]
+    match_all: true
+    category: UTILITIES
+
+  # ============================================
+  # TRANSFERS - Bank Transfers
+  # ============================================
+  # Note: Transfer detection is primarily handled by TransferMatchingService
+  # based on transaction type (XFER) and matching amounts.
+  # These rules catch common transfer description patterns.
+  - keywords: [etransfer, e-transfer]
+    category: TRANSFER
+
+  - keywords: [interac]
+    category: TRANSFER
+
+  # ============================================
+  # Payment Processors (for reference, low priority)
+  # ============================================
+  # PayPal, Square, Stripe transactions are identified by their prefix
+  # but the actual merchant is usually more relevant for categorization.
+  # These are low-priority fallbacks.
+  - keywords: [paypal]
+    category: SHOPPING
+
+  - keywords: [square]
+    category: SHOPPING
