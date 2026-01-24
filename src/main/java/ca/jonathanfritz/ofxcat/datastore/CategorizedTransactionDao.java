@@ -221,6 +221,95 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Checks if there are any transactions that don't have tokens stored.
+     * This is an efficient check that doesn't load transaction data into memory.
+     *
+     * @return true if any transactions need token migration, false otherwise
+     */
+    public boolean hasTransactionsWithoutTokens() {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return hasTransactionsWithoutTokens(t);
+        } catch (SQLException e) {
+            logger.error("Failed to check for transactions without tokens", e);
+            return false;
+        }
+    }
+
+    /**
+     * Checks if there are any transactions that don't have tokens stored.
+     * This is an efficient check that doesn't load transaction data into memory.
+     *
+     * @param t the database transaction to use
+     * @return true if any transactions need token migration, false otherwise
+     * @throws SQLException if the query fails
+     */
+    public boolean hasTransactionsWithoutTokens(DatabaseTransaction t) throws SQLException {
+        logger.debug("Checking for transactions without tokens");
+        final String checkStatement = """
+            SELECT EXISTS(
+                SELECT 1 FROM CategorizedTransaction ct
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM TransactionToken tt WHERE tt.transaction_id = ct.id
+                )
+            )
+            """;
+        return t.queryRaw(checkStatement, null, rs -> rs.next() && rs.getInt(1) == 1);
+    }
+
+    /**
+     * Selects only transactions that don't have tokens stored.
+     * Used for token migration to avoid loading all transactions into memory.
+     *
+     * @return a list of CategorizedTransactions that need token migration
+     */
+    public List<CategorizedTransaction> selectWithoutTokens() {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return selectWithoutTokens(t);
+        } catch (SQLException e) {
+            logger.error("Failed to select transactions without tokens", e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Selects only transactions that don't have tokens stored.
+     * Used for token migration to avoid loading all transactions into memory.
+     *
+     * @param t the database transaction to use
+     * @return a list of CategorizedTransactions that need token migration
+     * @throws SQLException if the query fails
+     */
+    public List<CategorizedTransaction> selectWithoutTokens(DatabaseTransaction t) throws SQLException {
+        logger.debug("Selecting transactions without tokens");
+        final String selectStatement = """
+            SELECT * FROM CategorizedTransaction ct
+            WHERE NOT EXISTS (
+                SELECT 1 FROM TransactionToken tt WHERE tt.transaction_id = ct.id
+            )
+            """;
+        return t.query(selectStatement, categorizedTransactionDeserializer);
+    }
+
+    /**
+     * Updates the category of an existing transaction.
+     *
+     * @param t the database transaction to use
+     * @param transactionId the ID of the transaction to update
+     * @param newCategory the new category to assign
+     * @return true if the update was successful, false otherwise
+     * @throws SQLException if the update fails
+     */
+    public boolean updateCategory(DatabaseTransaction t, long transactionId, Category newCategory) throws SQLException {
+        logger.debug("Attempting to update category of transaction {} to {}", transactionId, newCategory.getName());
+        final String updateStatement = "UPDATE CategorizedTransaction SET category_id = ? WHERE id = ?";
+        int rowsUpdated = t.execute(updateStatement, ps -> {
+            ps.setLong(1, newCategory.getId());
+            ps.setLong(2, transactionId);
+        });
+        return rowsUpdated > 0;
+    }
+
+    /**
      * Inserts the specified {@link CategorizedTransaction} into the database
      * @param categorizedTransactionToInsert the CategorizedTransaction to insert
      * @return an {@link Optional<CategorizedTransaction>} containing the inserted CategorizedTransaction, or

@@ -2,7 +2,9 @@ package ca.jonathanfritz.ofxcat;
 
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.exception.CliException;
+import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
+import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import org.flywaydb.core.Flyway;
@@ -43,6 +45,7 @@ class OfxCatImportValidationTest {
                 new StubFlyway(),
                 new StubTransactionImportService(),
                 new StubReportingService(),
+                new StubTokenMigrationService(),
                 testPathUtils,
                 new StubCLI()
         );
@@ -216,6 +219,24 @@ class OfxCatImportValidationTest {
         StubReportingService() {
             // 4 null params: CategorizedTransactionDao, AccountDao, CategoryDao, CLI
             super(null, null, null, null);
+        }
+    }
+
+    private static class StubTokenMigrationService extends TokenMigrationService {
+        StubTokenMigrationService() {
+            // 7 null params: Connection, CategorizedTransactionDao, TransactionTokenDao,
+            // DescriptionCategoryDao, CategoryDao, TokenNormalizer, KeywordRulesConfig
+            super(null, null, null, null, null, null, null);
+        }
+
+        @Override
+        public boolean isMigrationNeeded() {
+            return false;
+        }
+
+        @Override
+        public MigrationReport migrateExistingTransactions() {
+            return new MigrationReport();
         }
     }
 

@@ -1,6 +1,6 @@
 # ofxcat Codebase Overview
 
-**Last Updated:** November 26, 2025  
+**Last Updated:** January 21, 2026  
 **Purpose:** Comprehensive technical documentation for developers maintaining and extending this application.
 
 ---
@@ -22,15 +22,16 @@
 
 ## Overview
 
-ofxcat is a Java 21 command-line application that imports and categorizes financial transactions from OFX (Open Financial Exchange) files. The application uses intelligent fuzzy matching to automatically categorize transactions based on historical patterns and prompts users interactively when needed.
+ofxcat is a Java 21 command-line application that imports and categorizes financial transactions from OFX (Open Financial Exchange) files. The application uses intelligent token-based matching with configurable keyword rules to automatically categorize transactions based on historical patterns and prompts users interactively when needed.
 
 **Core Functionality:**
 - Parse OFX files exported from banking institutions
 - Store transactions in a local SQLite database
 - Automatically detect inter-account transfers
-- Categorize transactions using exact and fuzzy string matching
+- Categorize transactions using keyword rules, token-based matching, and exact matching
 - Generate CSV reports showing spending by category over time
 - Learn from user input to improve categorization accuracy
+- Apply keyword rules for automatic categorization of common merchants
 
 ---
 
@@ -136,7 +137,6 @@ Uses **TextIO** library for rich terminal interaction:
 | **Flyway** | 11.14.1 | Database migrations |
 | **ofx4j** | 1.39 | OFX file parsing |
 | **TextIO** | 3.4.1 | Interactive CLI |
-| **FuzzyWuzzy** | 1.4.0 | Fuzzy string matching |
 | **Commons CLI** | 1.10.0 | Command-line parsing |
 | **Commons Lang3** | 3.19.0 | Utility functions |
 | **Log4j2** | 2.25.2 | Logging |
@@ -196,6 +196,17 @@ ca.jonathanfritz.ofxcat/
 │   ├── OfxBalance.java
 │   ├── OfxExport.java
 │   └── OfxTransaction.java
+├── matching/              # Token-based matching and keyword rules
+│   ├── KeywordRule.java
+│   ├── KeywordRulesConfig.java
+│   ├── KeywordRulesLoader.java
+│   ├── MatchingModule.java
+│   ├── TokenMatchingConfig.java
+│   ├── TokenMatchingService.java
+│   └── TokenNormalizer.java
+├── config/                # Configuration management
+│   ├── AppConfig.java
+│   └── AppConfigLoader.java
 ├── service/               # Business logic
 │   ├── TransactionImportService.java
 │   ├── TransactionCategoryService.java
@@ -283,6 +294,16 @@ CREATE TABLE Transfer (
 ```
 Links pairs of transactions that represent inter-account transfers.
 
+#### TransactionToken
+```sql
+CREATE TABLE TransactionToken (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transaction_id INTEGER NOT NULL REFERENCES CategorizedTransaction (id) ON DELETE CASCADE,
+    token TEXT NOT NULL
+);
+```
+Stores normalized tokens for each transaction, enabling token-based matching during categorization.
+
 ### Migration History
 - V1: Category table
 - V2: DescriptionCategory table
@@ -294,6 +315,7 @@ Links pairs of transactions that represent inter-account transfers.
 - V8: Created UNKNOWN default category
 - V9: Created TRANSFER default category
 - V10: Transfer table
+- V11: TransactionToken table for token-based matching
 
 ---
 
@@ -322,9 +344,19 @@ Links pairs of transactions that represent inter-account transfers.
 
 **Class:** `TransactionCategoryService`
 
-The categorization process uses a **three-tier matching strategy**:
+The categorization process uses a **four-tier matching strategy**:
 
-#### Tier 1: Exact Match
+#### Tier 1: Keyword Rules
+```java
+categorizeTransactionKeywordRules(transaction)
+```
+1. Normalize description into tokens using `TokenNormalizer`
+2. Match tokens against configured keyword rules
+3. Rules are loaded from `~/.ofxcat/keyword-rules.yaml` or bundled defaults
+4. If a rule matches → auto-categorize to specified category
+5. If no match → proceed to Tier 2
+
+#### Tier 2: Exact Match
 ```java
 categorizeTransactionExactMatch(transaction)
 ```
@@ -332,29 +364,58 @@ categorizeTransactionExactMatch(transaction)
 2. Extract distinct categories from matches (excluding UNKNOWN)
 3. If **exactly one** category found → auto-categorize
 4. If **multiple** categories → prompt user to choose
-5. If **zero** matches → proceed to Tier 2
+5. If **zero** matches → proceed to Tier 3
 
-#### Tier 2: Partial Match (Fuzzy)
+#### Tier 3: Token-Based Match
 ```java
-categorizeTransactionPartialMatch(transaction)
+categorizeTransactionTokenMatch(transaction)
 ```
-1. Tokenize description (split on spaces)
-2. Filter out noise:
-   - Pure numbers or "#" + numbers (store numbers)
-   - Phone number patterns
-3. Search for transactions containing any tokens
-4. Apply **FuzzyWuzzy** string matching
-5. Score each category by average fuzzy match score
-6. Keep categories with score ≥ 60%
-7. Return top 5 categories ranked by score
-8. Prompt user to choose from ranked list
+1. Normalize description into tokens using `TokenNormalizer`
+   - Converts to lowercase
+   - Splits on whitespace and special characters
+   - Removes common stop words (THE, A, AN, etc.)
+   - Filters out pure numbers, store numbers, phone numbers
+2. Search `TransactionToken` table for transactions with matching tokens
+3. Calculate token overlap percentage: `matching_tokens / total_tokens`
+4. Filter to candidates meeting `overlap_threshold` (default 0.6)
+5. Group by category and rank by match quality
+6. If **exactly one** category with strong match → auto-categorize
+7. If **multiple** categories → prompt user to choose from ranked list
+8. If **zero** matches → proceed to Tier 4
 
-#### Tier 3: Manual Selection
+#### Tier 4: Manual Selection
 ```java
 chooseExistingCategoryOrAddNew(transaction)
 ```
 1. Prompt user to choose from all existing categories
 2. Allow creation of new category
+
+### Token Normalization
+
+**Class:** `TokenNormalizer`
+
+Converts transaction descriptions into normalized tokens:
+- Converts to lowercase
+- Splits on whitespace and special characters
+- Removes stop words: THE, A, AN, AND, OR, OF, TO, IN, FOR, AT, BY
+- Filters out pure numbers and common patterns (store IDs, phone numbers)
+
+### Keyword Rules Configuration
+
+**File:** `~/.ofxcat/keyword-rules.yaml`
+
+```yaml
+version: 1
+settings:
+  auto_categorize: true
+rules:
+  - keywords: [amazon, amzn]
+    category: Shopping
+  - keywords: [uber, lyft]
+    category: Transportation
+```
+
+Rules are processed in order; first match wins.
 
 ### 3. Transfer Detection
 
@@ -409,10 +470,28 @@ Rules match on:
 | File | Location | Purpose |
 |------|----------|---------|
 | Database | `~/.ofxcat/ofxcat.db` | SQLite database |
+| Configuration | `~/.ofxcat/config.yaml` | Application configuration |
+| Keyword Rules | `~/.ofxcat/keyword-rules.yaml` | Automatic categorization rules |
 | Logs | `~/.ofxcat/ofxcat.log` | Application logs |
 | Imported Files | `~/.ofxcat/imported/` | Backup copies of OFX files |
 
 **Security Note:** All files may contain sensitive financial information. The README warns users to protect these files appropriately.
+
+### Application Configuration
+
+**File:** `~/.ofxcat/config.yaml`
+
+```yaml
+# Keyword rules file location (relative to config directory or absolute path)
+keyword_rules_path: keyword-rules.yaml
+
+# Token matching settings
+token_matching:
+  # Minimum percentage of tokens that must match (0.0-1.0)
+  overlap_threshold: 0.6
+```
+
+A default configuration file is created on first run if one doesn't exist.
 
 ### Logging Configuration
 
@@ -506,10 +585,10 @@ WARNING: java.lang.System::loadLibrary has been called
 **Impact:** Multi-day transfers or transfers with fees are not detected  
 **Potential Fix:** Implement fuzzy date/amount matching within configurable thresholds
 
-### 4. Fuzzy Match Threshold Hardcoded
-**File:** `TransactionCategoryService.java:169`  
-**Issue:** 60% threshold is hardcoded  
-**TODO:** "should this threshold be configurable?"
+### 4. Token Match Threshold
+**File:** `~/.ofxcat/config.yaml`
+**Status:** Now configurable via `token_matching.overlap_threshold` setting
+**Default:** 0.6 (60%)
 
 ### 5. LCBO/RAO Categorization Issue
 **File:** `TransactionCategoryService.java:75`  
@@ -598,8 +677,10 @@ From `OfxCat.java`:
 **Recommendation:** Create specific exception types for different error conditions
 
 #### 11. Configuration Management
-**Issue:** Fuzzy match threshold, date tolerance, etc. are hardcoded  
-**Recommendation:** Create configuration file for tunable parameters
+**Status:** Implemented via `~/.ofxcat/config.yaml`
+- Token matching threshold is configurable
+- Keyword rules can be customized
+- Default configuration is auto-created on first run
 
 ---
 
@@ -611,7 +692,7 @@ From `OfxCat.java`:
 3. **Builder pattern** - DTOs are immutable and safely constructed
 4. **Database migrations** - Schema changes are tracked and versioned
 5. **Logging** - Comprehensive logging at all levels
-6. **Fuzzy matching** - Smart categorization algorithm
+6. **Token-based matching** - Smart categorization algorithm with configurable keyword rules
 7. **Factory pattern** - Extensible bank support via classpath scanning
 
 ### Weaknesses
@@ -697,7 +778,7 @@ sqlite3 ~/.ofxcat/ofxcat.db
 |-------|----------|--------|----------|
 | Missing test coverage | High | High | 1 |
 | Float for currency (should be BigDecimal) | High | Medium | 2 |
-| Hardcoded thresholds | Medium | Low | 3 |
+| Some hardcoded values | Medium | Low | 3 |
 | Generic exceptions | Medium | Medium | 4 |
 | Missing cache for reference data | Medium | Low | 5 |
 | No progress indication | Low | Low | 6 |
@@ -707,7 +788,7 @@ sqlite3 ~/.ofxcat/ofxcat.db
 
 ## Conclusion
 
-This is a well-architected, functional application with a solid foundation. The use of dependency injection, database migrations, and fuzzy matching demonstrates mature engineering. The main areas needing attention are:
+This is a well-architected, functional application with a solid foundation. The use of dependency injection, database migrations, and token-based matching with keyword rules demonstrates mature engineering. The main areas needing attention are:
 
 1. **Test coverage** - Critical for maintainability
 2. **BigDecimal for currency** - Current float usage risks precision errors

@@ -8,7 +8,9 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.matching.MatchingModule;
+import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
+import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
@@ -37,16 +39,19 @@ public class OfxCat {
     private final Flyway flyway;
     private final TransactionImportService transactionImportService;
     private final ReportingService reportingService;
+    private final TokenMigrationService tokenMigrationService;
     private final PathUtils pathUtils;
     private final CLI cli;
 
     private static final Logger logger = LogManager.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService, PathUtils pathUtils, CLI cli) {
+    OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService,
+           TokenMigrationService tokenMigrationService, PathUtils pathUtils, CLI cli) {
         this.flyway = flyway;
         this.transactionImportService = transactionImportService;
         this.reportingService = reportingService;
+        this.tokenMigrationService = tokenMigrationService;
         this.pathUtils = pathUtils;
         this.cli = cli;
     }
@@ -55,6 +60,25 @@ public class OfxCat {
         logger.debug("Attempting to migrate database schema...");
         flyway.migrate();
         logger.info("Database schema migration complete");
+    }
+
+    private void migrateTokens() {
+        if (!tokenMigrationService.isMigrationNeeded()) {
+            logger.debug("Token migration not needed");
+            return;
+        }
+
+        logger.info("Migrating existing transactions to use tokens...");
+        MigrationReport report = tokenMigrationService.migrateExistingTransactions();
+        logger.info("Token migration complete: {} processed, {} recategorized, {} skipped",
+                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount());
+
+        if (report.hasRecategorizations()) {
+            logger.info("Recategorized transactions:");
+            for (MigrationReport.RecategorizationEntry entry : report.getRecategorizations()) {
+                logger.info("  {} : {} -> {}", entry.description(), entry.oldCategory(), entry.newCategory());
+            }
+        }
     }
 
     // Package-private for testing
@@ -184,6 +208,7 @@ public class OfxCat {
         );
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
         ofxCat.migrateDatabase();
+        ofxCat.migrateTokens();
         logger.debug("Application initialized with config: keyword_rules_path={}, overlap_threshold={}",
                 appConfig.getKeywordRulesPath(),
                 appConfig.getTokenMatching().getOverlapThreshold());

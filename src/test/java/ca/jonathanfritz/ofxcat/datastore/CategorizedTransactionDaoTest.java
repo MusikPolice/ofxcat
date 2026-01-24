@@ -21,11 +21,13 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     private final CategoryDao categoryDao;
     private final AccountDao accountDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionTokenDao transactionTokenDao;
 
     CategorizedTransactionDaoTest() {
         accountDao = injector.getInstance(AccountDao.class);
         categoryDao = injector.getInstance(CategoryDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        transactionTokenDao = new TransactionTokenDao(connection);
     }
 
     @Test
@@ -238,5 +240,89 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
 
         // then they are no longer returned by the unlinked transactions method
         Assertions.assertEquals(0, categorizedTransactionDao.findUnlinkedTransfers().size());
+    }
+
+    @Test
+    void hasTransactionsWithoutTokens_returnsFalseWhenNoTransactions() {
+        // Empty database should return false
+        Assertions.assertFalse(categorizedTransactionDao.hasTransactionsWithoutTokens());
+    }
+
+    @Test
+    void hasTransactionsWithoutTokens_returnsTrueWhenTransactionHasNoTokens() throws SQLException {
+        // Create a transaction without tokens
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category));
+
+        // Should return true - transaction exists without tokens
+        Assertions.assertTrue(categorizedTransactionDao.hasTransactionsWithoutTokens());
+    }
+
+    @Test
+    void hasTransactionsWithoutTokens_returnsFalseWhenAllTransactionsHaveTokens() throws SQLException {
+        // Create a transaction
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final CategorizedTransaction txn = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElse(null);
+
+        // Add tokens for it
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, txn.getId(), Set.of("test", "token"));
+        }
+
+        // Should return false - all transactions have tokens
+        Assertions.assertFalse(categorizedTransactionDao.hasTransactionsWithoutTokens());
+    }
+
+    @Test
+    void selectWithoutTokens_returnsEmptyWhenNoTransactions() {
+        // Empty database should return empty list
+        Assertions.assertTrue(categorizedTransactionDao.selectWithoutTokens().isEmpty());
+    }
+
+    @Test
+    void selectWithoutTokens_returnsTransactionsWithoutTokens() throws SQLException {
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        // Create two transactions
+        final CategorizedTransaction withTokens = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElse(null);
+        final CategorizedTransaction withoutTokens = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElse(null);
+
+        // Add tokens only for the first one
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, withTokens.getId(), Set.of("test", "token"));
+        }
+
+        // Should return only the transaction without tokens
+        List<CategorizedTransaction> result = categorizedTransactionDao.selectWithoutTokens();
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(withoutTokens.getId(), result.getFirst().getId());
+    }
+
+    @Test
+    void selectWithoutTokens_returnsEmptyWhenAllHaveTokens() throws SQLException {
+        final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        // Create a transaction
+        final CategorizedTransaction txn = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElse(null);
+
+        // Add tokens for it
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, txn.getId(), Set.of("test", "token"));
+        }
+
+        // Should return empty list - all transactions have tokens
+        Assertions.assertTrue(categorizedTransactionDao.selectWithoutTokens().isEmpty());
     }
 }

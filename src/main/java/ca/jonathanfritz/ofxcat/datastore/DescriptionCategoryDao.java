@@ -120,4 +120,49 @@ public class DescriptionCategoryDao {
         }, descriptionCategoryDeserializer);
         return DatabaseTransaction.getFirstResult(results);
     }
+
+    /**
+     * Updates the category mapping for a description, or inserts a new mapping if one doesn't exist.
+     * This is used during migration to update the description-category mapping when a transaction
+     * is recategorized based on keyword rules.
+     *
+     * @param t the database transaction to use
+     * @param description the description to update
+     * @param newCategory the new category to map to
+     * @return the updated or inserted DescriptionCategory
+     * @throws SQLException if the operation fails
+     */
+    public Optional<DescriptionCategory> updateOrInsert(DatabaseTransaction t, String description, Category newCategory) throws SQLException {
+        logger.debug("Attempting to update or insert DescriptionCategory for description {} with category {}",
+                description, newCategory.getName());
+
+        // First, check if a mapping already exists for this description with the new category
+        Optional<DescriptionCategory> existing = selectByDescriptionAndCategory(t, description, newCategory);
+        if (existing.isPresent()) {
+            logger.debug("DescriptionCategory already exists with correct category");
+            return existing;
+        }
+
+        // Check if any mapping exists for this description (with a different category)
+        final String selectByDescription = "SELECT * FROM DescriptionCategory WHERE upper(description) = ?";
+        final List<DescriptionCategory> existingMappings = t.query(selectByDescription, ps -> {
+            ps.setString(1, description.toUpperCase());
+        }, descriptionCategoryDeserializer);
+
+        if (!existingMappings.isEmpty()) {
+            // Update the existing mapping to use the new category
+            final String updateStatement = "UPDATE DescriptionCategory SET category_id = ? WHERE upper(description) = ?";
+            t.execute(updateStatement, ps -> {
+                ps.setLong(1, newCategory.getId());
+                ps.setString(2, description.toUpperCase());
+            });
+            logger.debug("Updated existing DescriptionCategory mapping");
+
+            // Return the updated mapping
+            return selectByDescriptionAndCategory(t, description, newCategory);
+        }
+
+        // No existing mapping - insert a new one
+        return insert(t, new DescriptionCategory(description, newCategory));
+    }
 }

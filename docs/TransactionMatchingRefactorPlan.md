@@ -817,15 +817,18 @@ matching:
 - `categorizeTransaction_fallsBackToManualWhenNoMatch`
 - `categorizeTransaction_legacyFuzzyFallbackWhenEnabled`
 
-### Phase 5: Cleanup
+### Phase 5: Cleanup and Migration Service
 
-**Goal**: Remove deprecated fuzzy matching code and update documentation.
+**Goal**: Remove deprecated fuzzy matching code, update documentation, and add migration infrastructure.
 
 **Tasks**:
 1. Remove FuzzyWuzzy dependency from `build.gradle`
 2. Remove `FuzzySearch` imports from `TransactionCategoryService`
-3. Update `CodebaseOverview.md` with new matching algorithm description
-4. Update `README.md` with:
+3. Create `TokenMigrationService` and `MigrationReport` for migrating existing transactions
+4. Integrate migration into application startup (runs automatically on first launch after upgrade)
+5. Add efficient SQL-based check for unmigrated transactions to avoid loading all transactions into memory
+6. Update `CodebaseOverview.md` with new matching algorithm description
+7. Update `README.md` with:
    - Keyword rules configuration section (location, format, examples)
    - How to override default rules (`~/.ofxcat/keyword-rules.yaml`)
    - How to contribute new rules back to the project
@@ -859,6 +862,39 @@ The Architecture Overview section should be updated to include:
 - Ensure all existing integration tests still pass
 - Verify keyword rules file is created on first run if missing
 - Verify graceful handling when keyword rules file is corrupted
+
+### Phase 6: Re-migration CLI Command
+
+**Goal**: Allow users to re-run the token migration process on all transactions (including those that already have tokens) after updating keyword rules.
+
+**Motivation**: When users add new rules to `keyword-rules.yaml`, they may want to apply those rules to existing transactions. The automatic migration at startup only processes transactions that don't have tokens yet. This command provides a way to force reprocessing of all transactions.
+
+**New CLI Command**:
+```bash
+java -jar ofxcat.jar migrate [--dry-run]
+```
+
+**Behaviour**:
+1. Delete all existing tokens from `TransactionToken` table
+2. Re-run the full token migration process (same as startup migration)
+3. Apply current keyword rules to all transactions
+4. Display migration report showing recategorizations
+
+**Options**:
+- `--dry-run`: Show what would be changed without making changes
+
+**Implementation Notes**:
+- Add new `Mode.MIGRATE` to `OfxCat.java`
+- Add `deleteAllTokens()` method to `TransactionTokenDao`
+- Reuse existing `TokenMigrationService.migrateExistingTransactions()`
+- Display detailed report to console showing recategorizations
+
+**Tests**:
+- `migrateCommand_deletesExistingTokens`
+- `migrateCommand_reprocessesAllTransactions`
+- `migrateCommand_appliesNewKeywordRules`
+- `migrateCommand_dryRunShowsChangesWithoutApplying`
+- `migrateCommand_displaysRecategorizationReport`
 
 ---
 
@@ -936,12 +972,13 @@ This approach was chosen over SQLite FTS5 (full-text search) because:
 1. **Phase 1**: TokenNormalizer (foundation, no integration yet)
 2. **Phase 2**: TokenMatchingService + TransactionTokenDao (can be tested in isolation)
 3. **Phase 3**: KeywordRulesSystem (includes data acquisition task, can be tested in isolation)
-4. **Phase 4**: Migration + Integration (requires Phase 2 and 3 to be complete)
-5. **Phase 5**: Cleanup (remove old code, update docs)
+4. **Phase 4**: Integration with TransactionCategoryService (requires Phases 1-3)
+5. **Phase 5**: Cleanup + Migration Service (remove old code, update docs, add migration infrastructure)
+6. **Phase 6**: Re-migration CLI Command (optional enhancement for power users)
 
 ```
 Phase 1 ──┐
-          ├──► Phase 4 ──► Phase 5
+          ├──► Phase 4 ──► Phase 5 ──► Phase 6
 Phase 2 ──┤
           │
 Phase 3 ──┘
@@ -949,7 +986,7 @@ Phase 3 ──┘
 
 Phases 1, 2, and 3 can be developed in parallel. Phase 3 includes a data acquisition task (building the keyword rules file) that can happen concurrently with coding.
 
-**Critical dependency:** Migration in Phase 4 requires keyword rules from Phase 3 to perform the recategorization sweep.
+**Critical dependency:** Integration in Phase 4 requires all three foundation phases to be complete.
 
 ---
 
@@ -960,12 +997,13 @@ Phases 1, 2, and 3 can be developed in parallel. Phase 3 includes a data acquisi
 | 1 | 2 | 14 | 0 | 0 |
 | 2 | 2 | 16 | 1 (V12 migration) | 0 |
 | 3 | 3 | 13 | 1 (keyword-rules.yaml) | 0 |
-| 4 | 2 | 16 | 0 | 1 (TransactionCategoryService) |
-| 5 | 0 | 3 | 0 | 4 (build.gradle, CLAUDE.md, README.md, CodebaseOverview.md) |
-| **Total** | **9** | **62** | **2** | **5** |
+| 4 | 0 | 16 | 0 | 1 (TransactionCategoryService) |
+| 5 | 2 | 14 | 0 | 4 (build.gradle, CLAUDE.md, README.md, CodebaseOverview.md) |
+| 6 | 0 | 5 | 0 | 2 (OfxCat.java, TransactionTokenDao) |
+| **Total** | **9** | **78** | **2** | **7** |
 
 Phase 2 new classes: `TokenMatchingService`, `TransactionTokenDao`
-Phase 4 new classes: `TokenMigrationService`, `MigrationReport`
+Phase 5 new classes: `TokenMigrationService`, `MigrationReport`
 
 ---
 

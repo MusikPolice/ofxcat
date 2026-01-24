@@ -42,17 +42,23 @@ SQLite + Flyway migrations (~/.ofxcat/ofxcat.db)
 ```
 
 ### Key Design Patterns
-- **Google Guice** for dependency injection (`CLIModule`, `DatastoreModule`)
+- **Google Guice** for dependency injection (`CLIModule`, `DatastoreModule`, `MatchingModule`)
 - **Factory + Classpath scanning**: `TransactionCleanerFactory` auto-discovers bank-specific cleaners
 - **Builder pattern**: DTOs like `Transaction`, `OfxAccount` are immutable with builders
 - **DAO pattern**: All database access through DAO classes
+- **Token matching**: `TokenNormalizer` and `TokenMatchingService` for intelligent categorization
 
 ### Transaction Categorization Algorithm (TransactionCategoryService)
 
-Three-tier matching strategy:
-1. **Exact match**: Find transactions with identical description → auto-categorize if single category
-2. **Fuzzy match**: Tokenize description, use FuzzyWuzzy scoring (≥60% threshold), prompt user to choose from top 5
-3. **Manual**: User chooses from all categories or creates new one
+Four-tier matching strategy:
+1. **Keyword rules**: Match normalized tokens against `keyword-rules.yaml` → auto-categorize if rule matches
+2. **Exact match**: Find transactions with identical description → auto-categorize if single category
+3. **Token match**: Normalize description into tokens, find transactions with token overlap ≥ threshold (default 60%) → auto-categorize if single strong match, else prompt user
+4. **Manual**: User chooses from all categories or creates new one
+
+### Configuration (`~/.ofxcat/config.yaml`)
+- `keyword_rules_path`: Path to keyword rules file (default: `keyword-rules.yaml`)
+- `token_matching.overlap_threshold`: Minimum token overlap for matching (default: 0.6)
 
 ### Transfer Detection (TransferMatchingService)
 Matches XFER-type transactions across accounts by: same date + opposite amounts + different accounts
@@ -74,6 +80,7 @@ Schema managed by Flyway migrations in `src/main/resources/db/migration/`. Key t
 - `CategorizedTransaction` - all imported transactions with categories and `fit_id` for deduplication
 - `Transfer` - links source/sink transaction pairs for inter-account transfers
 - `DescriptionCategory` - maps descriptions to categories for auto-categorization
+- `TransactionToken` - normalized tokens for each transaction (for token-based matching)
 
 ## Key Documentation
 
