@@ -211,6 +211,49 @@ public class CLI {
                 .read("\nPlease enter a new category for transaction");
     }
 
+    /**
+     * Updates a progress bar on the current line. Uses moveToLineStart() to overwrite
+     * the previous progress, falling back to printing a new line if not supported.
+     *
+     * @param label the label to display before the progress bar
+     * @param current the current progress value
+     * @param total the total value (100%)
+     */
+    public void updateProgressBar(String label, int current, int total) {
+        int percentage = total > 0 ? (current * 100) / total : 0;
+        int barWidth = 30;
+        int filled = (percentage * barWidth) / 100;
+
+        StringBuilder bar = new StringBuilder();
+        bar.append(label).append(" [");
+        for (int i = 0; i < barWidth; i++) {
+            if (i < filled) {
+                bar.append("=");
+            } else if (i == filled) {
+                bar.append(">");
+            } else {
+                bar.append(" ");
+            }
+        }
+        bar.append("] ").append(String.format("%3d%%", percentage));
+        bar.append(" (").append(current).append("/").append(total).append(")");
+
+        // Try to overwrite the current line; if not supported, print new line
+        if (!textIO.getTextTerminal().moveToLineStart()) {
+            textIO.getTextTerminal().println(bar.toString());
+        } else {
+            textIO.getTextTerminal().print(bar.toString());
+        }
+    }
+
+    /**
+     * Completes a progress bar by printing a final newline.
+     * Call this after the last updateProgressBar() to move to the next line.
+     */
+    public void finishProgressBar() {
+        textIO.getTextTerminal().println();
+    }
+
     public void printFoundNewTransfer(Transfer transfer) {
         textIO.getTextTerminal().println("\nFound new transfer:");
 

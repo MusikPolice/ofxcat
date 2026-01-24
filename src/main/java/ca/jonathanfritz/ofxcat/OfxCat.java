@@ -68,15 +68,20 @@ public class OfxCat {
             return;
         }
 
-        logger.info("Migrating existing transactions to use tokens...");
-        MigrationReport report = tokenMigrationService.migrateExistingTransactions();
-        logger.info("Token migration complete: {} processed, {} recategorized, {} skipped",
-                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount());
+        cli.println("Migrating existing transactions to use tokens...");
+
+        MigrationReport report = tokenMigrationService.migrateExistingTransactions(
+                (current, total) -> cli.updateProgressBar("Migrating", current, total)
+        );
+        cli.finishProgressBar();
+
+        cli.println(String.format("Token migration complete: %d processed, %d recategorized, %d skipped",
+                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
 
         if (report.hasRecategorizations()) {
-            logger.info("Recategorized transactions:");
+            cli.println("Recategorized transactions:");
             for (MigrationReport.RecategorizationEntry entry : report.getRecategorizations()) {
-                logger.info("  {} : {} -> {}", entry.description(), entry.oldCategory(), entry.newCategory());
+                cli.println(String.format("  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
             }
         }
     }

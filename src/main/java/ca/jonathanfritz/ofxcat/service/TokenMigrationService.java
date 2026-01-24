@@ -63,6 +63,18 @@ public class TokenMigrationService {
      * @return a report describing what was migrated and changed
      */
     public MigrationReport migrateExistingTransactions() {
+        return migrateExistingTransactions(MigrationProgressCallback.NOOP);
+    }
+
+    /**
+     * Migrates existing transactions by:
+     * 1. Computing and storing tokens for transactions that don't have them
+     * 2. Optionally recategorizing transactions based on keyword rules
+     *
+     * @param progressCallback callback to report progress during migration
+     * @return a report describing what was migrated and changed
+     */
+    public MigrationReport migrateExistingTransactions(MigrationProgressCallback progressCallback) {
         MigrationReport report = new MigrationReport();
 
         // Only load transactions that actually need migration (no tokens yet)
@@ -74,6 +86,8 @@ public class TokenMigrationService {
         }
 
         logger.info("Token migration: processing {} transactions", needsMigration.size());
+        final int total = needsMigration.size();
+        int processed = 0;
 
         // Process in batches for efficiency
         for (int i = 0; i < needsMigration.size(); i += BATCH_SIZE) {
@@ -83,6 +97,8 @@ public class TokenMigrationService {
             try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
                 for (CategorizedTransaction txn : batch) {
                     migrateTransaction(t, txn, report);
+                    processed++;
+                    progressCallback.onProgress(processed, total);
                 }
             } catch (SQLException ex) {
                 logger.error("Token migration failed at batch starting index {}", i, ex);
