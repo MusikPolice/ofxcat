@@ -138,6 +138,37 @@ public class OfxCat {
         reportingService.reportCategories();
     }
 
+    private void runMigration(MigrateOptions options) {
+        if (options.dryRun()) {
+            cli.println("Dry run mode: showing what would change without making actual changes\n");
+        } else {
+            cli.println("Re-running token migration on all transactions...\n");
+        }
+
+        MigrationReport report = tokenMigrationService.forceMigration(
+                options.dryRun(),
+                (current, total) -> cli.updateProgressBar(options.dryRun() ? "Analyzing" : "Migrating", current, total)
+        );
+        cli.finishProgressBar();
+
+        if (options.dryRun()) {
+            cli.println(String.format("\nDry run results: %d would be processed, %d would be recategorized, %d would be skipped",
+                    report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
+        } else {
+            cli.println(String.format("\nMigration complete: %d processed, %d recategorized, %d skipped",
+                    report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
+        }
+
+        if (report.hasRecategorizations()) {
+            cli.println(options.dryRun() ? "\nTransactions that would be recategorized:" : "\nRecategorized transactions:");
+            for (MigrationReport.RecategorizationEntry entry : report.getRecategorizations()) {
+                cli.println(String.format("  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
+            }
+        } else {
+            cli.println("\nNo recategorizations " + (options.dryRun() ? "would be" : "were") + " made.");
+        }
+    }
+
     private void printHelp() {
         cli.println(Arrays.asList(
                 "ofxcat import [FILENAME]",
@@ -151,8 +182,12 @@ public class OfxCat {
                 "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
                 "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
                 "               Defaults to today if not specified.",
-                "   --category-id: Optional. If specified, only transactions that belong" +
-                " to the specified category will be printed." +
+                "   --category-id: Optional. If specified, only transactions that belong",
+                "                  to the specified category will be printed.",
+                "ofxcat migrate [OPTIONS]",
+                "   Re-runs token migration on all transactions, applying current keyword rules.",
+                "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
+                "   --dry-run: Optional. Show what would change without making actual changes.",
                 "ofxcat help",
                 "   Displays this help text"
         ));
@@ -195,6 +230,9 @@ public class OfxCat {
                                 ofxCat.reportCategories();
                     }
                     break;
+                case MIGRATE:
+                    ofxCat.runMigration(getMigrateOptions(args));
+                    break;
                 case HELP:
                     ofxCat.printHelp();
                     break;
@@ -235,6 +273,7 @@ public class OfxCat {
     enum Mode {
         IMPORT,
         GET,
+        MIGRATE,
         HELP
 
     }
@@ -318,4 +357,28 @@ public class OfxCat {
 
     // Package-private for testing
     record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) { }
+
+    // Package-private for testing
+    static MigrateOptions getMigrateOptions(String[] args) throws CliException {
+        try {
+            final Options options = new Options();
+            options.addOption(Option.builder()
+                    .argName("d")
+                    .longOpt("dry-run")
+                    .desc("Show what would change without making actual changes")
+                    .hasArg(false)
+                    .required(false)
+                    .build());
+
+            final CommandLineParser commandLineParser = new DefaultParser();
+            final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 1, args.length));
+            final boolean dryRun = commandLine.hasOption("dry-run");
+            return new MigrateOptions(dryRun);
+        } catch (ParseException e) {
+            throw new CliException("Failed to parse options", e);
+        }
+    }
+
+    // Package-private for testing
+    record MigrateOptions(boolean dryRun) { }
 }

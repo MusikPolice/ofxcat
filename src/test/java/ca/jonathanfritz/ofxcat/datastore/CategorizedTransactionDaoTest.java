@@ -10,10 +10,8 @@ import org.junit.jupiter.api.Test;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static ca.jonathanfritz.ofxcat.datastore.dto.Category.TRANSFER;
 import static ca.jonathanfritz.ofxcat.datastore.dto.Category.UNKNOWN;
 
 class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
@@ -27,7 +25,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         accountDao = injector.getInstance(AccountDao.class);
         categoryDao = injector.getInstance(CategoryDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
-        transactionTokenDao = new TransactionTokenDao(connection);
+        transactionTokenDao = new TransactionTokenDao();
     }
 
     @Test

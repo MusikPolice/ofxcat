@@ -257,6 +257,22 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Selects all transactions in the database.
+     *
+     * @return a list of all CategorizedTransactions
+     */
+    public List<CategorizedTransaction> selectAll() {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Selecting all transactions");
+            final String selectStatement = "SELECT * FROM CategorizedTransaction";
+            return t.query(selectStatement, categorizedTransactionDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to select all transactions", e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Selects only transactions that don't have tokens stored.
      * Used for token migration to avoid loading all transactions into memory.
      *

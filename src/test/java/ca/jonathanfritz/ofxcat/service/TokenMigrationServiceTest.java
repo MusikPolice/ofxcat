@@ -40,7 +40,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         descriptionCategoryDao = injector.getInstance(DescriptionCategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
-        transactionTokenDao = new TransactionTokenDao(connection);
+        transactionTokenDao = new TransactionTokenDao();
     }
 
     @BeforeEach
@@ -262,6 +262,101 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         assertEquals(0, report2.getProcessedCount());
     }
 
+    @Test
+    void forceMigration_deletesExistingTokensAndReprocesses() throws SQLException {
+        // Given: a transaction that already has tokens
+        Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        CategorizedTransaction txn = insertTransactionWithTokens("STARBUCKS COFFEE", category);
+
+        TokenMigrationService migrationService = createMigrationService(KeywordRulesConfig.empty());
+
+        // Verify migration is NOT needed (tokens already exist)
+        assertFalse(migrationService.isMigrationNeeded());
+
+        // When: we force migration
+        MigrationReport report = migrationService.forceMigration();
+
+        // Then: the transaction was reprocessed
+        assertEquals(1, report.getProcessedCount());
+
+        // And: tokens still exist
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            assertTrue(transactionTokenDao.hasTokens(t, txn.getId()));
+        }
+    }
+
+    @Test
+    void forceMigration_appliesNewKeywordRules() throws SQLException {
+        // Given: a transaction already migrated with UNKNOWN category
+        CategorizedTransaction txn = insertTransactionWithTokens("COSTCO WHOLESALE", Category.UNKNOWN);
+
+        // Verify transaction is in UNKNOWN category
+        CategorizedTransaction before = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        assertNotNull(before);
+        assertEquals("UNKNOWN", before.getCategory().getName());
+
+        // When: we force migration with keyword rules that match "costco" to "Groceries"
+        KeywordRulesConfig config = createKeywordRulesConfig(true,
+                new KeywordRule(List.of("costco"), "Groceries"));
+        TokenMigrationService migrationService = createMigrationService(config);
+
+        MigrationReport report = migrationService.forceMigration();
+
+        // Then: the transaction was recategorized
+        assertEquals(1, report.getProcessedCount());
+        assertEquals(1, report.getRecategorizedCount());
+
+        // And: the category was updated
+        CategorizedTransaction after = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        assertNotNull(after);
+        assertEquals("GROCERIES", after.getCategory().getName());
+    }
+
+    @Test
+    void forceMigration_dryRunShowsChangesWithoutApplying() throws SQLException {
+        // Given: a transaction already migrated with UNKNOWN category
+        CategorizedTransaction txn = insertTransactionWithTokens("COSTCO WHOLESALE", Category.UNKNOWN);
+
+        // When: we force migration with dry-run enabled
+        KeywordRulesConfig config = createKeywordRulesConfig(true,
+                new KeywordRule(List.of("costco"), "Groceries"));
+        TokenMigrationService migrationService = createMigrationService(config);
+
+        MigrationReport report = migrationService.forceMigration(true);
+
+        // Then: the report shows what would be changed
+        assertEquals(1, report.getProcessedCount());
+        assertEquals(1, report.getRecategorizedCount());
+        assertTrue(report.hasRecategorizations());
+
+        // But: the transaction was NOT actually changed
+        CategorizedTransaction unchanged = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        assertNotNull(unchanged);
+        assertEquals("UNKNOWN", unchanged.getCategory().getName());
+
+        // And: tokens were NOT deleted (still exist from original migration)
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            assertTrue(transactionTokenDao.hasTokens(t, txn.getId()));
+        }
+    }
+
+    @Test
+    void forceMigration_reprocessesAllTransactions() throws SQLException {
+        // Given: multiple transactions, some already with tokens
+        Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        insertTransactionWithTokens("AMAZON ORDER 1", category);
+        insertTransactionWithTokens("WALMART GROCERY", category);
+        insertTransactionWithoutTokens("NEW TRANSACTION", category);
+
+        TokenMigrationService migrationService = createMigrationService(KeywordRulesConfig.empty());
+
+        // When: we force migration
+        MigrationReport report = migrationService.forceMigration();
+
+        // Then: all transactions were processed
+        assertEquals(3, report.getProcessedCount());
+    }
+
     // Helper methods
 
     private TokenMigrationService createMigrationService(KeywordRulesConfig keywordRulesConfig) {
@@ -288,7 +383,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         return categorizedTransactionDao.insert(new CategorizedTransaction(transaction, category)).orElse(null);
     }
 
-    private void insertTransactionWithTokens(String description, Category category) throws SQLException {
+    private CategorizedTransaction insertTransactionWithTokens(String description, Category category) throws SQLException {
         CategorizedTransaction txn = insertTransactionWithoutTokens(description, category);
 
         // Store tokens
@@ -297,6 +392,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
             transactionTokenDao.insertTokens(t, txn.getId(), tokens);
         }
 
+        return txn;
     }
 
     private KeywordRulesConfig createKeywordRulesConfig(boolean autoCategorize, KeywordRule... rules) {

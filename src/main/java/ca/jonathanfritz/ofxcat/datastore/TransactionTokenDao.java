@@ -5,8 +5,6 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import jakarta.inject.Inject;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -16,14 +14,7 @@ import java.util.*;
  */
 public class TransactionTokenDao {
 
-    private final Connection connection;
-
     private static final Logger logger = LogManager.getLogger(TransactionTokenDao.class);
-
-    @Inject
-    public TransactionTokenDao(Connection connection) {
-        this.connection = connection;
-    }
 
     /**
      * Inserts tokens for a transaction.
@@ -185,6 +176,18 @@ public class TransactionTokenDao {
                     }
                     return results;
                 });
+    }
+
+    /**
+     * Deletes all tokens from all transactions.
+     * Used for re-migration when keyword rules are updated.
+     *
+     * @param t the database transaction to participate in
+     */
+    public void deleteAllTokens(DatabaseTransaction t) throws SQLException {
+        logger.debug("Deleting all tokens from TransactionToken table");
+        final String deleteStatement = "DELETE FROM TransactionToken;";
+        t.execute(deleteStatement, ps -> {});
     }
 
     /**

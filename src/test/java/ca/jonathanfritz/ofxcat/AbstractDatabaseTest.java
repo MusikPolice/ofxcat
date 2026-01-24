@@ -61,7 +61,7 @@ public abstract class AbstractDatabaseTest {
             CategorizedTransactionDao categorizedTransactionDao,
             CLI cli
     ) {
-        TransactionTokenDao transactionTokenDao = new TransactionTokenDao(connection);
+        TransactionTokenDao transactionTokenDao = new TransactionTokenDao();
         TokenMatchingService tokenMatchingService = new TokenMatchingService(
                 connection, transactionTokenDao, categoryDao, tokenNormalizer, tokenMatchingConfig
         );

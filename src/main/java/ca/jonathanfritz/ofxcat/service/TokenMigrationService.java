@@ -189,4 +189,110 @@ public class TokenMigrationService {
     public boolean isMigrationNeeded() {
         return categorizedTransactionDao.hasTransactionsWithoutTokens();
     }
+
+    /**
+     * Forces re-migration of all transactions, deleting existing tokens first.
+     * Use this after updating keyword rules to apply them to all transactions.
+     *
+     * @return a report describing what was migrated and changed
+     */
+    public MigrationReport forceMigration() {
+        return forceMigration(false);
+    }
+
+    /**
+     * Forces re-migration of all transactions.
+     *
+     * @param dryRun if true, shows what would change without making actual changes
+     * @return a report describing what would be (or was) migrated and changed
+     */
+    public MigrationReport forceMigration(boolean dryRun) {
+        return forceMigration(dryRun, MigrationProgressCallback.NOOP);
+    }
+
+    /**
+     * Forces re-migration of all transactions.
+     *
+     * @param dryRun if true, shows what would change without making actual changes
+     * @param progressCallback callback to report progress during migration
+     * @return a report describing what would be (or was) migrated and changed
+     */
+    public MigrationReport forceMigration(boolean dryRun, MigrationProgressCallback progressCallback) {
+        if (dryRun) {
+            return simulateMigration(progressCallback);
+        }
+
+        // Delete all existing tokens
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.deleteAllTokens(t);
+            logger.info("Force migration: deleted all existing tokens");
+        } catch (SQLException ex) {
+            logger.error("Force migration: failed to delete existing tokens", ex);
+            throw new RuntimeException("Force migration failed", ex);
+        }
+
+        // Run normal migration (will now process all transactions since none have tokens)
+        return migrateExistingTransactions(progressCallback);
+    }
+
+    /**
+     * Simulates migration to show what would change without making actual changes.
+     */
+    private MigrationReport simulateMigration(MigrationProgressCallback progressCallback) {
+        MigrationReport report = new MigrationReport();
+
+        // Load all transactions (regardless of token status)
+        List<CategorizedTransaction> allTransactions = categorizedTransactionDao.selectAll();
+
+        if (allTransactions.isEmpty()) {
+            logger.debug("Dry run: no transactions to simulate");
+            return report;
+        }
+
+        logger.info("Dry run: simulating migration of {} transactions", allTransactions.size());
+        final int total = allTransactions.size();
+        int processed = 0;
+
+        for (CategorizedTransaction txn : allTransactions) {
+            simulateTransactionMigration(txn, report);
+            processed++;
+            progressCallback.onProgress(processed, total);
+        }
+
+        logger.info("Dry run completed: {} would be processed, {} would be recategorized, {} would be skipped",
+                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount());
+
+        return report;
+    }
+
+    /**
+     * Simulates migration of a single transaction without making changes.
+     */
+    private void simulateTransactionMigration(CategorizedTransaction txn, MigrationReport report) {
+        String description = txn.getDescription();
+        Set<String> tokens = tokenNormalizer.normalize(description);
+
+        // Skip if no meaningful tokens
+        if (tokens.isEmpty()) {
+            report.incrementSkipped();
+            return;
+        }
+
+        report.incrementProcessed();
+
+        // Check keyword rules for potential recategorization
+        if (keywordRulesConfig.isAutoCategorizeEnabled()) {
+            Optional<String> keywordCategoryName = keywordRulesConfig.findMatchingCategory(tokens);
+
+            if (keywordCategoryName.isPresent()) {
+                String newCategoryName = keywordCategoryName.get();
+                String currentCategoryName = txn.getCategory().getName();
+
+                // Would recategorize if category would change
+                if (!newCategoryName.equalsIgnoreCase(currentCategoryName)) {
+                    report.addRecategorization(description, currentCategoryName, newCategoryName);
+                }
+            }
+        }
+    }
 }

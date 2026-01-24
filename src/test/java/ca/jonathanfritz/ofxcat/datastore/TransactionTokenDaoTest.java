@@ -215,4 +215,39 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
             assertEquals(3, transactionTokenDao.getTokenCount(t, transaction.getId()));
         }
     }
+
+    @Test
+    void deleteAllTokens_removesAllTokensFromAllTransactions() throws SQLException {
+        // Setup: Create multiple transactions with tokens
+        Category category = categoryDao.insert(new Category("SHOPPING")).orElseThrow();
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        CategorizedTransaction txn1 = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElseThrow();
+
+        CategorizedTransaction txn2 = categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
+        ).orElseThrow();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, txn1.getId(), Set.of("amazon", "shopping"));
+            transactionTokenDao.insertTokens(t, txn2.getId(), Set.of("walmart", "grocery"));
+
+            // Verify tokens exist
+            assertTrue(transactionTokenDao.hasTokens(t, txn1.getId()));
+            assertTrue(transactionTokenDao.hasTokens(t, txn2.getId()));
+        }
+
+        // Execute: Delete all tokens
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.deleteAllTokens(t);
+        }
+
+        // Verify: All tokens are deleted
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            assertFalse(transactionTokenDao.hasTokens(t, txn1.getId()));
+            assertFalse(transactionTokenDao.hasTokens(t, txn2.getId()));
+        }
+    }
 }
