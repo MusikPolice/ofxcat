@@ -6,7 +6,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
@@ -27,17 +27,17 @@ import java.util.*;
 class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
 
     private final CategoryDao categoryDao;
-    private final DescriptionCategoryDao descriptionCategoryDao;
     private final AccountDao accountDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionTokenDao transactionTokenDao;
 
     private Account testAccount;
 
     public TransactionCategoryServiceEdgeCaseTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
-        descriptionCategoryDao = injector.getInstance(DescriptionCategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        transactionTokenDao = new TransactionTokenDao();
     }
 
     @BeforeEach
@@ -54,7 +54,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "");
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should not crash, should prompt for category
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -79,7 +79,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "   \t\n   ");
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should not crash, should prompt for category
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -99,7 +99,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "12345 67890 #999");
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: All tokens filtered, should prompt for new category
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -133,7 +133,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "Payment to 555-123-4567");
             final SpyCli spyCli = new SpyCli(paymentCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Phone number should be filtered, "Payment" should match
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -154,7 +154,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "Café José™ 中文");
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should not crash
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -176,7 +176,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, "'; DROP TABLE Category; --");
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should treat as literal string
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -201,7 +201,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction transaction = createTransaction(testAccount, longDescription);
             final SpyCli spyCli = new SpyCli(expectedCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should handle gracefully (may truncate or accept)
             final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -226,7 +226,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction secondSafeway = createTransaction(testAccount, "Safeway #5678");
             final SpyCli spyCli = new SpyCli(groceryCategory);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute: Should match because #5678 is filtered out
             final CategorizedTransaction result = service.categorizeTransaction(t, secondSafeway);
@@ -257,7 +257,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
             final Transaction newAmazon = createTransaction(testAccount, "Amazon.com");
             final SpyCli spyCli = new SpyCli(books);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute
             final CategorizedTransaction result = service.categorizeTransaction(t, newAmazon);
@@ -288,7 +288,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
                 final Transaction transaction = createTransaction(testAccount, description);
                 final SpyCli spyCli = new SpyCli(expectedCategory);
                 final TransactionCategoryService service = createTransactionCategoryService(
-                        categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                        categoryDao, categorizedTransactionDao, spyCli);
 
                 // Execute: Should handle without crashing
                 final CategorizedTransaction result = service.categorizeTransaction(t, transaction);
@@ -307,23 +307,26 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
         final Category restaurant1 = categoryDao.insert(new Category("Fast Food")).orElse(null);
         final Category restaurant2 = categoryDao.insert(new Category("Dining")).orElse(null);
 
-        // Insert similar transactions with tokens stored via put()
-        final TransactionCategoryService setupService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, null);
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            // Insert similar transactions with tokens stored directly
+            final Transaction tx1 = createTransaction(testAccount, "McDonald's Restaurant");
+            CategorizedTransaction ct1 = categorizedTransactionDao.insert(t, new CategorizedTransaction(tx1, restaurant1))
+                    .orElseThrow(() -> new RuntimeException("Failed to insert"));
+            Set<String> tokens1 = tokenNormalizer.normalize(tx1.getDescription());
+            transactionTokenDao.insertTokens(t, ct1.getId(), tokens1);
 
-        final CategorizedTransaction ct1 = setupService.put(
-                createTransaction(testAccount, "McDonald's Restaurant"), restaurant1);
-        categorizedTransactionDao.insert(ct1);
-
-        final CategorizedTransaction ct2 = setupService.put(
-                createTransaction(testAccount, "McDonald's Diner"), restaurant2);
-        categorizedTransactionDao.insert(ct2);
+            final Transaction tx2 = createTransaction(testAccount, "McDonald's Diner");
+            CategorizedTransaction ct2 = categorizedTransactionDao.insert(t, new CategorizedTransaction(tx2, restaurant2))
+                    .orElseThrow(() -> new RuntimeException("Failed to insert"));
+            Set<String> tokens2 = tokenNormalizer.normalize(tx2.getDescription());
+            transactionTokenDao.insertTokens(t, ct2.getId(), tokens2);
+        }
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             final Transaction newTransaction = createTransaction(testAccount, "McDonald's");
             final SpyCli spyCli = new SpyCli(restaurant1);
             final TransactionCategoryService service = createTransactionCategoryService(
-                    categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                    categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute
             final CategorizedTransaction result = service.categorizeTransaction(t, newTransaction);
@@ -376,4 +379,3 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
         }
     }
 }
-

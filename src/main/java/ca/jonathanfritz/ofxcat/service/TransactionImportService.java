@@ -6,7 +6,9 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
+import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
@@ -44,11 +46,18 @@ public class TransactionImportService {
     private final CategoryDao categoryDao;
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
+    private final TransactionTokenDao transactionTokenDao;
+    private final TokenNormalizer tokenNormalizer;
 
     private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao, TransactionCleanerFactory transactionCleanerFactory, Connection connection, CategorizedTransactionDao categorizedTransactionDao, TransactionCategoryService transactionCategoryService, CategoryDao categoryDao, TransferMatchingService transferMatchingService, TransferDao transferDao) {
+    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao,
+                                    TransactionCleanerFactory transactionCleanerFactory, Connection connection,
+                                    CategorizedTransactionDao categorizedTransactionDao,
+                                    TransactionCategoryService transactionCategoryService, CategoryDao categoryDao,
+                                    TransferMatchingService transferMatchingService, TransferDao transferDao,
+                                    TransactionTokenDao transactionTokenDao, TokenNormalizer tokenNormalizer) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -59,6 +68,8 @@ public class TransactionImportService {
         this.categoryDao = categoryDao;
         this.transferMatchingService = transferMatchingService;
         this.transferDao = transferDao;
+        this.transactionTokenDao = transactionTokenDao;
+        this.tokenNormalizer = tokenNormalizer;
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
@@ -147,7 +158,10 @@ public class TransactionImportService {
                             );
                     }
                     categorizedTransactionDao.insert(t, categorizedTransaction)
-                            .ifPresent(categorizedTransactions::add);
+                            .ifPresent(inserted -> {
+                                categorizedTransactions.add(inserted);
+                                storeTokensForTransaction(t, inserted);
+                            });
 
                     cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
                     logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
@@ -208,6 +222,33 @@ public class TransactionImportService {
             return categorizedTransaction;
         } catch (SQLException ex) {
             throw new OfxCatException("Failed to insert either the source or sink of a Transfer", ex);
+        }
+    }
+
+    /**
+     * Stores normalized tokens for a newly persisted transaction.
+     * Tokens are used for token-based matching during categorization.
+     * Tokens are not stored for UNKNOWN or TRANSFER categories as they don't contribute to matching.
+     */
+    private void storeTokensForTransaction(DatabaseTransaction t, CategorizedTransaction transaction) {
+        // Don't store tokens for UNKNOWN or TRANSFER categories
+        if (Category.UNKNOWN.equals(transaction.getCategory()) ||
+            Category.TRANSFER.equals(transaction.getCategory())) {
+            return;
+        }
+
+        Set<String> tokens = tokenNormalizer.normalize(transaction.getDescription());
+        if (tokens.isEmpty()) {
+            logger.debug("No tokens to store for transaction: {}", transaction.getDescription());
+            return;
+        }
+
+        try {
+            transactionTokenDao.insertTokens(t, transaction.getId(), tokens);
+            logger.debug("Stored {} tokens for transaction {}: {}", tokens.size(), transaction.getId(), tokens);
+        } catch (SQLException ex) {
+            // Log but don't fail - tokens are an optimization for matching, not critical
+            logger.warn("Failed to store tokens for transaction {}: {}", transaction.getId(), ex.getMessage());
         }
     }
 }

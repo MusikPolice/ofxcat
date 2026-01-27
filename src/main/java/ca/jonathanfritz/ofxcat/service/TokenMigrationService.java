@@ -2,7 +2,6 @@ package ca.jonathanfritz.ofxcat.service;
 
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
@@ -31,7 +30,6 @@ public class TokenMigrationService {
     private final Connection connection;
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionTokenDao transactionTokenDao;
-    private final DescriptionCategoryDao descriptionCategoryDao;
     private final CategoryDao categoryDao;
     private final TokenNormalizer tokenNormalizer;
     private final KeywordRulesConfig keywordRulesConfig;
@@ -41,7 +39,6 @@ public class TokenMigrationService {
             Connection connection,
             CategorizedTransactionDao categorizedTransactionDao,
             TransactionTokenDao transactionTokenDao,
-            DescriptionCategoryDao descriptionCategoryDao,
             CategoryDao categoryDao,
             TokenNormalizer tokenNormalizer,
             KeywordRulesConfig keywordRulesConfig
@@ -49,7 +46,6 @@ public class TokenMigrationService {
         this.connection = connection;
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.transactionTokenDao = transactionTokenDao;
-        this.descriptionCategoryDao = descriptionCategoryDao;
         this.categoryDao = categoryDao;
         this.tokenNormalizer = tokenNormalizer;
         this.keywordRulesConfig = keywordRulesConfig;
@@ -171,9 +167,6 @@ public class TokenMigrationService {
             logger.error("Failed to update category for transaction: {}", txn.getId());
             return;
         }
-
-        // Update the description-category mapping
-        descriptionCategoryDao.updateOrInsert(t, txn.getDescription(), newCategory.get());
 
         // Record the recategorization
         report.addRecategorization(txn.getDescription(), oldCategoryName, newCategoryName);

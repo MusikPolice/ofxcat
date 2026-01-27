@@ -3,7 +3,6 @@ package ca.jonathanfritz.ofxcat;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
@@ -57,7 +56,6 @@ public abstract class AbstractDatabaseTest {
      */
     protected TransactionCategoryService createTransactionCategoryService(
             CategoryDao categoryDao,
-            DescriptionCategoryDao descriptionCategoryDao,
             CategorizedTransactionDao categorizedTransactionDao,
             CLI cli
     ) {
@@ -69,13 +67,10 @@ public abstract class AbstractDatabaseTest {
 
         return new TransactionCategoryService(
                 categoryDao,
-                descriptionCategoryDao,
                 categorizedTransactionDao,
-                transactionTokenDao,
                 tokenNormalizer,
                 tokenMatchingService,
                 keywordRulesConfig,
-                connection,
                 cli
         );
     }

@@ -202,10 +202,10 @@ class OfxCatImportValidationTest {
 
     private class StubTransactionImportService extends TransactionImportService {
         StubTransactionImportService() {
-            // 10 null params to match constructor: CLI, OfxParser, AccountDao, TransactionCleanerFactory,
+            // 12 null params to match constructor: CLI, OfxParser, AccountDao, TransactionCleanerFactory,
             // Connection, CategorizedTransactionDao, TransactionCategoryService, CategoryDao,
-            // TransferMatchingService, TransferDao
-            super(null, null, null, null, null, null, null, null, null, null);
+            // TransferMatchingService, TransferDao, TransactionTokenDao, TokenNormalizer
+            super(null, null, null, null, null, null, null, null, null, null, null, null);
         }
 
         @Override
@@ -224,9 +224,9 @@ class OfxCatImportValidationTest {
 
     private static class StubTokenMigrationService extends TokenMigrationService {
         StubTokenMigrationService() {
-            // 7 null params: Connection, CategorizedTransactionDao, TransactionTokenDao,
-            // DescriptionCategoryDao, CategoryDao, TokenNormalizer, KeywordRulesConfig
-            super(null, null, null, null, null, null, null);
+            // 6 null params: Connection, CategorizedTransactionDao, TransactionTokenDao,
+            // CategoryDao, TokenNormalizer, KeywordRulesConfig
+            super(null, null, null, null, null, null);
         }
 
         @Override

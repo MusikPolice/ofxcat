@@ -7,6 +7,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,6 +36,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionTokenDao transactionTokenDao;
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
@@ -44,6 +45,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        this.transactionTokenDao = new TransactionTokenDao();
         this.transferMatchingService = injector.getInstance(TransferMatchingService.class);
         this.transferDao = injector.getInstance(TransferDao.class);
     }
@@ -95,11 +97,11 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         // Execute import with SpyCli that returns pre-defined categories
         SpyCli spyCli = new SpyCli(List.of(groceries, restaurants, utilities));
         TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -142,10 +144,11 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         // First import
         SpyCli spyCli1 = new SpyCli(List.of(category));
         TransactionCategoryService tcs1 = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli1);
+                categoryDao, categorizedTransactionDao, spyCli1);
         TransactionImportService tis1 = new TransactionImportService(
                 spyCli1, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> firstImport = tis1.categorizeTransactions(ofxExports);
         assertEquals(2, firstImport.size(), "First import should have 2 transactions");
@@ -153,10 +156,11 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         // Second import of same file
         SpyCli spyCli2 = new SpyCli(List.of(category));
         TransactionCategoryService tcs2 = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli2);
+                categoryDao, categorizedTransactionDao, spyCli2);
         TransactionImportService tis2 = new TransactionImportService(
                 spyCli2, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> secondImport = tis2.categorizeTransactions(ofxExports);
         assertEquals(0, secondImport.size(), "Second import should have 0 new transactions (duplicates ignored)");
@@ -193,10 +197,11 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         // Execute
         SpyCli spyCli = new SpyCli(List.of(category));
         TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 
@@ -238,10 +243,11 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         // Execute
         SpyCli spyCli = new SpyCli(List.of(income, expense));
         TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 

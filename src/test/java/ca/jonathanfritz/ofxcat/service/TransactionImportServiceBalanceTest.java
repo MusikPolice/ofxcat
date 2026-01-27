@@ -30,7 +30,7 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
-    private final DescriptionCategoryDao descriptionCategoryDao;
+    private final TransactionTokenDao transactionTokenDao;
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
@@ -39,7 +39,7 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
-        this.descriptionCategoryDao = injector.getInstance(DescriptionCategoryDao.class);
+        this.transactionTokenDao = new TransactionTokenDao();
         this.transferMatchingService = injector.getInstance(TransferMatchingService.class);
         this.transferDao = injector.getInstance(TransferDao.class);
     }
@@ -60,11 +60,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -94,11 +94,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -139,11 +139,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -183,11 +183,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -228,11 +228,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -278,11 +278,11 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         // Execute
         final SpyCli spyCli = new SpyCli(testCategory);
         final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, descriptionCategoryDao, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
                 categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao);
+                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -346,4 +346,3 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
         }
     }
 }
-

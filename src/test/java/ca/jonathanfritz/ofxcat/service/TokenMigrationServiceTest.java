@@ -5,7 +5,6 @@ import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
@@ -28,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class TokenMigrationServiceTest extends AbstractDatabaseTest {
 
     private final CategoryDao categoryDao;
-    private final DescriptionCategoryDao descriptionCategoryDao;
     private final AccountDao accountDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final TransactionTokenDao transactionTokenDao;
@@ -37,7 +35,6 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
 
     public TokenMigrationServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
-        descriptionCategoryDao = injector.getInstance(DescriptionCategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
         transactionTokenDao = new TransactionTokenDao();
@@ -364,7 +361,6 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
                 connection,
                 categorizedTransactionDao,
                 transactionTokenDao,
-                descriptionCategoryDao,
                 categoryDao,
                 tokenNormalizer,
                 keywordRulesConfig

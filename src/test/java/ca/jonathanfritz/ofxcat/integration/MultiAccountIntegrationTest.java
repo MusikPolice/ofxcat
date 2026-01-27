@@ -7,6 +7,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.*;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
@@ -33,6 +34,7 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final TransactionTokenDao transactionTokenDao;
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
@@ -41,6 +43,7 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        this.transactionTokenDao = new TransactionTokenDao();
         this.transferMatchingService = injector.getInstance(TransferMatchingService.class);
         this.transferDao = injector.getInstance(TransferDao.class);
     }
@@ -87,10 +90,11 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         // Execute import
         SpyCli spyCli = new SpyCli();
         TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 
@@ -155,10 +159,11 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         // Execute
         SpyCli spyCli = new SpyCli(expense);
         TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 
@@ -211,10 +216,11 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
         SpyCli spyCli1 = new SpyCli();
         TransactionCategoryService tcs1 = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli1);
+                categoryDao, categorizedTransactionDao, spyCli1);
         TransactionImportService tis1 = new TransactionImportService(
                 spyCli1, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> firstImport = tis1.categorizeTransactions(checkingExport);
 
@@ -239,10 +245,11 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
         SpyCli spyCli2 = new SpyCli();
         TransactionCategoryService tcs2 = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli2);
+                categoryDao, categorizedTransactionDao, spyCli2);
         TransactionImportService tis2 = new TransactionImportService(
                 spyCli2, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> secondImport = tis2.categorizeTransactions(savingsExport);
 
@@ -284,10 +291,11 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         // Execute with a CLI that provides account name
         SpyCliWithAccountNaming spyCli = new SpyCliWithAccountNaming(category, "My New Account");
         TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, null, categorizedTransactionDao, spyCli);
+                categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
                 spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao);
+                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
+                transactionTokenDao, tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 

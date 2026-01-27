@@ -3,11 +3,8 @@ package ca.jonathanfritz.ofxcat.service;
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.DescriptionCategoryDao;
-import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
-import ca.jonathanfritz.ofxcat.datastore.dto.DescriptionCategory;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
@@ -17,7 +14,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import jakarta.inject.Inject;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,13 +21,10 @@ import java.util.stream.Collectors;
 public class TransactionCategoryService {
 
     private final CategoryDao categoryDao;
-    private final DescriptionCategoryDao descriptionCategoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
-    private final TransactionTokenDao transactionTokenDao;
     private final TokenNormalizer tokenNormalizer;
     private final TokenMatchingService tokenMatchingService;
     private final KeywordRulesConfig keywordRulesConfig;
-    private final Connection connection;
     private final CLI cli;
 
     private static final Logger logger = LogManager.getLogger(TransactionCategoryService.class);
@@ -39,69 +32,18 @@ public class TransactionCategoryService {
     @Inject
     public TransactionCategoryService(
             CategoryDao categoryDao,
-            DescriptionCategoryDao descriptionCategoryDao,
             CategorizedTransactionDao categorizedTransactionDao,
-            TransactionTokenDao transactionTokenDao,
             TokenNormalizer tokenNormalizer,
             TokenMatchingService tokenMatchingService,
             KeywordRulesConfig keywordRulesConfig,
-            Connection connection,
             CLI cli
     ) {
         this.categoryDao = categoryDao;
-        this.descriptionCategoryDao = descriptionCategoryDao;
         this.categorizedTransactionDao = categorizedTransactionDao;
-        this.transactionTokenDao = transactionTokenDao;
         this.tokenNormalizer = tokenNormalizer;
         this.tokenMatchingService = tokenMatchingService;
         this.keywordRulesConfig = keywordRulesConfig;
-        this.connection = connection;
         this.cli = cli;
-    }
-
-    // TODO: only used by tests. Remove?
-    public CategorizedTransaction put(Transaction newTransaction, Category newCategory) {
-        try (final DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            return put(t, newTransaction, newCategory);
-        } catch (SQLException ex) {
-            logger.error("Failed to insert categorized transaction",ex);
-            return null;
-        }
-    }
-
-    /**
-     * Maps the specified transaction's description to the specified category.
-     * Also stores normalized tokens for future token-based matching.
-     */
-    public CategorizedTransaction put(DatabaseTransaction t, Transaction newTransaction, Category newCategory) throws SQLException {
-        // if a DescriptionCategory with the specified description and category exists, use it. Otherwise, insert one
-        final DescriptionCategory descriptionCategory = descriptionCategoryDao.selectByDescriptionAndCategory(t, newTransaction.getDescription(), newCategory)
-                .or(() -> {
-                    logger.debug("Implicitly creating DescriptionCategory with description {} and Category {}", newTransaction.getDescription(), newCategory);
-                    try {
-                        return descriptionCategoryDao.insert(t, new DescriptionCategory(newTransaction.getDescription(), newCategory));
-                    } catch (SQLException ex) {
-                        logger.error("Failed to insert into descriptionCategoryDao", ex);
-                        return Optional.empty();
-                    }
-                })
-                .orElseThrow(() -> new SQLException("Failed to put categorized transaction"));
-
-        // Store normalized tokens for future token-based matching (only for non-UNKNOWN categories)
-        if (!Category.UNKNOWN.equals(newCategory)) {
-            Set<String> tokens = tokenNormalizer.normalize(newTransaction.getDescription());
-            if (!tokens.isEmpty()) {
-                try {
-                    transactionTokenDao.insertTokens(t, descriptionCategory.getId(), tokens);
-                    logger.debug("Stored {} tokens for transaction: {}", tokens.size(), tokens);
-                } catch (SQLException ex) {
-                    // Log but don't fail - tokens are an optimization, not critical
-                    logger.warn("Failed to store tokens for transaction: {}", ex.getMessage());
-                }
-            }
-        }
-
-        return new CategorizedTransaction(newTransaction, descriptionCategory.getCategory());
     }
 
     /**
