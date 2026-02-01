@@ -93,10 +93,41 @@ public class OfxCat {
             throw new CliException("Import file path either does not exist or cannot be read");
         }
 
+        // Create database backup before import
+        backupDatabase();
+
         // TODO: show a progress bar?
         // TODO: retain scrolling list of categorizations on screen
         transactionImportService.importTransactions(pathToImportFile.toFile());
 
+        backupOfxFile(pathToImportFile);
+        deleteOfxFile(path, pathToImportFile);
+
+        cli.waitForInput("Press enter to exit");
+        cli.exit();
+    }
+
+    private void backupDatabase() throws CliException {
+        try {
+            final Path databasePath = pathUtils.getDatabasePath();
+            if (Files.exists(databasePath)) {
+                final Path backupDir = pathUtils.getBackupsPath();
+                if (!Files.isDirectory(backupDir)) {
+                    Files.createDirectories(backupDir);
+                }
+                final String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+                final Path backupPath = backupDir.resolve("ofxcat-" + today + ".db");
+                if (!Files.exists(backupPath)) {
+                    Files.copy(databasePath, backupPath);
+                    logger.info("Database backed up to {}", backupPath);
+                }
+            }
+        } catch (IOException ex) {
+            throw new CliException("Failed to backup database before import", ex);
+        }
+    }
+
+    private void backupOfxFile(Path pathToImportFile) throws CliException {
         try {
             // copy the imported file to the data directory so that we have a record of everything that has been imported
             final Path backupPath = pathUtils.getImportedFilesPath().resolve(pathToImportFile.getFileName());
@@ -109,7 +140,9 @@ public class OfxCat {
         } catch (IOException ex) {
             throw new CliException("Failed to copy imported file to data directory", ex);
         }
+    }
 
+    private void deleteOfxFile(String path, Path pathToImportFile) throws CliException {
         if (cli.promptYesNo(String.format("Delete import file %s?", path))) {
             try {
                 Files.delete(pathToImportFile);
@@ -117,9 +150,6 @@ public class OfxCat {
                 throw new CliException("Failed to delete import file", ex);
             }
         }
-
-        cli.waitForInput("Press enter to exit");
-        cli.exit();
     }
 
     private void reportTransactions(OfxCatOptions options) {

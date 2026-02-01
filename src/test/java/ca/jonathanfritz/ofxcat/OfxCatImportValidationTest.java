@@ -16,6 +16,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -171,13 +173,127 @@ class OfxCatImportValidationTest {
         assertEquals(fileContent, Files.readString(backupFile), "Backup content should match original");
     }
 
+    @Test
+    void databaseBackupCreatedBeforeImport() throws Exception {
+        // Setup: Create database file and valid import file
+        Path databaseFile = testPathUtils.getDatabasePath();
+        String dbContent = "database content";
+        Files.writeString(databaseFile, dbContent);
+
+        Path validFile = tempDir.resolve("valid.ofx");
+        Files.writeString(validFile, "<?xml version=\"1.0\"?><OFX></OFX>");
+
+        // Execute
+        ofxCat.importTransactions(validFile.toString());
+
+        // Verify: Database backup should exist
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        Path backupPath = testPathUtils.getBackupsPath().resolve("ofxcat-" + today + ".db");
+        assertTrue(Files.exists(backupPath), "Database backup should be created");
+        assertEquals(dbContent, Files.readString(backupPath), "Backup content should match database");
+    }
+
+    @Test
+    void databaseBackupDirectoryCreatedIfNotExists() throws Exception {
+        // Setup: Create database file, but backups directory doesn't exist
+        Path databaseFile = testPathUtils.getDatabasePath();
+        Files.writeString(databaseFile, "database content");
+
+        Path validFile = tempDir.resolve("valid.ofx");
+        Files.writeString(validFile, "<?xml version=\"1.0\"?><OFX></OFX>");
+
+        // Verify: Backups directory doesn't exist yet
+        assertFalse(Files.exists(testPathUtils.getBackupsPath()));
+
+        // Execute
+        ofxCat.importTransactions(validFile.toString());
+
+        // Verify: Backups directory should be created
+        assertTrue(Files.isDirectory(testPathUtils.getBackupsPath()),
+                "Backups directory should be created");
+    }
+
+    @Test
+    void databaseBackupSkippedIfAlreadyExistsForToday() throws Exception {
+        // Setup: Create database file and existing backup for today
+        Path databaseFile = testPathUtils.getDatabasePath();
+        String originalDbContent = "original database content";
+        Files.writeString(databaseFile, originalDbContent);
+
+        Path backupsDir = testPathUtils.getBackupsPath();
+        Files.createDirectories(backupsDir);
+
+        String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        Path existingBackup = backupsDir.resolve("ofxcat-" + today + ".db");
+        String existingBackupContent = "existing backup content";
+        Files.writeString(existingBackup, existingBackupContent);
+
+        Path validFile = tempDir.resolve("valid.ofx");
+        Files.writeString(validFile, "<?xml version=\"1.0\"?><OFX></OFX>");
+
+        // Execute
+        ofxCat.importTransactions(validFile.toString());
+
+        // Verify: Existing backup should not be overwritten
+        assertEquals(existingBackupContent, Files.readString(existingBackup),
+                "Existing backup should not be overwritten");
+    }
+
+    @Test
+    void importFailsGracefullyIfBackupFails() throws Exception {
+        // Setup: Create database file and configure PathUtils to fail backup
+        Path databaseFile = testPathUtils.getDatabasePath();
+        Files.writeString(databaseFile, "database content");
+
+        // Create a file where the backup directory should be, so createDirectories will fail
+        Path blockerFile = tempDir.resolve("blocker-file");
+        Files.writeString(blockerFile, "this is a file, not a directory");
+
+        testPathUtils.setFailBackup(true);
+
+        Path validFile = tempDir.resolve("valid.ofx");
+        Files.writeString(validFile, "<?xml version=\"1.0\"?><OFX></OFX>");
+
+        // Execute & Verify: Should throw CliException
+        CliException exception = assertThrows(CliException.class, () -> {
+            ofxCat.importTransactions(validFile.toString());
+        });
+
+        assertTrue(exception.getMessage().contains("backup"),
+                "Error message should mention backup failure, got: " + exception.getMessage());
+        assertFalse(importServiceCalled, "Import service should not be called when backup fails");
+    }
+
+    @Test
+    void databaseBackupSkippedIfNoDatabaseExists() throws Exception {
+        // Setup: Valid import file, but no database file exists
+        Path validFile = tempDir.resolve("valid.ofx");
+        Files.writeString(validFile, "<?xml version=\"1.0\"?><OFX></OFX>");
+
+        // Verify: Database doesn't exist
+        assertFalse(Files.exists(testPathUtils.getDatabasePath()));
+
+        // Execute: Should not throw, backup is skipped
+        assertDoesNotThrow(() -> {
+            ofxCat.importTransactions(validFile.toString());
+        });
+
+        assertTrue(importServiceCalled, "Import service should be called");
+        // Backups directory may or may not exist (implementation doesn't create it if no db)
+    }
+
     // Test doubles
 
     private class TestPathUtils extends PathUtils {
         private final Path basePath;
+        private boolean failBackup = false;
 
         TestPathUtils(Path basePath) {
             this.basePath = basePath;
+        }
+
+        void setFailBackup(boolean failBackup) {
+            this.failBackup = failBackup;
         }
 
         @Override
@@ -197,6 +313,21 @@ class OfxCatImportValidationTest {
         @Override
         public Path getDataPath() {
             return basePath;
+        }
+
+        @Override
+        public Path getBackupsPath() {
+            if (failBackup) {
+                // Return a path inside a file (not a directory) to cause IOException
+                // when createDirectories is called
+                return basePath.resolve("blocker-file").resolve("backups");
+            }
+            return basePath.resolve("backups");
+        }
+
+        @Override
+        public Path getDatabasePath() {
+            return basePath.resolve("ofxcat.db");
         }
     }
 

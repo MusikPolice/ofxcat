@@ -23,6 +23,14 @@ public class PathUtils {
         return getDataPath().resolve("imported");
     }
 
+    public Path getBackupsPath() {
+        return getDataPath().resolve("backups");
+    }
+
+    public Path getDatabasePath() {
+        return getDataPath().resolve("ofxcat.db");
+    }
+
     /**
      * Returns the full path to the config directory (~/.ofxcat).
      * This is where config.yaml and keyword-rules.yaml are stored.
