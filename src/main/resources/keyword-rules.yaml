@@ -27,6 +27,9 @@ rules:
   - keywords: [starbucks]
     category: RESTAURANTS
 
+  - keywords: [chickfila]
+    category: RESTAURANTS
+
   - keywords: [mcdonalds, mcdonald]
     category: RESTAURANTS
 
@@ -76,8 +79,19 @@ rules:
     match_all: true
     category: RESTAURANTS
 
+  - keywords: [arbys]
+    match_all: true
+    category: RESTAURANTS
+
   # Canadian Restaurant Chains
   - keywords: [swiss, chalet]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [statemain]
+    category: RESTAURANTS
+
+  - keywords: [new, york, fries]
     match_all: true
     category: RESTAURANTS
 
@@ -96,6 +110,13 @@ rules:
     match_all: true
     category: RESTAURANTS
 
+  - keywords: [quiznos]
+    category: RESTAURANTS
+
+  - keywords: [mr, sub]
+    match_all: true
+    category: RESTAURANTS
+
   - keywords: [earls]
     category: RESTAURANTS
 
@@ -108,11 +129,22 @@ rules:
   - keywords: [kelseys]
     category: RESTAURANTS
 
-  - keywords: [east, side, marios]
+  - keywords: [east, side, mario]
     match_all: true
     category: RESTAURANTS
 
   - keywords: [caseys]
+    category: RESTAURANTS
+
+  - keywords: [ aw ]
+    category: RESTAURANTS
+
+  - keywords: [ crabby, joes ]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [ jack, astors ]
+    match_all: true
     category: RESTAURANTS
 
   # Coffee Shops
@@ -124,6 +156,7 @@ rules:
     category: RESTAURANTS
 
   - keywords: [peets, coffee]
+    match_all: true
     category: RESTAURANTS
 
   # Other Restaurant Chains
@@ -161,25 +194,79 @@ rules:
     match_all: true
     category: RESTAURANTS
 
-  # Asian Food
   - keywords: [panda, express]
     match_all: true
     category: RESTAURANTS
 
-  - keywords: [sushi]
+  # Food delivery apps
+  - keywords: [uber, eats]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [skip, the, dishes]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [doordash]
+    category: RESTAURANTS
+
+  - keywords: [ delivery ]
     category: RESTAURANTS
 
   # Generic food keywords (lower priority)
   - keywords: [pizza]
     category: RESTAURANTS
 
+  - keywords: [shawarma]
+    category: RESTAURANTS
+
   - keywords: [grill]
+    category: RESTAURANTS
+
+  - keywords: [ buffet ]
     category: RESTAURANTS
 
   - keywords: [cafe]
     category: RESTAURANTS
 
   - keywords: [bistro]
+    category: RESTAURANTS
+
+  - keywords: [ sushi ]
+    category: RESTAURANTS
+
+  - keywords: [ restaurant, restaurants ]
+    category: RESTAURANTS
+
+  - keywords: [ coffee ]
+    category: RESTAURANTS
+
+  - keywords: [ thai ]
+    category: RESTAURANTS
+
+  - keywords: [ chinese ]
+    category: RESTAURANTS
+
+  - keywords: [ ramen ]
+    category: RESTAURANTS
+
+  - keywords: [ bakery ]
+    category: RESTAURANTS
+
+  - keywords: [ pasta ]
+    category: RESTAURANTS
+
+  - keywords: [ ice, cream ]
+    match_all: true
+    category: RESTAURANTS
+
+  - keywords: [ pho ]
+    category: RESTAURANTS
+
+  - keywords: [ burrito ]
+    category: RESTAURANTS
+
+  - keywords: [ pita ]
     category: RESTAURANTS
 
   # ============================================
@@ -255,9 +342,6 @@ rules:
   - keywords: [costco]
     category: GROCERIES
 
-  - keywords: [walmart, wal-mart]
-    category: GROCERIES
-
   # US Chains in Canada
   - keywords: [whole, foods]
     match_all: true
@@ -292,30 +376,43 @@ rules:
   - keywords: [macs]
     category: GROCERIES
 
+  # Generic grocery keywords (lower priority)
+  - keywords: [foods]
+    category: GROCERIES
+
+  - keywords: [ grocery, groceries ]
+    category: GROCERIES
+
+  - keywords: [ supermarket ]
+    category: GROCERIES
+
+  - keywords: [ butcher ]
+    category: GROCERIES
+
   # ============================================
   # PHARMACY
   # ============================================
-  - keywords: [shoppers, drug]
+  - keywords: [ cvs ]
+    category: PHARMACY
+
+  - keywords: [ london, drugs ]
     match_all: true
+    category: PHARMACY
+
+  - keywords: [shoppers, drug, mart]
+    match_all: true
+    category: PHARMACY
+
+  - keywords: [ pharmasave ]
     category: PHARMACY
 
   - keywords: [rexall]
     category: PHARMACY
 
-  - keywords: [pharmasave]
-    category: PHARMACY
-
-  - keywords: [london, drugs]
-    match_all: true
-    category: PHARMACY
-
-  - keywords: [cvs]
-    category: PHARMACY
-
   - keywords: [walgreens]
     category: PHARMACY
 
-  - keywords: [jean, coutu]
+  - keywords: [ well, ca ]
     match_all: true
     category: PHARMACY
 
@@ -325,147 +422,316 @@ rules:
   # ============================================
   # SHOPPING - General Retail
   # ============================================
-  - keywords: [amazon]
+  - keywords: [amazon, amzn]
     category: SHOPPING
 
-  - keywords: [canadian, tire]
+  - keywords: [ chapters ]
+    category: SHOPPING
+
+  - keywords: [ ebay ]
+    category: SHOPPING
+
+  - keywords: [ etsy ]
+    category: SHOPPING
+
+  - keywords: [ fabricland ]
+    category: SHOPPING
+
+  - keywords: [ fossil, canada ]
     match_all: true
     category: SHOPPING
 
-  - keywords: [home, depot]
+  - keywords: [ hudsons, bay ]
     match_all: true
     category: SHOPPING
 
-  - keywords: [lowes, lowe]
+  - keywords: [ indigo ]
     category: SHOPPING
 
-  - keywords: [rona]
+  - keywords: [ kijiji ]
     category: SHOPPING
 
-  - keywords: [home, hardware]
+  - keywords: [ lego ]
+    category: SHOPPING
+
+  - keywords: [ marshalls ]
+    category: SHOPPING
+
+  - keywords: [ mastermind ]
+    category: SHOPPING
+
+  - keywords: [ michaels ]
+    category: SHOPPING
+
+  - keywords: [ party, city ]
     match_all: true
     category: SHOPPING
 
-  - keywords: [ikea]
+  - keywords: [ sears ]
     category: SHOPPING
 
-  - keywords: [dollarama]
+  - keywords: [ sephora ]
     category: SHOPPING
 
-  - keywords: [dollar, tree]
-    match_all: true
+  - keywords: [ simons ]
     category: SHOPPING
 
-  - keywords: [winners]
+  - keywords: [ staples ]
     category: SHOPPING
 
-  - keywords: [marshalls]
+  - keywords: [ target ]
     category: SHOPPING
 
-  - keywords: [homesense]
+  - keywords: [ walmart, wal-mart ]
     category: SHOPPING
 
-  - keywords: [bed, bath]
-    match_all: true
-    category: SHOPPING
-
-  - keywords: [staples]
-    category: SHOPPING
-
-  - keywords: [best, buy]
-    match_all: true
-    category: SHOPPING
-
-  - keywords: [the, source]
-    match_all: true
-    category: SHOPPING
-
-  - keywords: [walmart]
-    category: SHOPPING
-
-  - keywords: [target]
-    category: SHOPPING
-
-  - keywords: [hudson, bay]
-    match_all: true
-    category: SHOPPING
-
-  - keywords: [sears]
-    category: SHOPPING
-
-  - keywords: [nordstrom]
-    category: SHOPPING
-
-  - keywords: [simons]
+  - keywords: [ winners ]
     category: SHOPPING
 
   # Clothing
-  - keywords: [old, navy]
+  - keywords: [ aerie ]
+    category: CLOTHING
+
+  - keywords: [ american, eagle ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ aritzia ]
+    category: CLOTHING
+
+  - keywords: [banana, republic]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ bikini, village ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ carters ]
+    category: CLOTHING
+
+  - keywords: [ factory, shoe ]
+    category: CLOTHING
+
+  - keywords: [ foot, locker ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ gap ]
+    category: CLOTHING
+
+  - keywords: [ h&m, hm ]
+    category: CLOTHING
+
+  - keywords: [ la, senza ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ la, vie, en, rose ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ le, chateau ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ lids ]
+    category: CLOTHING
+
+  - keywords: [ lululemon, lululemoncom ]
+    category: CLOTHING
+
+  - keywords: [ marks, store ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ nordstrom ]
+    category: CLOTHING
+
+  - keywords: [ old, navy ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ oldnavy ]
+    category: CLOTHING
+
+  - keywords: [ rickis ]
+    category: CLOTHING
+
+  - keywords: [ roots ]
+    category: CLOTHING
+
+  - keywords: [ rwco ]
+    category: CLOTHING
+
+  - keywords: [ sport, chek ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ glass, hut, sun ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ torrid ]
+    category: CLOTHING
+
+  - keywords: [ uniqlo ]
+    category: CLOTHING
+
+  - keywords: [ victorias, secret ]
+    match_all: true
+    category: CLOTHING
+
+  - keywords: [ zara ]
+    category: CLOTHING
+
+  # Electronics
+  - keywords: [ apple, store ]
     match_all: true
     category: SHOPPING
 
-  - keywords: [gap]
-    category: SHOPPING
-
-  - keywords: [h&m, hm]
-    category: SHOPPING
-
-  - keywords: [zara]
-    category: SHOPPING
-
-  - keywords: [uniqlo]
-    category: SHOPPING
-
-  - keywords: [lululemon]
-    category: SHOPPING
-
-  - keywords: [roots]
-    category: SHOPPING
-
-  - keywords: [aritzia]
-    category: SHOPPING
-
-  - keywords: [marks, work]
+  - keywords: [ best, buy ]
     match_all: true
     category: SHOPPING
 
-  - keywords: [sport, chek]
+  - keywords: [ canada, computers ]
     match_all: true
     category: SHOPPING
 
-  # Pet Stores
+  - keywords: [ the, source ]
+    match_all: true
+    category: SHOPPING
+
+  # Housewares
+  - keywords: [ bed, bathbeyond ]
+    match_all: true
+    category: HOUSEWARES
+
+  - keywords: [ canadian, tire ]
+    match_all: true
+    category: HOUSEWARES
+
+  - keywords: [ cdn, tire ]
+    match_all: true
+    category: HOUSEWARES
+
+  - keywords: [ dollarama ]
+    category: HOUSEWARES
+
+  - keywords: [ dollar, tree ]
+    match_all: true
+    category: HOUSEWARES
+
+  - keywords: [ homesense ]
+    category: HOUSEWARES
+
+  - keywords: [ linen, chest ]
+    match_all: true
+    category: HOUSEWARES
+
+  # ===================================================================
+  # HOME RENOVATION - Home Improvement & Furniture
+  # ===================================================================
+  - keywords: [ home, depot ]
+    match_all: true
+    category: HOME_RENOVATION
+
+  - keywords: [ lowes, lowe ]
+    category: HOME_RENOVATION
+
+  - keywords: [ rona ]
+    category: HOME_RENOVATION
+
+  - keywords: [ home, hardware ]
+    match_all: true
+    category: HOME_RENOVATION
+
+  - keywords: [ ikea ]
+    category: HOME_RENOVATION
+
+  # ===================================================================
+  # PETS - Pet Stores & Supplies
+  # ===================================================================
   - keywords: [petsmart]
-    category: SHOPPING
+    category: PETS
 
   - keywords: [petco]
-    category: SHOPPING
+    category: PETS
 
   - keywords: [rens, pets]
     match_all: true
-    category: SHOPPING
+    category: PETS
 
   - keywords: [pet, valu]
     match_all: true
-    category: SHOPPING
+    category: PETS
 
-  # Books & Crafts
-  - keywords: [indigo]
-    category: SHOPPING
+  - keywords: [animal]
+    category: PETS
 
-  - keywords: [chapters]
-    category: SHOPPING
+  - keywords: [veterinary]
+    category: PETS
 
-  - keywords: [michaels]
-    category: SHOPPING
+  # ===================================================================
+  # HEALTH INSURANCE - Dentists, Opticians, Optometrists, and Massages
+  # ===================================================================
 
-  # Electronics
-  - keywords: [apple, store]
+  # health insurance providers
+  - keywords: [sunlife]
+    category: HEALTH_INSURANCE
+
+  - keywords: [ sun, life ]
     match_all: true
-    category: SHOPPING
+    category: HEALTH_INSURANCE
 
-  - keywords: [microsoft, store]
+  - keywords: [manulife]
+    category: HEALTH_INSURANCE
+
+  - keywords: [green, shield]
     match_all: true
-    category: SHOPPING
+    category: HEALTH_INSURANCE
+
+  - keywords: [blendable]
+    category: HEALTH_INSURANCE
+
+  - keywords: [equitable, life]
+    match_all: true
+    category: HEALTH_INSURANCE
+
+  - keywords: [ canada, life ]
+    match_all: true
+    category: HEALTH_INSURANCE
+
+  - keywords: [ greatwest, life ]
+    match_all: true
+    category: HEALTH_INSURANCE
+
+  - keywords: [desjardins, insurance]
+    match_all: true
+    category: HEALTH_INSURANCE
+
+  # generic health insurance keywords
+  - keywords: [dental, dentist, dentistry]
+    category: HEALTH_INSURANCE
+
+  - keywords: [optometrist, optometry]
+    category: HEALTH_INSURANCE
+
+  - keywords: [massage, rmt]
+    category: HEALTH_INSURANCE
+
+  - keywords: [chiropractor, chiropractic]
+    category: HEALTH_INSURANCE
+
+  - keywords: [physio, physiotherapy, physiotherapist]
+    category: HEALTH_INSURANCE
+
+  - keywords: [counselling]
+    category: HEALTH_INSURANCE
+
+  - keywords: [ health, insurance ]
+    match_all: true
+    category: HEALTH_INSURANCE
 
   # ============================================
   # ENTERTAINMENT - Streaming & Subscriptions
@@ -524,6 +790,10 @@ rules:
   - keywords: [kindle]
     category: ENTERTAINMENT
 
+  - keywords: [ microsoft, store ]
+    match_all: true
+    category: ENTERTAINMENT
+
   # Gaming
   - keywords: [steam, purchase]
     match_all: true
@@ -556,86 +826,161 @@ rules:
   - keywords: [stubhub]
     category: ENTERTAINMENT
 
+  # live events and concerts
+  - keywords: [live, nation]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [ ticketmaster ]
+    category: ENTERTAINMENT
+
+  - keywords: [ rogers, stadium ]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [centre, square, kitchener]
+    match_all: true
+    category: ENTERTAINMENT
+
+  - keywords: [stadium]
+    category: ENTERTAINMENT
+
+  - keywords: [ tickets ]
+    category: ENTERTAINMENT
+
   # ============================================
   # VEHICLES - Gas & Automotive
   # ============================================
-  - keywords: [shell]
+  - keywords: [ chevron ]
     category: VEHICLES
 
-  - keywords: [esso]
-    category: VEHICLES
-
-  - keywords: [petro, canada]
+  - keywords: [ cdn, tire, gasbar ]
     match_all: true
     category: VEHICLES
 
-  - keywords: [mobil]
-    category: VEHICLES
-
-  - keywords: [chevron]
-    category: VEHICLES
-
-  - keywords: [sunoco]
-    category: VEHICLES
-
-  - keywords: [ultramar]
-    category: VEHICLES
-
-  - keywords: [pioneer]
-    category: VEHICLES
-
-  - keywords: [husky]
-    category: VEHICLES
-
-  - keywords: [costco, gas]
+  - keywords: [ costco, gas ]
     match_all: true
+    category: VEHICLES
+
+  - keywords: [ esso ]
+    category: VEHICLES
+
+  - keywords: [ husky ]
+    category: VEHICLES
+
+  - keywords: [ mobil ]
+    category: VEHICLES
+
+  - keywords: [ petro, petrocanada ]
+    category: VEHICLES
+
+  - keywords: [ pioneer ]
+    category: VEHICLES
+
+  - keywords: [ shell ]
+    category: VEHICLES
+
+  - keywords: [ sunoco ]
+    category: VEHICLES
+
+  - keywords: [ ultramar ]
     category: VEHICLES
 
   # Electric Charging
-  - keywords: [flo, charging]
+  - keywords: [ flo, charging ]
     match_all: true
     category: VEHICLES
 
-  - keywords: [chargepoint]
+  - keywords: [ chargepoint ]
     category: VEHICLES
 
-  - keywords: [electrify]
+  - keywords: [ electrify ]
     category: VEHICLES
 
   # Auto Parts & Service
-  - keywords: [napa, auto]
+  - keywords: [ caa, membership ]
     match_all: true
     category: VEHICLES
 
-  - keywords: [partsource]
-    category: VEHICLES
-
-  - keywords: [midas]
-    category: VEHICLES
-
-  - keywords: [mister, lube]
+  - keywords: [ napa, auto ]
     match_all: true
     category: VEHICLES
 
-  - keywords: [jiffy, lube]
+  - keywords: [ partsource ]
+    category: VEHICLES
+
+  - keywords: [ midas ]
+    category: VEHICLES
+
+  - keywords: [ mister, lube ]
     match_all: true
+    category: VEHICLES
+
+  - keywords: [ jiffy, lube ]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [ car, wash ]
+    match_all: true
+    category: VEHICLES
+
+  - keywords: [ towing ]
+    category: VEHICLES
+
+  # Dealerships & Rentals
+  - keywords: [ buick ]
+    category: VEHICLES
+
+  - keywords: [ chevrolet ]
+    category: VEHICLES
+
+  - keywords: [ ford ]
+    category: VEHICLES
+
+  - keywords: [ gmc ]
+    category: VEHICLES
+
+  - keywords: [ mazda ]
+    category: VEHICLES
+
+  - keywords: [ subaru ]
+    category: VEHICLES
+
+  - keywords: [ tesla ]
+    category: VEHICLES
+
+  - keywords: [ toyota ]
     category: VEHICLES
 
   # Parking
-  - keywords: [impark]
+  - keywords: [ impark ]
     category: VEHICLES
 
-  - keywords: [indigo, parking]
+  - keywords: [ indigo, parking ]
     match_all: true
     category: VEHICLES
 
-  - keywords: [parking]
+  - keywords: [ parking ]
+    category: VEHICLES
+
+  ## Toll Roads
+  - keywords: [ etr ]
+    category: VEHICLES
+
+  ## Ride Sharing
+  - keywords: [ uber ]
+    category: VEHICLES
+
+  - keywords: [ lyft ]
+    category: VEHICLES
+
+  - keywords: [ taxi ]
     category: VEHICLES
 
   # ============================================
   # ALCOHOL - Liquor & Beer
   # ============================================
-  - keywords: [lcbo]
+  - keywords: [lcbo, rao]
     category: ALCOHOL
 
   - keywords: [beer, store]
@@ -664,6 +1009,21 @@ rules:
   - keywords: [alberta, liquor]
     match_all: true
     category: ALCOHOL
+
+  - keywords: [ beer, brewing, brewery ]
+    category: ALCOHOL
+
+  # ================================================
+  # PERSONAL_CARE - Salons, Barbers, Gyms, etc.
+  # ================================================
+  - keywords: [gym, fitness]
+    category: PERSONAL_CARE
+
+  - keywords: [gymnastics]
+    category: PERSONAL_CARE
+
+  - keywords: [barber, barbershop, salon]
+    category: PERSONAL_CARE
 
   # ============================================
   # UTILITIES - Telecom & Services
@@ -723,13 +1083,48 @@ rules:
     category: UTILITIES
 
   # ============================================
+  # MORTGAGE - Mortgage Payments
+  # ============================================
+  - keywords: [mortgage, mcap]
+    match_all: true
+    category: MORTGAGE
+
+  # ============================================
   # TRANSFERS - Bank Transfers
   # ============================================
   # Note: Transfer detection is primarily handled by TransferMatchingService
   # based on transaction type (XFER) and matching amounts.
   # These rules catch common transfer description patterns.
-  - keywords: [etransfer, e-transfer]
+  - keywords: [e-transfer, etransfer]
     category: TRANSFER
+
+  - keywords: [charge, service, etransfer, interac]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [fee,interac,abm,cr]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [ interest, payment ]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [ monthly, fee ]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [ service, fee ]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [ transfer, fee ]
+    match_all: true
+    category: BANK_FEES
+
+  - keywords: [ insurance, premium, loanprotector ]
+    match_all: true
+    category: BANK_FEES
 
   - keywords: [interac]
     category: TRANSFER
