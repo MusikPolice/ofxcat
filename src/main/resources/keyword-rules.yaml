@@ -634,20 +634,20 @@ rules:
   # ===================================================================
   - keywords: [ home, depot ]
     match_all: true
-    category: HOME_RENOVATION
+    category: HOME RENOVATION
 
   - keywords: [ lowes, lowe ]
-    category: HOME_RENOVATION
+    category: HOME RENOVATION
 
   - keywords: [ rona ]
-    category: HOME_RENOVATION
+    category: HOME RENOVATION
 
   - keywords: [ home, hardware ]
     match_all: true
-    category: HOME_RENOVATION
+    category: HOME RENOVATION
 
   - keywords: [ ikea ]
-    category: HOME_RENOVATION
+    category: HOME RENOVATION
 
   # ===================================================================
   # PETS - Pet Stores & Supplies
@@ -678,60 +678,60 @@ rules:
 
   # health insurance providers
   - keywords: [sunlife]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [ sun, life ]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [manulife]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [green, shield]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [blendable]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [equitable, life]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [ canada, life ]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [ greatwest, life ]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [desjardins, insurance]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   # generic health insurance keywords
   - keywords: [dental, dentist, dentistry]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [optometrist, optometry]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [massage, rmt]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [chiropractor, chiropractic]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [physio, physiotherapy, physiotherapist]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [counselling]
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   - keywords: [ health, insurance ]
     match_all: true
-    category: HEALTH_INSURANCE
+    category: HEALTH INSURANCE
 
   # ============================================
   # ENTERTAINMENT - Streaming & Subscriptions
@@ -1017,13 +1017,13 @@ rules:
   # PERSONAL_CARE - Salons, Barbers, Gyms, etc.
   # ================================================
   - keywords: [gym, fitness]
-    category: PERSONAL_CARE
+    category: PERSONAL CARE
 
   - keywords: [gymnastics]
-    category: PERSONAL_CARE
+    category: PERSONAL CARE
 
   - keywords: [barber, barbershop, salon]
-    category: PERSONAL_CARE
+    category: PERSONAL CARE
 
   # ============================================
   # UTILITIES - Telecom & Services
@@ -1100,31 +1100,31 @@ rules:
 
   - keywords: [charge, service, etransfer, interac]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [fee,interac,abm,cr]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [ interest, payment ]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [ monthly, fee ]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [ service, fee ]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [ transfer, fee ]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [ insurance, premium, loanprotector ]
     match_all: true
-    category: BANK_FEES
+    category: BANK FEES
 
   - keywords: [interac]
     category: TRANSFER
