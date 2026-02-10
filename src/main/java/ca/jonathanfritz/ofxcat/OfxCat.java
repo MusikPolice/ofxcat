@@ -7,6 +7,9 @@ import ca.jonathanfritz.ofxcat.config.AppConfigLoader;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
+import ca.jonathanfritz.ofxcat.matching.KeywordRule;
+import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
+import ca.jonathanfritz.ofxcat.matching.KeywordRulesLoader;
 import ca.jonathanfritz.ofxcat.matching.MatchingModule;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
@@ -30,6 +33,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * The entrypoint to the application
@@ -44,13 +48,15 @@ public class OfxCat {
     private final CategoryCombineService categoryCombineService;
     private final PathUtils pathUtils;
     private final CLI cli;
+    private final KeywordRulesConfig keywordRulesConfig;
+    private final AppConfig appConfig;
 
     private static final Logger logger = LogManager.getLogger(OfxCat.class);
 
     @Inject
     OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService,
            TokenMigrationService tokenMigrationService, CategoryCombineService categoryCombineService,
-           PathUtils pathUtils, CLI cli) {
+           PathUtils pathUtils, CLI cli, KeywordRulesConfig keywordRulesConfig, AppConfig appConfig) {
         this.flyway = flyway;
         this.transactionImportService = transactionImportService;
         this.reportingService = reportingService;
@@ -58,6 +64,8 @@ public class OfxCat {
         this.categoryCombineService = categoryCombineService;
         this.pathUtils = pathUtils;
         this.cli = cli;
+        this.keywordRulesConfig = keywordRulesConfig;
+        this.appConfig = appConfig;
     }
 
     private void migrateDatabase() {
@@ -220,8 +228,38 @@ public class OfxCat {
             cli.println(String.format("Complete: %d transactions moved from \"%s\" to \"%s\"",
                     result.transactionsMoved(), result.sourceName(), result.targetName()));
             cli.println(String.format("Category \"%s\" has been deleted.", result.sourceName()));
+
+            updateKeywordRulesIfNeeded(result.sourceName(), result.targetName());
         } catch (IllegalArgumentException ex) {
             cli.println("Error: " + ex.getMessage());
+        }
+    }
+
+    private void updateKeywordRulesIfNeeded(String sourceName, String targetName) {
+        List<KeywordRule> affectedRules = keywordRulesConfig.findRulesByCategory(sourceName);
+        if (affectedRules.isEmpty()) {
+            return;
+        }
+
+        cli.println(String.format("\nWarning: %d keyword rule(s) still reference category \"%s\":", affectedRules.size(), sourceName));
+        for (KeywordRule rule : affectedRules) {
+            cli.println(String.format("  keywords: %s -> %s", rule.getKeywords(), rule.getCategory()));
+        }
+
+        if (cli.promptYesNo(String.format("Update these rules to use \"%s\" instead?", targetName))) {
+            for (KeywordRule rule : affectedRules) {
+                rule.setCategory(targetName);
+            }
+
+            try {
+                Path rulesPath = appConfig.resolveKeywordRulesPath(pathUtils.getConfigPath());
+                KeywordRulesLoader loader = new KeywordRulesLoader();
+                loader.save(keywordRulesConfig, rulesPath);
+                cli.println(String.format("Keyword rules updated and saved to %s", rulesPath));
+            } catch (IOException ex) {
+                logger.error("Failed to save updated keyword rules", ex);
+                cli.println("Error: Failed to save updated keyword rules: " + ex.getMessage());
+            }
         }
     }
 

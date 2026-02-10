@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -181,6 +182,66 @@ class KeywordRulesLoaderTest {
         assertEquals(1, config.getRules().size());
         assertTrue(config.isAutoCategorizeEnabled()); // Default
         assertEquals("GROCERIES", config.findMatchingCategory(Set.of("costco")).orElse(null));
+    }
+
+    @Test
+    void savedFileCanBeReloaded() throws IOException {
+        // Setup: Build a config in memory
+        KeywordRulesConfig config = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("starbucks"), "RESTAURANTS"),
+                new KeywordRule(List.of("tim", "hortons"), "RESTAURANTS", true),
+                new KeywordRule(List.of("walmart"), "GROCERIES")
+        ));
+
+        // Execute: Save and reload
+        Path outputFile = tempDir.resolve("saved-rules.yaml");
+        loader.save(config, outputFile);
+        KeywordRulesConfig reloaded = loader.load(outputFile);
+
+        // Verify: Reloaded config matches original
+        assertEquals(config.getRules().size(), reloaded.getRules().size());
+        assertEquals("RESTAURANTS", reloaded.findMatchingCategory(Set.of("starbucks")).orElse(null));
+        assertEquals("RESTAURANTS", reloaded.findMatchingCategory(Set.of("tim", "hortons")).orElse(null));
+        assertEquals("GROCERIES", reloaded.findMatchingCategory(Set.of("walmart")).orElse(null));
+    }
+
+    @Test
+    void saveCreatesParentDirectories() throws IOException {
+        // Setup: Config and nested path
+        KeywordRulesConfig config = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("netflix"), "ENTERTAINMENT")
+        ));
+        Path nestedPath = tempDir.resolve("a").resolve("b").resolve("rules.yaml");
+
+        // Execute: Save to nested path
+        loader.save(config, nestedPath);
+
+        // Verify: File exists and is loadable
+        assertTrue(Files.exists(nestedPath));
+        KeywordRulesConfig reloaded = loader.load(nestedPath);
+        assertEquals(1, reloaded.getRules().size());
+    }
+
+    @Test
+    void saveOverwritesExistingFile() throws IOException {
+        // Setup: Save initial config
+        Path outputFile = tempDir.resolve("rules.yaml");
+        KeywordRulesConfig original = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("starbucks"), "RESTAURANTS")
+        ));
+        loader.save(original, outputFile);
+
+        // Execute: Overwrite with new config
+        KeywordRulesConfig updated = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("netflix"), "ENTERTAINMENT")
+        ));
+        loader.save(updated, outputFile);
+
+        // Verify: Reloaded config is the updated one
+        KeywordRulesConfig reloaded = loader.load(outputFile);
+        assertEquals(1, reloaded.getRules().size());
+        assertEquals("ENTERTAINMENT", reloaded.findMatchingCategory(Set.of("netflix")).orElse(null));
+        assertFalse(reloaded.findMatchingCategory(Set.of("starbucks")).isPresent());
     }
 
     @Test

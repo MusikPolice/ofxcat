@@ -75,6 +75,22 @@ public class KeywordRulesConfig {
     }
 
     /**
+     * Returns all rules whose category matches the given name (case-insensitive).
+     *
+     * @param categoryName the category name to search for
+     * @return matching rules, or an empty list if none match or input is null/blank
+     */
+    public List<KeywordRule> findRulesByCategory(String categoryName) {
+        if (categoryName == null || categoryName.isBlank()) {
+            return List.of();
+        }
+
+        return rules.stream()
+                .filter(rule -> categoryName.equalsIgnoreCase(rule.getCategory()))
+                .toList();
+    }
+
+    /**
      * Returns an empty configuration with no rules.
      */
     public static KeywordRulesConfig empty() {

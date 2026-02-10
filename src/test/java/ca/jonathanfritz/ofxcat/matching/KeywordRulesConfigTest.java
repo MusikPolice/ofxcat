@@ -161,6 +161,48 @@ class KeywordRulesConfigTest {
     }
 
     @Test
+    void findRulesByCategoryReturnsCaseInsensitiveMatches() {
+        // Setup: Rules with mixed case category names
+        KeywordRule rule1 = new KeywordRule(List.of("starbucks"), "RESTAURANTS");
+        KeywordRule rule2 = new KeywordRule(List.of("mcdonalds"), "Restaurants");
+        KeywordRule rule3 = new KeywordRule(List.of("walmart"), "GROCERIES");
+        KeywordRulesConfig config = new KeywordRulesConfig(List.of(rule1, rule2, rule3));
+
+        // Execute: Search case-insensitively
+        List<KeywordRule> result = config.findRulesByCategory("restaurants");
+
+        // Verify: Both restaurant rules returned
+        assertEquals(2, result.size());
+        assertTrue(result.contains(rule1));
+        assertTrue(result.contains(rule2));
+    }
+
+    @Test
+    void findRulesByCategoryReturnsEmptyListWhenNoMatch() {
+        // Setup: Rules that don't match
+        KeywordRulesConfig config = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("starbucks"), "RESTAURANTS")
+        ));
+
+        // Execute: Search for non-existent category
+        List<KeywordRule> result = config.findRulesByCategory("NONEXISTENT");
+
+        // Verify: Empty list returned
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findRulesByCategoryReturnsEmptyListForNullInput() {
+        KeywordRulesConfig config = new KeywordRulesConfig(List.of(
+                new KeywordRule(List.of("starbucks"), "RESTAURANTS")
+        ));
+
+        assertTrue(config.findRulesByCategory(null).isEmpty());
+        assertTrue(config.findRulesByCategory("").isEmpty());
+        assertTrue(config.findRulesByCategory("   ").isEmpty());
+    }
+
+    @Test
     void multipleRulesForSameCategory() {
         // Setup: Multiple rules mapping to same category
         KeywordRulesConfig config = new KeywordRulesConfig(List.of(

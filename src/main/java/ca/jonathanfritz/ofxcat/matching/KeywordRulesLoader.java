@@ -80,6 +80,22 @@ public class KeywordRulesLoader {
         }
     }
 
+    /**
+     * Saves a keyword rules configuration to a YAML file.
+     * Creates parent directories if they don't exist.
+     *
+     * @param config the configuration to save
+     * @param path the path to write the YAML file to
+     * @throws IOException if the file cannot be written
+     */
+    public void save(KeywordRulesConfig config, Path path) throws IOException {
+        if (path.getParent() != null && !Files.exists(path.getParent())) {
+            Files.createDirectories(path.getParent());
+        }
+        yamlMapper.writeValue(path.toFile(), config);
+        logger.info("Saved {} keyword rules to {}", config.getRules().size(), path);
+    }
+
     private KeywordRulesConfig loadFromPath(Path path) throws IOException {
         // Check if file is empty
         if (Files.size(path) == 0) {

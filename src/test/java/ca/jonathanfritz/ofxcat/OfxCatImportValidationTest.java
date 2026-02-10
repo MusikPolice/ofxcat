@@ -1,7 +1,9 @@
 package ca.jonathanfritz.ofxcat;
 
 import ca.jonathanfritz.ofxcat.cli.CLI;
+import ca.jonathanfritz.ofxcat.config.AppConfig;
 import ca.jonathanfritz.ofxcat.exception.CliException;
+import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
@@ -51,7 +53,9 @@ class OfxCatImportValidationTest {
                 new StubTokenMigrationService(),
                 new StubCategoryCombineService(),
                 testPathUtils,
-                new StubCLI()
+                new StubCLI(),
+                KeywordRulesConfig.empty(),
+                AppConfig.defaults()
         );
     }
 
