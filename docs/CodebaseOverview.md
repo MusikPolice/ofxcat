@@ -45,7 +45,8 @@ The application follows a **layered architecture** with dependency injection:
 │     CLI Layer (OfxCat, CLI)         │  ← Entry point, argument parsing
 ├─────────────────────────────────────┤
 │  Service Layer (Import, Category,   │  ← Business logic
-│   Reporting, TransferMatching)      │
+│   Reporting, TransferMatching,      │
+│   CategoryCombine)                  │
 ├─────────────────────────────────────┤
 │    DAO Layer (AccountDao, etc)      │  ← Data access
 ├─────────────────────────────────────┤
@@ -109,6 +110,23 @@ java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get transactions \
 - `--category-id`: Optional, filters to specific category
 
 Outputs a matrix with months as rows and categories as columns, showing total spending per category per month. Includes p50, p90, average, and total rows.
+
+#### Combine Categories
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar combine categories \
+  --source=DAYCARE --target="CHILD CARE"
+```
+- `--source`: Required. Name of the category to move transactions from.
+- `--target`: Required. Name of the category to move transactions to. Created if it doesn't exist.
+
+Moves all transactions from the source category to the target, then deletes the source. After a successful combine, if any keyword rules in `keyword-rules.yaml` reference the deleted category, the user is warned and offered to update the rules automatically.
+
+#### Rename Category
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar rename category \
+  --source=DAYCARE --target="CHILD CARE"
+```
+Alias for `combine categories`. Same behavior and options.
 
 #### Help
 ```bash
@@ -208,6 +226,7 @@ ca.jonathanfritz.ofxcat/
 │   ├── AppConfig.java
 │   └── AppConfigLoader.java
 ├── service/               # Business logic
+│   ├── CategoryCombineService.java
 │   ├── TransactionImportService.java
 │   ├── TransactionCategoryService.java
 │   ├── TransferMatchingService.java
@@ -529,6 +548,7 @@ src/test/java/ca/jonathanfritz/ofxcat/
 ├── io/
 │   └── OfxParserTest.java
 ├── service/
+│   ├── CategoryCombineServiceTest.java
 │   ├── ReportingServiceTest.java
 │   ├── TransactionCategoryServiceTest.java
 │   ├── TransactionImportServiceTest.java
@@ -536,6 +556,8 @@ src/test/java/ca/jonathanfritz/ofxcat/
 ├── utils/
 │   └── PathUtilsTest.java
 ├── AbstractDatabaseTest.java
+├── OfxCatImportValidationTest.java
+├── OfxCatParameterParsingTest.java
 ├── OfxCatTest.java
 └── TestUtils.java
 ```
@@ -557,7 +579,6 @@ Sample OFX files in `src/test/resources/`:
 - CLI not tested (marked "TODO: test me?")
 - `TransactionCategoryService` marked "TODO: Test me!"
 - `TransactionImportService` marked "TODO: Improve test coverage"
-- CLI parameter parsing not tested
 
 ---
 
@@ -619,7 +640,7 @@ From `OfxCat.java`:
 - **Line 147:** "add a way to export actual transactions, not just category sums"
   - Current reports only show aggregates
 - **Line 151:** "need a way to edit categories and category descriptions"
-  - Currently no way to rename/merge categories
+  - Combine/rename is now implemented; category descriptions still not editable
 - **Line 209:** "add group-by arg, values are category, day, week, month, year, type"
   - Reporting flexibility
 

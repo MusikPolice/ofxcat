@@ -34,7 +34,7 @@ Java 21 CLI application for importing and categorizing OFX bank transactions usi
 OfxCat.java (entry point, argument parsing)
     ↓
 Service Layer (TransactionImportService, TransactionCategoryService,
-               TransferMatchingService, ReportingService)
+               TransferMatchingService, ReportingService, CategoryCombineService)
     ↓
 DAO Layer (AccountDao, CategoryDao, CategorizedTransactionDao, etc.)
     ↓

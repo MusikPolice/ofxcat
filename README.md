@@ -28,15 +28,35 @@ Transfers between recognized accounts will be detected and automatically togethe
 ![Inter-account transfers](images/ofxcat-inter-account-transfers.png)
 
 #### Categorizing Transactions
-When a new transaction is found that is not recognized as an inter-account transfer, `ofxcat` attempts to categorize it by searching for previously imported transactions that have the same description as the newly found transaction. If all exact matches belong to the same category, the new transaction is automatically added to that category. 
+When a new transaction is found that is not recognized as an inter-account transfer, `ofxcat` attempts to categorize it using a four-tier strategy:
 
-If no previously imported transactions have a description that exactly matches that of the new transaction, `ofxcat` splits the description of the new transaction up into tokens and searches for previously imported transactions with descriptions that contain some or all of those tokens. If any matches are found, `ofxcat` asks if you would like to add the new transaction to one of the categories that the matching transactions belong to.
+1. **Keyword rules:** The transaction description is normalized into tokens and matched against configurable rules in `~/.ofxcat/keyword-rules.yaml`. If a rule matches, the transaction is automatically categorized. This is useful for common merchants like Amazon, Starbucks, etc.
+2. **Exact match:** `ofxcat` searches for previously imported transactions with the same description. If all exact matches belong to the same category, the new transaction is automatically added to that category.
+3. **Token match:** If no exact match is found, `ofxcat` splits the description into tokens and searches for previously imported transactions with overlapping tokens. If matches are found, `ofxcat` asks if you would like to add the new transaction to one of the matching categories.
+4. **Manual selection:** If none of the above strategies produce a match, `ofxcat` will allow you to choose from a list of all categories that it knows about, or to create a new category.
 
 ![Prompted to choose from existing categories](images/ofxcat-prompted-to-choose-category.png)
 
-If none of the proposed categories are suitable for the new transaction, `ofxcat` will allow you to choose from a list of all categories that it knows about, or to create a new category and add the new transaction to it.
+Because transaction descriptions are normalized into tokens before comparison, `ofxcat` can categorize transactions based on vendor names that differ only slightly. As an example, if you typically do groceries at Megamart #123 but decide to shop at Megamart #125 while visiting a different city, `ofxcat` will recognize the similarity in the transaction descriptions and offer to categorize the transaction from Megamart #125 as `GROCERIES`.
 
-Because transaction descriptions are compared using tokens and fuzzy string matching, `ofxcat` learns from patterns that it has seen in the past, and can categorize transactions based on vendor names that differ only slightly. As an example, if you typically do groceries at Megamart #123 but decide to shop at Megamart #125 while visiting a different city, `ofxcat` will recognize the similarity in the transaction descriptions and intuitively offer to categorize the transaction from Megamart #125 as `GROCERIES`.
+### Managing Categories
+
+Over time, you may end up with duplicate or poorly named categories. `ofxcat` provides commands to fix this.
+
+#### Combining Categories
+To merge all transactions from one category into another:
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar combine categories --source=DAYCARE --target="CHILD CARE"
+```
+This moves all transactions from DAYCARE to CHILD CARE, then deletes the DAYCARE category. If the target category doesn't exist, it will be created automatically.
+
+#### Renaming a Category
+The `rename` command is an alias for `combine` — it works exactly the same way:
+```bash
+java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar rename category --source=DAYCARE --target="CHILD CARE"
+```
+
+After a combine or rename, if any keyword rules in `keyword-rules.yaml` still reference the old category name, `ofxcat` will warn you and offer to update them automatically.
 
 ### Reports
 Once you have categorized some transactions, you can find out where your money is going by looking at how much is spent per category over a given period of time:
