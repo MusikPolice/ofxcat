@@ -210,11 +210,14 @@ public class OfxCat {
             CategoryCombineService.CombineResult result = categoryCombineService.combine(
                     options.source(),
                     options.target(),
-                    (current, total) -> cli.updateProgressBar("Combining", current, total)
+                    (current, total) -> cli.updateProgressBar("Moving", current, total)
             );
             cli.finishProgressBar();
 
-            cli.println(String.format("\nComplete: %d transactions moved from \"%s\" to \"%s\"",
+            if (result.targetCreated()) {
+                cli.println(String.format("\nCreated category \"%s\"", result.targetName()));
+            }
+            cli.println(String.format("Complete: %d transactions moved from \"%s\" to \"%s\"",
                     result.transactionsMoved(), result.sourceName(), result.targetName()));
             cli.println(String.format("Category \"%s\" has been deleted.", result.sourceName()));
         } catch (IllegalArgumentException ex) {
@@ -244,8 +247,12 @@ public class OfxCat {
                 "ofxcat combine categories --source=SOURCE --target=TARGET",
                 "   Moves all transactions from the source category to the target category,",
                 "   then deletes the source category. Useful for merging duplicate categories.",
+                "   The target category is created if it doesn't already exist.",
                 "   --source: Required. Name of the category to move transactions from.",
                 "   --target: Required. Name of the category to move transactions to.",
+                "ofxcat rename category --source=SOURCE --target=TARGET",
+                "   Alias for 'combine categories'. Renames a category by moving all its",
+                "   transactions to the target (created if it doesn't exist) and deleting the source.",
                 "ofxcat help",
                 "   Displays this help text"
         ));
@@ -294,6 +301,9 @@ public class OfxCat {
                 case COMBINE:
                     ofxCat.combineCategories(getCombineOptions(args));
                     break;
+                case RENAME:
+                    ofxCat.combineCategories(getRenameOptions(args));
+                    break;
                 case HELP:
                     ofxCat.printHelp();
                     break;
@@ -336,6 +346,7 @@ public class OfxCat {
         GET,
         MIGRATE,
         COMBINE,
+        RENAME,
         HELP
     }
 
@@ -448,20 +459,31 @@ public class OfxCat {
         if (args.length < 2 || !"categories".equalsIgnoreCase(args[1])) {
             throw new CliException("Usage: ofxcat combine categories --source=SOURCE --target=TARGET");
         }
+        return parseSourceTargetOptions(args);
+    }
 
+    // Package-private for testing
+    static CombineOptions getRenameOptions(String[] args) throws CliException {
+        if (args.length < 2 || !"category".equalsIgnoreCase(args[1])) {
+            throw new CliException("Usage: ofxcat rename category --source=SOURCE --target=TARGET");
+        }
+        return parseSourceTargetOptions(args);
+    }
+
+    private static CombineOptions parseSourceTargetOptions(String[] args) throws CliException {
         try {
             final Options options = new Options();
             options.addOption(Option.builder()
                     .argName("s")
                     .longOpt("source")
-                    .desc("Name of the source category to combine from")
+                    .desc("Name of the source category")
                     .hasArg(true)
                     .required(true)
                     .build());
             options.addOption(Option.builder()
                     .argName("t")
                     .longOpt("target")
-                    .desc("Name of the target category to combine into")
+                    .desc("Name of the target category")
                     .hasArg(true)
                     .required(true)
                     .build());

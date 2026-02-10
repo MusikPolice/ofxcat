@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Combines two categories by moving all transactions from the source category
@@ -38,22 +39,30 @@ public class CategoryCombineService {
      * then deletes the source category.
      *
      * @param sourceName the name of the category to move transactions from
-     * @param targetName the name of the category to move transactions to
+     * @param targetName the name of the category to move transactions to (created if it doesn't exist)
      * @param progressCallback callback to report progress
      * @return a result describing what was done
-     * @throws IllegalArgumentException if either category doesn't exist or they are the same
+     * @throws IllegalArgumentException if the source category doesn't exist, or source and target are the same
      */
     public CombineResult combine(String sourceName, String targetName, MigrationProgressCallback progressCallback) {
         final Category source = categoryDao.select(sourceName)
                 .orElseThrow(() -> new IllegalArgumentException(
                         String.format("Source category \"%s\" does not exist", sourceName)));
 
-        final Category target = categoryDao.select(targetName)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        String.format("Target category \"%s\" does not exist", targetName)));
+        // look up the target, creating it if it doesn't exist
+        final Optional<Category> existingTarget = categoryDao.select(targetName);
+        final boolean targetCreated = existingTarget.isEmpty();
+        final Category target = existingTarget.orElseGet(() ->
+                categoryDao.insert(new Category(targetName))
+                        .orElseThrow(() -> new RuntimeException(
+                                String.format("Failed to create target category \"%s\"", targetName))));
 
         if (source.getId().equals(target.getId())) {
             throw new IllegalArgumentException("Source and target categories are the same");
+        }
+
+        if (targetCreated) {
+            logger.info("Created target category \"{}\"", target.getName());
         }
 
         final List<CategorizedTransaction> transactions = categorizedTransactionDao.selectByCategory(source);
@@ -84,11 +93,11 @@ public class CategoryCombineService {
         categoryDao.delete(source.getId());
         logger.info("Deleted source category \"{}\"", source.getName());
 
-        return new CombineResult(source.getName(), target.getName(), processed);
+        return new CombineResult(source.getName(), target.getName(), processed, targetCreated);
     }
 
     /**
      * The result of combining two categories.
      */
-    public record CombineResult(String sourceName, String targetName, int transactionsMoved) {}
+    public record CombineResult(String sourceName, String targetName, int transactionsMoved, boolean targetCreated) {}
 }

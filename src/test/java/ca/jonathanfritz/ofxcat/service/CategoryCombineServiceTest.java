@@ -106,15 +106,43 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
-    void combineFailsWhenTargetDoesNotExist() {
-        // Given: only source exists
-        categoryDao.insert(new Category("SOURCE")).orElse(null);
+    void combineCreatesTargetCategoryIfItDoesNotExist() {
+        // Given: source exists with transactions, target does not exist
+        Category source = categoryDao.insert(new Category("DAYCARE")).orElse(null);
+        CategorizedTransaction txn = insertTransaction("LITTLE LEARNERS", source);
 
-        // When/Then: combining with nonexistent target throws
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                categoryCombineService.combine("SOURCE", "NONEXISTENT", MigrationProgressCallback.NOOP)
+        // When: we combine into a nonexistent target
+        CategoryCombineService.CombineResult result = categoryCombineService.combine(
+                "DAYCARE", "CHILD CARE", MigrationProgressCallback.NOOP
         );
-        assertTrue(ex.getMessage().contains("NONEXISTENT"));
+
+        // Then: the target was created and transactions were moved
+        assertEquals(1, result.transactionsMoved());
+        assertTrue(result.targetCreated());
+        assertEquals("CHILD CARE", result.targetName());
+
+        // And: the target category exists in the database
+        assertTrue(categoryDao.select("CHILD CARE").isPresent());
+
+        // And: the transaction belongs to the new category
+        CategorizedTransaction updated = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        assertNotNull(updated);
+        assertEquals("CHILD CARE", updated.getCategory().getName());
+    }
+
+    @Test
+    void combineReportsTargetNotCreatedWhenItAlreadyExists() {
+        // Given: both categories exist
+        categoryDao.insert(new Category("SRC")).orElse(null);
+        categoryDao.insert(new Category("DST")).orElse(null);
+
+        // When: we combine
+        CategoryCombineService.CombineResult result = categoryCombineService.combine(
+                "SRC", "DST", MigrationProgressCallback.NOOP
+        );
+
+        // Then: targetCreated is false
+        assertFalse(result.targetCreated());
     }
 
     @Test

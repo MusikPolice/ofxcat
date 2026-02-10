@@ -404,5 +404,48 @@ class OfxCatParameterParsingTest {
         // Execute & Verify
         assertThrows(CliException.class, () -> OfxCat.getCombineOptions(args));
     }
+
+    @Test
+    void getModeWithValidRenameMode() throws CliException {
+        // Setup: Valid RENAME mode
+        String[] args = {"rename", "category", "--source=DAYCARE", "--target=CHILD CARE"};
+
+        // Execute
+        OfxCat.Mode mode = OfxCat.getMode(args);
+
+        // Verify
+        assertEquals(OfxCat.Mode.RENAME, mode);
+    }
+
+    @Test
+    void getRenameOptionsWithValidSourceAndTarget() throws CliException {
+        // Setup: Valid source and target
+        String[] args = {"rename", "category", "--source=DAYCARE", "--target=CHILD CARE"};
+
+        // Execute
+        OfxCat.CombineOptions options = OfxCat.getRenameOptions(args);
+
+        // Verify
+        assertEquals("DAYCARE", options.source());
+        assertEquals("CHILD CARE", options.target());
+    }
+
+    @Test
+    void getRenameOptionsRequiresCategoryConcern() {
+        // Setup: Missing "category" keyword
+        String[] args = {"rename", "--source=DAYCARE", "--target=CHILD CARE"};
+
+        // Execute & Verify
+        assertThrows(CliException.class, () -> OfxCat.getRenameOptions(args));
+    }
+
+    @Test
+    void getRenameOptionsRejectsPluralCategories() {
+        // Setup: "categories" (plural) is not valid for rename
+        String[] args = {"rename", "categories", "--source=DAYCARE", "--target=CHILD CARE"};
+
+        // Execute & Verify: rename expects singular "category"
+        assertThrows(CliException.class, () -> OfxCat.getRenameOptions(args));
+    }
 }
 
