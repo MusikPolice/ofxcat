@@ -352,5 +352,57 @@ class OfxCatParameterParsingTest {
         assertNotNull(date);
         assertEquals("2100-12-31", date.toString());
     }
+
+    @Test
+    void getModeWithValidCombineMode() throws CliException {
+        // Setup: Valid COMBINE mode
+        String[] args = {"combine", "categories", "--source=BANK_FEES", "--target=BANK FEES"};
+
+        // Execute
+        OfxCat.Mode mode = OfxCat.getMode(args);
+
+        // Verify
+        assertEquals(OfxCat.Mode.COMBINE, mode);
+    }
+
+    @Test
+    void getCombineOptionsWithValidSourceAndTarget() throws CliException {
+        // Setup: Valid source and target
+        String[] args = {"combine", "categories", "--source=BANK_FEES", "--target=BANK FEES"};
+
+        // Execute
+        OfxCat.CombineOptions options = OfxCat.getCombineOptions(args);
+
+        // Verify
+        assertEquals("BANK_FEES", options.source());
+        assertEquals("BANK FEES", options.target());
+    }
+
+    @Test
+    void getCombineOptionsWithMissingSource() {
+        // Setup: Missing required --source
+        String[] args = {"combine", "categories", "--target=BANK FEES"};
+
+        // Execute & Verify
+        assertThrows(CliException.class, () -> OfxCat.getCombineOptions(args));
+    }
+
+    @Test
+    void getCombineOptionsWithMissingTarget() {
+        // Setup: Missing required --target
+        String[] args = {"combine", "categories", "--source=BANK_FEES"};
+
+        // Execute & Verify
+        assertThrows(CliException.class, () -> OfxCat.getCombineOptions(args));
+    }
+
+    @Test
+    void getCombineOptionsRequiresCategoriesConcern() {
+        // Setup: Missing "categories" keyword
+        String[] args = {"combine", "--source=BANK_FEES", "--target=BANK FEES"};
+
+        // Execute & Verify
+        assertThrows(CliException.class, () -> OfxCat.getCombineOptions(args));
+    }
 }
 

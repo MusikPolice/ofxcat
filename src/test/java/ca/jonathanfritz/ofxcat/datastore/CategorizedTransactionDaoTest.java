@@ -115,6 +115,32 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     }
 
     @Test
+    public void selectByCategoryWithoutDateFilterTest() {
+        // need an account and two categories
+        final Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        final Category restaurants = categoryDao.insert(new Category("RESTAURANTS")).orElse(null);
+
+        // insert transactions across different dates into the target category
+        final List<CategorizedTransaction> expected = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            expected.add(
+                    categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), groceries)).orElse(null)
+            );
+        }
+
+        // insert a transaction in a different category
+        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants)).orElse(null);
+
+        // selectByCategory without date filter should return only groceries transactions
+        List<CategorizedTransaction> actual = categorizedTransactionDao.selectByCategory(groceries);
+        Assertions.assertEquals(expected.size(), actual.size());
+        for (CategorizedTransaction expectedTxn : expected) {
+            Assertions.assertTrue(actual.stream().anyMatch(a -> a.getId().equals(expectedTxn.getId())));
+        }
+    }
+
+    @Test
     void isDuplicateSuccessTest() throws SQLException {
         // need a category
         final Category category = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);

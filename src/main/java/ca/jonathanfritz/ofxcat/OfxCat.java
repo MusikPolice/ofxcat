@@ -8,6 +8,7 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.matching.MatchingModule;
+import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
@@ -40,6 +41,7 @@ public class OfxCat {
     private final TransactionImportService transactionImportService;
     private final ReportingService reportingService;
     private final TokenMigrationService tokenMigrationService;
+    private final CategoryCombineService categoryCombineService;
     private final PathUtils pathUtils;
     private final CLI cli;
 
@@ -47,11 +49,13 @@ public class OfxCat {
 
     @Inject
     OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService,
-           TokenMigrationService tokenMigrationService, PathUtils pathUtils, CLI cli) {
+           TokenMigrationService tokenMigrationService, CategoryCombineService categoryCombineService,
+           PathUtils pathUtils, CLI cli) {
         this.flyway = flyway;
         this.transactionImportService = transactionImportService;
         this.reportingService = reportingService;
         this.tokenMigrationService = tokenMigrationService;
+        this.categoryCombineService = categoryCombineService;
         this.pathUtils = pathUtils;
         this.cli = cli;
     }
@@ -199,6 +203,25 @@ public class OfxCat {
         }
     }
 
+    private void combineCategories(CombineOptions options) {
+        cli.println(String.format("Combining category \"%s\" into \"%s\"...\n", options.source(), options.target()));
+
+        try {
+            CategoryCombineService.CombineResult result = categoryCombineService.combine(
+                    options.source(),
+                    options.target(),
+                    (current, total) -> cli.updateProgressBar("Combining", current, total)
+            );
+            cli.finishProgressBar();
+
+            cli.println(String.format("\nComplete: %d transactions moved from \"%s\" to \"%s\"",
+                    result.transactionsMoved(), result.sourceName(), result.targetName()));
+            cli.println(String.format("Category \"%s\" has been deleted.", result.sourceName()));
+        } catch (IllegalArgumentException ex) {
+            cli.println("Error: " + ex.getMessage());
+        }
+    }
+
     private void printHelp() {
         cli.println(Arrays.asList(
                 "ofxcat import [FILENAME]",
@@ -218,6 +241,11 @@ public class OfxCat {
                 "   Re-runs token migration on all transactions, applying current keyword rules.",
                 "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
                 "   --dry-run: Optional. Show what would change without making actual changes.",
+                "ofxcat combine categories --source=SOURCE --target=TARGET",
+                "   Moves all transactions from the source category to the target category,",
+                "   then deletes the source category. Useful for merging duplicate categories.",
+                "   --source: Required. Name of the category to move transactions from.",
+                "   --target: Required. Name of the category to move transactions to.",
                 "ofxcat help",
                 "   Displays this help text"
         ));
@@ -263,6 +291,9 @@ public class OfxCat {
                 case MIGRATE:
                     ofxCat.runMigration(getMigrateOptions(args));
                     break;
+                case COMBINE:
+                    ofxCat.combineCategories(getCombineOptions(args));
+                    break;
                 case HELP:
                     ofxCat.printHelp();
                     break;
@@ -304,8 +335,8 @@ public class OfxCat {
         IMPORT,
         GET,
         MIGRATE,
+        COMBINE,
         HELP
-
     }
 
     // Package-private for testing
@@ -411,4 +442,40 @@ public class OfxCat {
 
     // Package-private for testing
     record MigrateOptions(boolean dryRun) { }
+
+    // Package-private for testing
+    static CombineOptions getCombineOptions(String[] args) throws CliException {
+        if (args.length < 2 || !"categories".equalsIgnoreCase(args[1])) {
+            throw new CliException("Usage: ofxcat combine categories --source=SOURCE --target=TARGET");
+        }
+
+        try {
+            final Options options = new Options();
+            options.addOption(Option.builder()
+                    .argName("s")
+                    .longOpt("source")
+                    .desc("Name of the source category to combine from")
+                    .hasArg(true)
+                    .required(true)
+                    .build());
+            options.addOption(Option.builder()
+                    .argName("t")
+                    .longOpt("target")
+                    .desc("Name of the target category to combine into")
+                    .hasArg(true)
+                    .required(true)
+                    .build());
+
+            final CommandLineParser commandLineParser = new DefaultParser();
+            final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
+            final String source = commandLine.getOptionValue("source");
+            final String target = commandLine.getOptionValue("target");
+            return new CombineOptions(source, target);
+        } catch (ParseException e) {
+            throw new CliException("Failed to parse options", e);
+        }
+    }
+
+    // Package-private for testing
+    record CombineOptions(String source, String target) { }
 }

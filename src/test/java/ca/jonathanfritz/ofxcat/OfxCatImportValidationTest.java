@@ -2,6 +2,7 @@ package ca.jonathanfritz.ofxcat;
 
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.exception.CliException;
+import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
@@ -48,6 +49,7 @@ class OfxCatImportValidationTest {
                 new StubTransactionImportService(),
                 new StubReportingService(),
                 new StubTokenMigrationService(),
+                new StubCategoryCombineService(),
                 testPathUtils,
                 new StubCLI()
         );
@@ -368,6 +370,12 @@ class OfxCatImportValidationTest {
         @Override
         public MigrationReport migrateExistingTransactions() {
             return new MigrationReport();
+        }
+    }
+
+    private static class StubCategoryCombineService extends CategoryCombineService {
+        StubCategoryCombineService() {
+            super(null, null, null);
         }
     }
 

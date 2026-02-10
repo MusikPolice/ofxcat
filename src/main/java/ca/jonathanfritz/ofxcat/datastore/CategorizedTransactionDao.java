@@ -117,6 +117,22 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Finds all categorized transactions that belong to the specified category
+     * @param category the category that returned transactions belong to
+     * @return a list of matching {@link CategorizedTransaction}, sorted by date ascending
+     */
+    public List<CategorizedTransaction> selectByCategory(final Category category) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to get all CategorizedTransactions in Category {}", category);
+            final String query = "SELECT * FROM CategorizedTransaction WHERE category_id = ? ORDER BY date ASC";
+            return t.query(query, ps -> ps.setLong(1, category.getId()), categorizedTransactionDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to get CategorizedTransactions in Category {}", category, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Finds all categorized transactions that belong to the specified category, and that occurred between the specified dates
      * @param category the category that returned transactions belong to
      * @param startDate the earliest date on which a returned transaction can occur, inclusive

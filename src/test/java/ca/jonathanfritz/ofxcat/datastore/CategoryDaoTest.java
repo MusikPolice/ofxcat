@@ -141,6 +141,29 @@ class CategoryDaoTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void deleteSuccessTest() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // insert a category, then delete it
+        final Category inserted = categoryDao.insert(new Category("Doomed Category")).get();
+        final boolean deleted = categoryDao.delete(inserted.getId());
+
+        // verify it was deleted
+        Assertions.assertTrue(deleted);
+        Assertions.assertFalse(categoryDao.select(inserted.getId()).isPresent());
+    }
+
+    @Test
+    void deleteNonExistentCategoryReturnsFalse() {
+        final CategoryDao categoryDao = new CategoryDao(connection);
+
+        // attempt to delete a category that doesn't exist
+        final boolean deleted = categoryDao.delete(99999L);
+
+        Assertions.assertFalse(deleted);
+    }
+
+    @Test
     void getOrCreateReturnsDefaultCategoriesIfQueried() {
         final CategoryDao categoryDao = new CategoryDao(connection);
 

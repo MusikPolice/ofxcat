@@ -121,6 +121,27 @@ public class CategoryDao {
     }
 
     /**
+     * Deletes the {@link Category} with the specified id from the database
+     * @param categoryId the primary key of the Category to delete
+     * @return true if the Category was deleted, false if it did not exist
+     */
+    public boolean delete(long categoryId) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            return delete(t, categoryId);
+        } catch (SQLException e) {
+            logger.error("Failed to delete Category with id {}", categoryId, e);
+            return false;
+        }
+    }
+
+    boolean delete(DatabaseTransaction t, long categoryId) throws SQLException {
+        logger.debug("Attempting to delete Category with id {}", categoryId);
+        final String deleteStatement = "DELETE FROM Category WHERE id = ?";
+        int rowsDeleted = t.execute(deleteStatement, ps -> ps.setLong(1, categoryId));
+        return rowsDeleted > 0;
+    }
+
+    /**
      * Gets the {@link Category} with the specified name from the database, creating it if it doesn't exist.
      * This is useful when keyword rules reference categories that may not yet exist in the database.
      *
