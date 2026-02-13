@@ -14,8 +14,10 @@ import ca.jonathanfritz.ofxcat.service.ReportingService;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,7 +31,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
 
-    public ReportingWorkflowIntegrationTest() {
+    ReportingWorkflowIntegrationTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -302,7 +304,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     private static class SpyCli extends CLI {
         private final List<String> capturedLines = new ArrayList<>();
 
-        public SpyCli() {
+        SpyCli() {
             super(null, null);
         }
 

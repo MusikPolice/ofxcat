@@ -79,7 +79,7 @@ public class TransferDao {
     }
 
     public Optional<Transfer> insert(Transfer transferToInsert) {
-        try(DatabaseTransaction t = new DatabaseTransaction(connection)) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             return insert(t, transferToInsert);
         } catch (SQLException e) {
             logger.error("Failed to insert Transfer {}", transferToInsert, e);

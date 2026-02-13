@@ -68,7 +68,7 @@ class TransferDaoTest extends AbstractDatabaseTest {
         final CategorizedTransaction source = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER)).get();
         final CategorizedTransaction sink = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER)).get();
 
-        try (final DatabaseTransaction t = new DatabaseTransaction(connection)) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // the transfer is not a duplicate before it has been inserted
             Transfer expected = new Transfer(source, sink);
             Assertions.assertFalse(transferDao.isDuplicate(t, expected));

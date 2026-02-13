@@ -18,7 +18,12 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
@@ -31,7 +36,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public TransactionCategoryServiceTest() {
+    TransactionCategoryServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -251,7 +256,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         private final Category category;
         private final List<Category> capturedCategories = new ArrayList<>();
 
-        public SpyCli(Category category) {
+        SpyCli(Category category) {
             super(null, null);
             this.category = category;
         }

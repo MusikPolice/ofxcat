@@ -9,7 +9,11 @@ import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
-import ca.jonathanfritz.ofxcat.datastore.dto.*;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
@@ -21,7 +25,11 @@ import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,7 +48,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
-    public ImportFlowIntegrationTest() {
+    ImportFlowIntegrationTest() {
         this.transactionCleanerFactory = new TransactionCleanerFactory();
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
@@ -291,7 +299,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         private int categoryIndex = 0;
         private int transactionCount = 0;
 
-        public SpyCli(List<Category> categoriesToReturn) {
+        SpyCli(List<Category> categoriesToReturn) {
             super(null, null);
             this.categoriesToReturn = categoriesToReturn;
         }

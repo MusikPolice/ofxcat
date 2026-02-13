@@ -1,8 +1,6 @@
 package ca.jonathanfritz.ofxcat.matching;
 
 import ca.jonathanfritz.ofxcat.config.AppConfig;
-import ca.jonathanfritz.ofxcat.config.AppConfigLoader;
-import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;

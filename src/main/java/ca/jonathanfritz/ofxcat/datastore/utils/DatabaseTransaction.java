@@ -85,7 +85,9 @@ public class DatabaseTransaction implements Closeable {
      * @return a copy of the persisted entity that has its id attribute populated with the primary key of the persisted
      * record
      */
-    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> Optional<T> insert(String insertStatement,
+            SqlConsumer<PreparedStatement> statementPreparer,
+            SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax

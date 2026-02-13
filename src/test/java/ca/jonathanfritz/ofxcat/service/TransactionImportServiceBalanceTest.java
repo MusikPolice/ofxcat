@@ -3,7 +3,11 @@ package ca.jonathanfritz.ofxcat.service;
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
-import ca.jonathanfritz.ofxcat.datastore.*;
+import ca.jonathanfritz.ofxcat.datastore.AccountDao;
+import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
+import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
+import ca.jonathanfritz.ofxcat.datastore.TransferDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
@@ -34,7 +38,7 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
-    public TransactionImportServiceBalanceTest() {
+    TransactionImportServiceBalanceTest() {
         this.transactionCleanerFactory = new TransactionCleanerFactory();
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
@@ -320,7 +324,7 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
     private static class SpyCli extends ca.jonathanfritz.ofxcat.cli.CLI {
         private final Category category;
 
-        public SpyCli(Category category) {
+        SpyCli(Category category) {
             super(null, null);
             this.category = category;
         }

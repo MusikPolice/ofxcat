@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'checkstyle'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -85,6 +86,23 @@ jar {
                 'Multi-Release': 'true'
         )
     }
+}
+
+// Static analysis: Checkstyle enforces consistent code style
+checkstyle {
+    toolVersion = '10.21.4'
+    configFile = file('config/checkstyle/checkstyle.xml')
+    configDirectory = file('config/checkstyle')
+    // Fail the build on any style violation
+    maxWarnings = 0
+    maxErrors = 0
+}
+
+// Single command to verify the project is ready for review
+tasks.register('verify') {
+    dependsOn 'checkstyleMain', 'checkstyleTest', 'test'
+    group = 'verification'
+    description = 'Runs all verification tasks: tests, checkstyle'
 }
 
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)

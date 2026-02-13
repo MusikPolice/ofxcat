@@ -33,7 +33,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public TokenMigrationServiceTest() {
+    TokenMigrationServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);

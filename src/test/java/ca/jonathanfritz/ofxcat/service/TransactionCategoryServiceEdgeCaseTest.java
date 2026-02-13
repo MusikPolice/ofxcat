@@ -18,7 +18,11 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Edge case tests for TransactionCategoryService focusing on fuzzy matching thresholds,
@@ -33,7 +37,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public TransactionCategoryServiceEdgeCaseTest() {
+    TransactionCategoryServiceEdgeCaseTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -356,7 +360,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
         private final List<Category> capturedCategories = new ArrayList<>();
         private boolean wasPromptedForNewCategory = false;
 
-        public SpyCli(Category category) {
+        SpyCli(Category category) {
             super(null, null);
             this.category = category;
         }

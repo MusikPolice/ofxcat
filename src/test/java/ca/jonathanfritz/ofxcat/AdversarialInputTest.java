@@ -26,7 +26,7 @@ class AdversarialInputTest extends AbstractDatabaseTest {
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao transactionDao;
 
-    public AdversarialInputTest() {
+    AdversarialInputTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.transactionDao = injector.getInstance(CategorizedTransactionDao.class);

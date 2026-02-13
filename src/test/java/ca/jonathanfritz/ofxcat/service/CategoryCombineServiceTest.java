@@ -26,7 +26,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public CategoryCombineServiceTest() {
+    CategoryCombineServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);

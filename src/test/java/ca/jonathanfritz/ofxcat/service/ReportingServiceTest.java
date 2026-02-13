@@ -10,17 +10,17 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import org.apache.commons.lang3.Range;
-import org.checkerframework.checker.units.qual.A;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -186,37 +186,37 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 "January 2022",
                 CURRENCY_FORMATTER.format(expected.get(0).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(0).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(1));
+        ), spyCli.getCapturedLines().get(1));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "February 2022",
                 CURRENCY_FORMATTER.format(expected.get(1).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(1).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(2));
+        ), spyCli.getCapturedLines().get(2));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "March 2022",
                 CURRENCY_FORMATTER.format(expected.get(2).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(2).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(3));
+        ), spyCli.getCapturedLines().get(3));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "April 2022",
                 CURRENCY_FORMATTER.format(expected.get(3).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(3).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(4));
+        ), spyCli.getCapturedLines().get(4));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "May 2022",
                 CURRENCY_FORMATTER.format(expected.get(4).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(4).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(5));
+        ), spyCli.getCapturedLines().get(5));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "June 2022",
                 CURRENCY_FORMATTER.format(expected.get(5).get(TRANSFER)),
                 CURRENCY_FORMATTER.format(expected.get(5).get(UNKNOWN)))
-        ),spyCli.getCapturedLines().get(6));
+        ), spyCli.getCapturedLines().get(6));
 
         // stats are tested in a dedicated method with fixed values
     }
@@ -255,50 +255,50 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 "January 2022",
                 CURRENCY_FORMATTER.format(2f),
                 CURRENCY_FORMATTER.format(-3f))
-        ),spyCli.getCapturedLines().get(1));
+        ), spyCli.getCapturedLines().get(1));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "February 2022",
                 CURRENCY_FORMATTER.format(4f),
                 CURRENCY_FORMATTER.format(-6f))
-        ),spyCli.getCapturedLines().get(2));
+        ), spyCli.getCapturedLines().get(2));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "March 2022",
                 CURRENCY_FORMATTER.format(6f),
                 CURRENCY_FORMATTER.format(-9f))
-        ),spyCli.getCapturedLines().get(3));
+        ), spyCli.getCapturedLines().get(3));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "April 2022",
                 CURRENCY_FORMATTER.format(8f),
                 CURRENCY_FORMATTER.format(-12f))
-        ),spyCli.getCapturedLines().get(4));
+        ), spyCli.getCapturedLines().get(4));
 
         // stats
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "p50",
                 CURRENCY_FORMATTER.format(4f),
                 CURRENCY_FORMATTER.format(-6f))
-        ),spyCli.getCapturedLines().get(5));
+        ), spyCli.getCapturedLines().get(5));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "p90",
                 CURRENCY_FORMATTER.format(6f),
                 CURRENCY_FORMATTER.format(-9f))
-        ),spyCli.getCapturedLines().get(6));
+        ), spyCli.getCapturedLines().get(6));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "avg",
                 CURRENCY_FORMATTER.format(5f),
                 CURRENCY_FORMATTER.format(-7.5f))
-        ),spyCli.getCapturedLines().get(7));
+        ), spyCli.getCapturedLines().get(7));
 
         Assertions.assertEquals(String.join(CSV_DELIMITER, Arrays.asList(
                 "total",
                 CURRENCY_FORMATTER.format(20f),
                 CURRENCY_FORMATTER.format(-30f))
-        ),spyCli.getCapturedLines().get(8));
+        ), spyCli.getCapturedLines().get(8));
     }
 
     @Test
@@ -411,7 +411,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
 
         private final List<String> capturedLines = new ArrayList<>();
 
-        public SpyCli() {
+        SpyCli() {
             super(null, null);
         }
 

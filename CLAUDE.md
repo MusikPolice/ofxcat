@@ -9,6 +9,9 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 ## Build Commands
 
 ```bash
+# Verify everything before committing (tests + checkstyle)
+./gradlew verify
+
 # Build everything including fat JAR
 ./gradlew clean build shadowJar
 
@@ -21,9 +24,14 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 # Run a specific test method
 ./gradlew test --tests "ca.jonathanfritz.ofxcat.datastore.AccountDaoTest.testSelectById"
 
+# Run checkstyle only
+./gradlew checkstyleMain checkstyleTest
+
 # Run the application
 java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
 ```
+
+**Before committing, always run `./gradlew verify`** to confirm tests pass and code style is clean.
 
 ## Architecture Overview
 
@@ -86,3 +94,4 @@ Schema managed by Flyway migrations in `src/main/resources/db/migration/`. Key t
 
 - `docs/GenAIGuide.md` - Collaboration rules and coding standards (required reading)
 - `docs/CodebaseOverview.md` - Comprehensive technical documentation
+- `docs/StaticAnalysis.md` - Checkstyle configuration, static analysis rules, and how to fix violations

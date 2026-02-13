@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+    <!-- Log4jLogger uses intentional one-liner methods for a thin adapter pattern -->
+    <suppress files="Log4jLogger\.java" checks="LeftCurly"/>
+
+    <!-- Test method names commonly use underscores for readability (e.g., methodName_scenario_expectedResult) -->
+    <suppress files=".*Test\.java$" checks="MethodName"/>
+</suppressions>

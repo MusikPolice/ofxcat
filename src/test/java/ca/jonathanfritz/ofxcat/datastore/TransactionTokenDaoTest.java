@@ -5,7 +5,6 @@ import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
-import ca.jonathanfritz.ofxcat.datastore.dto.TransactionToken;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import org.junit.jupiter.api.Test;
 

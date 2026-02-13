@@ -18,9 +18,12 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -366,7 +369,9 @@ public class CategorizedTransactionDao {
      */
     public Optional<CategorizedTransaction> insert(DatabaseTransaction t, CategorizedTransaction categorizedTransactionToInsert) throws SQLException {
         logger.debug("Attempting to insert CategorizedTransaction {}", categorizedTransactionToInsert);
-        final String insertStatement = "INSERT INTO CategorizedTransaction (type, date, amount, description, account_id, category_id, balance, fitId) VALUES (?, ?, ROUND(?,2), ?, ?, ?, ROUND(?,2), ?);";
+        final String insertStatement = "INSERT INTO CategorizedTransaction "
+                + "(type, date, amount, description, account_id, category_id, balance, fitId) "
+                + "VALUES (?, ?, ROUND(?,2), ?, ?, ?, ROUND(?,2), ?);";
         return t.insert(insertStatement, ps -> {
             ps.setString(1, categorizedTransactionToInsert.getType().name());
             ps.setDate(2, Date.valueOf(categorizedTransactionToInsert.getDate()));

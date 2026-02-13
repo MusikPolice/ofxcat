@@ -9,7 +9,11 @@ import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
 import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
-import ca.jonathanfritz.ofxcat.datastore.dto.*;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
@@ -28,7 +32,13 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -79,7 +89,7 @@ public class TransactionImportService {
 
         logger.debug("Attempting to parse file {}", inputFile);
         final List<OfxExport> ofxTransactions;
-        try (final FileInputStream inputStream = new FileInputStream(inputFile)) {
+        try (FileInputStream inputStream = new FileInputStream(inputFile)) {
             ofxTransactions = ofxParser.parse(inputStream);
         } catch (FileNotFoundException e) {
             throw new OfxCatException("File not found", e);

@@ -1,6 +1,5 @@
 package ca.jonathanfritz.ofxcat.utils;
 
-import ca.jonathanfritz.ofxcat.OfxCat;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -48,7 +47,7 @@ public class PathUtils {
     /**
      * Joins multiple file path components together, ensuring that exactly one instance of {@link File#separator} is between each component
      */
-    public Path join(String ...components) {
+    public Path join(String... components) {
         final StringBuilder sb = new StringBuilder();
         for (String component : components) {
             if (sb.length() == 0) {

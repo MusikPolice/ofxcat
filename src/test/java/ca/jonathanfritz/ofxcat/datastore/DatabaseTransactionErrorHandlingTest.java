@@ -21,7 +21,7 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
 
-    public DatabaseTransactionErrorHandlingTest() {
+    DatabaseTransactionErrorHandlingTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
     }

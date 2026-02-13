@@ -213,13 +213,13 @@ class CLIInputValidationTest {
         private final Category categoryToReturn;
         private final String nameToReturn;
 
-        public TestCLI(Category categoryToReturn) {
+        TestCLI(Category categoryToReturn) {
             super(null, null);
             this.categoryToReturn = categoryToReturn;
             this.nameToReturn = null;
         }
 
-        public TestCLI(String nameToReturn) {
+        TestCLI(String nameToReturn) {
             super(null, null);
             this.categoryToReturn = null;
             this.nameToReturn = nameToReturn;
@@ -240,7 +240,7 @@ class CLIInputValidationTest {
     private static class AccountTestCLI extends CLI {
         private final String accountNameToReturn;
 
-        public AccountTestCLI(String accountNameToReturn) {
+        AccountTestCLI(String accountNameToReturn) {
             super(null, null);
             this.accountNameToReturn = accountNameToReturn;
         }

@@ -9,7 +9,11 @@ import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
-import ca.jonathanfritz.ofxcat.datastore.dto.*;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
@@ -21,7 +25,9 @@ import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,7 +44,7 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
     private final TransferMatchingService transferMatchingService;
     private final TransferDao transferDao;
 
-    public MultiAccountIntegrationTest() {
+    MultiAccountIntegrationTest() {
         this.transactionCleanerFactory = new TransactionCleanerFactory();
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
@@ -328,12 +334,12 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
         private int transferCount = 0;
         private int transactionCount = 0;
 
-        public SpyCli() {
+        SpyCli() {
             super(null, null);
             this.categoryToReturn = null;
         }
 
-        public SpyCli(Category categoryToReturn) {
+        SpyCli(Category categoryToReturn) {
             super(null, null);
             this.categoryToReturn = categoryToReturn;
         }
@@ -382,7 +388,7 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
     private static class SpyCliWithAccountNaming extends SpyCli {
         private final String accountNameToReturn;
 
-        public SpyCliWithAccountNaming(Category categoryToReturn, String accountNameToReturn) {
+        SpyCliWithAccountNaming(Category categoryToReturn, String accountNameToReturn) {
             super(categoryToReturn);
             this.accountNameToReturn = accountNameToReturn;
         }
