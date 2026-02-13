@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'checkstyle'
+    id 'pmd'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -98,11 +99,20 @@ checkstyle {
     maxErrors = 0
 }
 
+// Static analysis: PMD detects common code smells and potential bugs
+pmd {
+    toolVersion = '7.14.0'
+    consoleOutput = true
+    ruleSetFiles = files('config/pmd/ruleset.xml')
+    // Fail the build on any PMD violation
+    ignoreFailures = false
+}
+
 // Single command to verify the project is ready for review
 tasks.register('verify') {
-    dependsOn 'checkstyleMain', 'checkstyleTest', 'test'
+    dependsOn 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'test'
     group = 'verification'
-    description = 'Runs all verification tasks: tests, checkstyle'
+    description = 'Runs all verification tasks: tests, checkstyle, pmd'
 }
 
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)

@@ -127,18 +127,16 @@ public class ReportingService {
                         .collect(Collectors.joining(CSV_DELIMITER));
     }
 
-    public void reportTransactionsInCategory(final Long categoryId, final LocalDate startDate, LocalDate endDate) {
+    public void reportTransactionsInCategory(final Long categoryId, final LocalDate startDate, final LocalDate endDate) {
         // input validation
         final Category category = categoryDao.select(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Category with id " + categoryId + " does not exist"));
         if (startDate == null) {
             throw new IllegalArgumentException("Start date must be specified");
         }
-        if (endDate == null) {
-            endDate = LocalDate.now();
-        }
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date " + startDate + " must be before end date " + endDate);
+        final LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
+        if (startDate.isAfter(effectiveEndDate)) {
+            throw new IllegalArgumentException("Start date " + startDate + " must be before end date " + effectiveEndDate);
         }
 
         // get all transactions in the specified category
@@ -150,7 +148,7 @@ public class ReportingService {
 
         // generate one line for each transaction
         final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        categorizedTransactionDao.selectByCategory(category, startDate, endDate).stream()
+        categorizedTransactionDao.selectByCategory(category, startDate, effectiveEndDate).stream()
                 .map(CategorizedTransaction::getTransaction)
                 .forEach(transaction -> {
                     amounts.add(transaction.getAmount());

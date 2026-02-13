@@ -97,21 +97,21 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void accountListingReport() {
         // Setup: Create multiple accounts
-        Account checking = accountDao.insert(Account.newBuilder()
+        accountDao.insert(Account.newBuilder()
                 .setName("Primary Checking")
                 .setAccountNumber("1234567890")
                 .setBankId("BANK001")
                 .setAccountType("CHECKING")
                 .build()).orElseThrow();
 
-        Account savings = accountDao.insert(Account.newBuilder()
+        accountDao.insert(Account.newBuilder()
                 .setName("High Yield Savings")
                 .setAccountNumber("9876543210")
                 .setBankId("BANK001")
                 .setAccountType("SAVINGS")
                 .build()).orElseThrow();
 
-        Account creditCard = accountDao.insert(Account.newBuilder()
+        accountDao.insert(Account.newBuilder()
                 .setName("Rewards Card")
                 .setAccountNumber("4111111111111111")
                 .setBankId("CARD_ISSUER")
@@ -147,9 +147,9 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void categoryListingReport() {
         // Setup: Create categories
-        Category groceries = categoryDao.insert(new Category("Groceries")).orElseThrow();
-        Category restaurants = categoryDao.insert(new Category("Dining Out")).orElseThrow();
-        Category entertainment = categoryDao.insert(new Category("Entertainment")).orElseThrow();
+        categoryDao.insert(new Category("Groceries")).orElseThrow();
+        categoryDao.insert(new Category("Dining Out")).orElseThrow();
+        categoryDao.insert(new Category("Entertainment")).orElseThrow();
 
         // Generate category report
         SpyCli spyCli = new SpyCli();
@@ -210,8 +210,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void reportWithNoTransactionsInRange() {
         // Setup: Create account and category but no transactions
-        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        Category category = categoryDao.insert(new Category("Empty Category")).orElseThrow();
+        accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+        categoryDao.insert(new Category("Empty Category")).orElseThrow();
 
         // Generate report for a period with no transactions
         SpyCli spyCli = new SpyCli();

@@ -30,6 +30,7 @@ public class ResultSetDeserializer<T extends Entity> implements SqlFunction<Tran
     }
 
     @Override
+    @SuppressWarnings("PMD.CloseResource") // ResultSet lifecycle is managed by TransactionState
     public List<T> apply(TransactionState transactionState) throws SQLException {
         final List<T> results = new ArrayList<>();
         final ResultSet resultSet = transactionState.getResultSet();

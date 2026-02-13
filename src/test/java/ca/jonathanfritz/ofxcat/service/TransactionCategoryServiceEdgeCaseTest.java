@@ -264,7 +264,7 @@ class TransactionCategoryServiceEdgeCaseTest extends AbstractDatabaseTest {
                     categoryDao, categorizedTransactionDao, spyCli);
 
             // Execute
-            final CategorizedTransaction result = service.categorizeTransaction(t, newAmazon);
+            service.categorizeTransaction(t, newAmazon);
 
             // Verify: User was prompted with all three categories
             Assertions.assertEquals(3, spyCli.capturedCategories.size());

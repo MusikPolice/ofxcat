@@ -179,7 +179,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineDoesNotAffectTransactionsInOtherCategories() {
         // Given: three categories, transactions in source and unrelated
         Category source = categoryDao.insert(new Category("SOURCE")).orElse(null);
-        Category target = categoryDao.insert(new Category("TARGET")).orElse(null);
+        categoryDao.insert(new Category("TARGET")).orElse(null);
         Category unrelated = categoryDao.insert(new Category("UNRELATED")).orElse(null);
         CategorizedTransaction unrelatedTxn = insertTransaction("UNRELATED TXN", unrelated);
 

@@ -195,14 +195,8 @@ public class CategorizedTransactionDao {
             return Collections.emptyList();
         }
 
-        final StringBuilder likeClauses = new StringBuilder("(");
-        for (int i = 0; i < tokens.size(); i++) {
-            if (likeClauses.length() > 1) {
-                likeClauses.append(" OR ");
-            }
-            likeClauses.append("description LIKE ?");
-        }
-        likeClauses.append(") ");
+        final String likeClauses = "(" + String.join(" OR ",
+                Collections.nCopies(tokens.size(), "description LIKE ?")) + ") ";
 
         final String selectStatement = "SELECT DISTINCT * " +
                 "FROM CategorizedTransaction " +

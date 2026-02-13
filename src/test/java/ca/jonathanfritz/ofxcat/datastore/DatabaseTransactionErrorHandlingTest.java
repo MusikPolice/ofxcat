@@ -113,9 +113,11 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
         // This test documents the current behavior.
 
         // Verify foreign keys are NOT enabled (SQLite default)
-        var rs = connection.createStatement().executeQuery("PRAGMA foreign_keys");
-        rs.next();
-        int fkEnabled = rs.getInt(1);
+        int fkEnabled;
+        try (var rs = connection.createStatement().executeQuery("PRAGMA foreign_keys")) {
+            rs.next();
+            fkEnabled = rs.getInt(1);
+        }
         assertEquals(0, fkEnabled,
                 "Foreign keys are disabled by default in SQLite (enabling breaks Flyway clean)");
 

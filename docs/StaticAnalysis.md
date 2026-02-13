@@ -87,6 +87,96 @@ When checkstyle reports a violation, the error message includes the rule name in
 | `WhitespaceAfter` | Add a space after commas, keywords, etc. |
 | `ConstantName` | Use `UPPER_SNAKE_CASE` or `camelCase` for `static final` fields |
 
+## PMD
+
+PMD detects common code smells, potential bugs, and dead code. It runs as part of `./gradlew verify` and will fail the build on any violation.
+
+### Configuration
+
+- **Ruleset file**: `config/pmd/ruleset.xml`
+- **PMD version**: 7.14.0
+- **Severity**: All violations are errors (zero tolerance)
+- **Console output**: Enabled (violations shown directly in build output)
+
+### Running PMD
+
+```bash
+# Run on main sources only
+./gradlew pmdMain
+
+# Run on test sources only
+./gradlew pmdTest
+
+# Run everything (tests + checkstyle + PMD)
+./gradlew verify
+```
+
+Reports are generated at:
+- `build/reports/pmd/main.html`
+- `build/reports/pmd/test.html`
+
+### What PMD Enforces
+
+#### Best Practices
+- **No unused local variables, private fields, or private methods**. Remove dead code.
+- **No unused assignments**. Don't assign a value that is never read.
+- **No parameter reassignment**. Use a local variable instead of overwriting a parameter.
+- **Use foreach loops** where possible instead of indexed for-loops.
+- **Use try-with-resources** for `AutoCloseable` resources.
+
+#### Code Style
+- **No empty control statements** (empty `if`, `while`, `for`, etc.).
+- **No unnecessary returns** at the end of void methods.
+- **No unnecessary semicolons**.
+- **No unnecessary boxing/unboxing** (e.g., `Integer.valueOf(42)` where autoboxing suffices).
+
+#### Design
+- **Simplify ternary expressions** (e.g., `x ? true : false` should be just `x`).
+- **No useless overriding methods** that only call `super`.
+
+#### Error Prone
+- **No empty catch blocks** (unless the exception variable is named `ignored` or `expected`).
+- **No decimal literals in BigDecimal constructors** (use string constructors).
+- **Close resources** after use (ResultSet, Connection, etc.).
+- **No comparison with NaN** (use `Double.isNaN()` instead).
+- **No `.equals(null)`** (use `== null` instead).
+- **Override both `equals` and `hashCode`** if either is defined.
+- **Return empty collections instead of null**.
+- **No unconditional if statements** (always-true or always-false conditions).
+
+#### Performance
+- **No `new String("literal")`** — use the string literal directly.
+- **No `.toString()` on String objects**.
+
+### Suppressions
+
+For false positives where PMD cannot understand the resource lifecycle, use the `@SuppressWarnings` annotation:
+
+```java
+@SuppressWarnings("PMD.CloseResource") // lifecycle managed by caller
+public void myMethod() { ... }
+```
+
+Current suppressions:
+
+| File | Suppressed Rule | Reason |
+|---|---|---|
+| `ResultSetDeserializer.java` | `CloseResource` | ResultSet lifecycle is managed by TransactionState |
+
+### Fixing Violations
+
+PMD output includes the rule name (e.g., `UnusedLocalVariable`). Common fixes:
+
+| Rule | Fix |
+|---|---|
+| `UnusedLocalVariable` | Remove the variable. If the method call has a needed side-effect, call it without assigning the result |
+| `UnusedPrivateMethod` | Delete the method |
+| `AvoidReassigningParameters` | Introduce a local variable (e.g., `final LocalDate effectiveDate = date != null ? date : LocalDate.now()`) |
+| `ForLoopCanBeForeach` | Convert `for (int i = 0; ...)` to `for (Type item : collection)`. If the loop variable isn't needed, consider `String.join` or `Collections.nCopies` |
+| `CloseResource` | Wrap in try-with-resources. If the resource lifecycle is managed elsewhere, suppress with `@SuppressWarnings("PMD.CloseResource")` |
+| `EmptyCatchBlock` | Add handling, or rename the exception variable to `ignored` or `expected` |
+| `ReturnEmptyCollectionRatherThanNull` | Return `Collections.emptyList()`, `Collections.emptySet()`, or `Collections.emptyMap()` instead of `null` |
+
 ## Verify Task
 
 The `verify` Gradle task is the single command that checks whether a change is ready to commit:
@@ -98,7 +188,9 @@ The `verify` Gradle task is the single command that checks whether a change is r
 It runs:
 1. `checkstyleMain` - style check on production code
 2. `checkstyleTest` - style check on test code
-3. `test` - the full test suite
+3. `pmdMain` - bug/smell detection on production code
+4. `pmdTest` - bug/smell detection on test code
+5. `test` - the full test suite
 
 If `verify` passes, the code is clean.
 
