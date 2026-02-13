@@ -148,8 +148,9 @@ public class OfxCat {
         try {
             // copy the imported file to the data directory so that we have a record of everything that has been imported
             final Path backupPath = pathUtils.getImportedFilesPath().resolve(pathToImportFile.getFileName());
-            if (!Files.isDirectory(backupPath.getParent())) {
-                Files.createDirectories(backupPath.getParent());
+            final Path backupDir = backupPath.getParent();
+            if (backupDir != null && !Files.isDirectory(backupDir)) {
+                Files.createDirectories(backupDir);
             }
             if (!Files.exists(backupPath)) {
                 Files.copy(pathToImportFile, backupPath);

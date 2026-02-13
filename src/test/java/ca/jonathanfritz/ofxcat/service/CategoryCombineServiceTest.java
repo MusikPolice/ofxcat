@@ -68,7 +68,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineDeletesSourceCategory() {
         // Given: two categories
         Category source = categoryDao.insert(new Category("OLD_NAME")).orElse(null);
-        categoryDao.insert(new Category("CORRECT NAME")).orElse(null);
+        categoryDao.insert(new Category("CORRECT NAME"));
 
         // When: we combine
         categoryCombineService.combine("OLD_NAME", "CORRECT NAME", MigrationProgressCallback.NOOP);
@@ -80,8 +80,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineWithEmptySourceCategoryStillDeletesIt() {
         // Given: source category exists but has no transactions
-        categoryDao.insert(new Category("EMPTY_CAT")).orElse(null);
-        categoryDao.insert(new Category("TARGET_CAT")).orElse(null);
+        categoryDao.insert(new Category("EMPTY_CAT"));
+        categoryDao.insert(new Category("TARGET_CAT"));
 
         // When: we combine
         CategoryCombineService.CombineResult result = categoryCombineService.combine(
@@ -96,7 +96,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineFailsWhenSourceDoesNotExist() {
         // Given: only target exists
-        categoryDao.insert(new Category("TARGET")).orElse(null);
+        categoryDao.insert(new Category("TARGET"));
 
         // When/Then: combining with nonexistent source throws
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
@@ -133,8 +133,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineReportsTargetNotCreatedWhenItAlreadyExists() {
         // Given: both categories exist
-        categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("SRC"));
+        categoryDao.insert(new Category("DST"));
 
         // When: we combine
         CategoryCombineService.CombineResult result = categoryCombineService.combine(
@@ -148,7 +148,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineFailsWhenSourceAndTargetAreTheSame() {
         // Given: a category
-        categoryDao.insert(new Category("SAME")).orElse(null);
+        categoryDao.insert(new Category("SAME"));
 
         // When/Then: combining a category with itself throws
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
@@ -160,8 +160,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineReportsCorrectSourceAndTargetNames() {
         // Given: two categories
-        categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("SRC"));
+        categoryDao.insert(new Category("DST"));
         insertTransaction("SOME TXN", categoryDao.select("SRC").get());
 
         // When: we combine
@@ -179,7 +179,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineDoesNotAffectTransactionsInOtherCategories() {
         // Given: three categories, transactions in source and unrelated
         Category source = categoryDao.insert(new Category("SOURCE")).orElse(null);
-        categoryDao.insert(new Category("TARGET")).orElse(null);
+        categoryDao.insert(new Category("TARGET"));
         Category unrelated = categoryDao.insert(new Category("UNRELATED")).orElse(null);
         CategorizedTransaction unrelatedTxn = insertTransaction("UNRELATED TXN", unrelated);
 
@@ -198,7 +198,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineInvokesProgressCallback() {
         // Given: source has 3 transactions
         Category source = categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("DST"));
         insertTransaction("TXN 1", source);
         insertTransaction("TXN 2", source);
         insertTransaction("TXN 3", source);

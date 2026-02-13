@@ -89,8 +89,9 @@ public class KeywordRulesLoader {
      * @throws IOException if the file cannot be written
      */
     public void save(KeywordRulesConfig config, Path path) throws IOException {
-        if (path.getParent() != null && !Files.exists(path.getParent())) {
-            Files.createDirectories(path.getParent());
+        final Path parentDir = path.getParent();
+        if (parentDir != null && !Files.exists(parentDir)) {
+            Files.createDirectories(parentDir);
         }
         yamlMapper.writeValue(path.toFile(), config);
         logger.info("Saved {} keyword rules to {}", config.getRules().size(), path);

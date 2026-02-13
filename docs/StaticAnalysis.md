@@ -177,6 +177,106 @@ PMD output includes the rule name (e.g., `UnusedLocalVariable`). Common fixes:
 | `EmptyCatchBlock` | Add handling, or rename the exception variable to `ignored` or `expected` |
 | `ReturnEmptyCollectionRatherThanNull` | Return `Collections.emptyList()`, `Collections.emptySet()`, or `Collections.emptyMap()` instead of `null` |
 
+## SpotBugs
+
+SpotBugs analyzes compiled bytecode to detect bug patterns including null pointer dereferences, resource leaks, incorrect API usage, and performance issues. It runs as part of `./gradlew verify` and will fail the build on any violation.
+
+### Configuration
+
+- **Exclusion filter**: `config/spotbugs/exclusion-filter.xml`
+- **SpotBugs version**: 4.9.8 (via Gradle plugin 6.4.8)
+- **Effort**: MAX (deepest analysis)
+- **Report level**: MEDIUM (reports medium and high confidence findings)
+- **Severity**: All violations are errors (zero tolerance)
+
+### Running SpotBugs
+
+```bash
+# Run on main sources only
+./gradlew spotbugsMain
+
+# Run on test sources only
+./gradlew spotbugsTest
+
+# Run everything (tests + checkstyle + PMD + SpotBugs)
+./gradlew verify
+```
+
+Reports are generated at:
+- `build/reports/spotbugs/main.html`
+- `build/reports/spotbugs/test.html`
+
+### What SpotBugs Detects
+
+SpotBugs operates on compiled bytecode, so it catches issues that source-level tools miss.
+
+#### Correctness
+- **Null pointer dereferences** from unchecked return values (e.g., `Path.getParent()` can return null).
+- **Floating point equality** using `==` instead of `Double.compare()` or epsilon comparison.
+- **Incorrect API usage** (e.g., `new String(byte[])` without specifying charset).
+
+#### Performance
+- **Inefficient map iteration** using `keySet()` + `get()` instead of `entrySet()`.
+- **Fields that should be static** (unread instance fields holding constants).
+
+#### Resource Management
+- **Unclosed database resources** (Statement, ResultSet, Connection not in try-with-resources).
+- **Unsatisfied resource obligations** (resources created but not reliably closed on all paths).
+
+#### Code Quality
+- **Ignored return values** from methods with no side effects.
+- **Static field writes from instance methods** (threading concerns).
+
+### Exclusions
+
+Exclusions are configured in `config/spotbugs/exclusion-filter.xml`. Each exclusion includes a comment explaining the rationale.
+
+Current global exclusions:
+
+| Bug Pattern | Category | Reason |
+|---|---|---|
+| `EI_EXPOSE_REP` | MALICIOUS_CODE | CLI application, not a library with untrusted callers |
+| `EI_EXPOSE_REP2` | MALICIOUS_CODE | CLI application, not a library with untrusted callers |
+| `VA_FORMAT_STRING_USES_NEWLINE` | BAD_PRACTICE | `\n` is intentional; `%n` would produce `\r\n` on Windows |
+
+Current class-specific exclusions:
+
+| Class | Bug Pattern | Reason |
+|---|---|---|
+| `AbstractDatabaseTest` | `ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD` | JUnit `@BeforeEach` sets shared Flyway field for `@AfterEach` cleanup |
+
+### Fixing Violations
+
+SpotBugs HTML reports group findings by category and link to detailed descriptions. Common fixes:
+
+| Bug Pattern | Fix |
+|---|---|
+| `NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE` | Store the potentially-null return value in a local variable, add a null check before use |
+| `FE_FLOATING_POINT_EQUALITY` | Use `Double.compare(a, b) == 0` instead of `a == b` |
+| `DM_DEFAULT_ENCODING` | Add explicit charset parameter: `new String(bytes, StandardCharsets.UTF_8)` |
+| `WMI_WRONG_MAP_ITERATOR` | Replace `for (K key : map.keySet()) { map.get(key) }` with `for (Map.Entry<K,V> entry : map.entrySet())` |
+| `ODR_OPEN_DATABASE_RESOURCE` | Wrap Statement/ResultSet creation in try-with-resources |
+| `RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT` | Either use the return value or remove the no-op method call (e.g., `.orElse(null)` on a discarded Optional) |
+| `SS_SHOULD_BE_STATIC` | Change the instance field to `private static final` if it holds a constant |
+
+### Adding New Exclusions
+
+Only exclude confirmed false positives. To add an exclusion:
+
+1. Verify the finding is genuinely a false positive (not a real bug you can fix)
+2. Add a `<Match>` element to `config/spotbugs/exclusion-filter.xml`
+3. Include a comment explaining why it's excluded
+4. Scope the exclusion as narrowly as possible (prefer class-specific over global)
+
+Example:
+```xml
+<!-- Reason for exclusion -->
+<Match>
+    <Class name="ca.jonathanfritz.ofxcat.SomeClass"/>
+    <Bug pattern="SOME_PATTERN"/>
+</Match>
+```
+
 ## Verify Task
 
 The `verify` Gradle task is the single command that checks whether a change is ready to commit:
@@ -190,10 +290,12 @@ It runs:
 2. `checkstyleTest` - style check on test code
 3. `pmdMain` - bug/smell detection on production code
 4. `pmdTest` - bug/smell detection on test code
-5. `test` - the full test suite
+5. `spotbugsMain` - bug pattern detection on production bytecode
+6. `spotbugsTest` - bug pattern detection on test bytecode
+7. `test` - the full test suite
 
 If `verify` passes, the code is clean.
 
 ## Future Static Analysis Tools
 
-See `docs/AgentToolingPlan.md` for planned additions including SpotBugs, JaCoCo, Error Prone, and custom architectural lint rules.
+See `docs/AgentToolingPlan.md` for planned additions including JaCoCo, Error Prone, and custom architectural lint rules.

@@ -45,7 +45,7 @@ public class TransferMatchingService {
         for (Transaction source : sourceTransactions) {
             final List<Transaction> potentialSinks = sinkTransactions.stream()
                     .filter(t -> t.getDate().equals(source.getDate()))
-                    .filter(t -> t.getAmount() == source.getAmount() * -1)
+                    .filter(t -> Double.compare(t.getAmount(), -source.getAmount()) == 0)
                     .filter(t -> !t.getAccount().equals(source.getAccount()))
                     .toList();
 
@@ -64,11 +64,11 @@ public class TransferMatchingService {
         final Set<CategorizedTransaction> matchedTransactions = transfers.stream()
                 .flatMap(t -> Stream.of(t.getSink(), t.getSource()))
                 .collect(Collectors.toSet());
-        for (Account account : accountTransactions.keySet()) {
-            final List<Transaction> filtered = accountTransactions.get(account).stream()
+        for (Map.Entry<Account, List<Transaction>> entry : accountTransactions.entrySet()) {
+            final List<Transaction> filtered = entry.getValue().stream()
                     .filter(t -> matchedTransactions.stream().noneMatch(ct -> ct.getFitId().equals(t.getFitId())))
                     .toList();
-            accountTransactions.put(account, filtered);
+            entry.setValue(filtered);
         }
 
         return transfers;

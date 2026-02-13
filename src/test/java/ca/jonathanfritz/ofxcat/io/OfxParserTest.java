@@ -23,7 +23,7 @@ class OfxParserTest {
     private static final String ONE_ACCOUNT_OFX = "oneaccount.ofx";
     private static final String TWO_ACCOUNTS_OFX = "twoaccounts.ofx";
     private static final String CREDIT_CARD_OFX = "creditcard.ofx";
-    private final String twoAccountsOneCreditCard = "twoaccountsonecreditcard.ofx";
+    private static final String TWO_ACCOUNTS_ONE_CREDIT_CARD = "twoaccountsonecreditcard.ofx";
 
     // this test data matches the contents of the two ofx files
     private static final LocalDate december10th2018 = LocalDate.of(2018, 12, 10);
@@ -149,7 +149,7 @@ class OfxParserTest {
     @Test
     void allAccountsAndCreditCardsReadTest() throws IOException, OFXParseException {
         final OfxParser ofxParser = new OfxParser();
-        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(twoAccountsOneCreditCard));
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(TWO_ACCOUNTS_ONE_CREDIT_CARD));
 
         // there should be two accounts and one credit card
         MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(3));

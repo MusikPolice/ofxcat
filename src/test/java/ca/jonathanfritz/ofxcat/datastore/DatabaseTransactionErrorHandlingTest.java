@@ -114,7 +114,8 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
 
         // Verify foreign keys are NOT enabled (SQLite default)
         int fkEnabled;
-        try (var rs = connection.createStatement().executeQuery("PRAGMA foreign_keys")) {
+        try (var stmt = connection.createStatement();
+             var rs = stmt.executeQuery("PRAGMA foreign_keys")) {
             rs.next();
             fkEnabled = rs.getInt(1);
         }
@@ -128,7 +129,9 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
 
         // This does NOT throw - FK constraints are not enforced
         assertDoesNotThrow(() -> {
-            connection.createStatement().executeUpdate(violatingInsert);
+            try (var stmt = connection.createStatement()) {
+                stmt.executeUpdate(violatingInsert);
+            }
         }, "With FK constraints disabled, invalid references are allowed");
     }
 }

@@ -70,7 +70,7 @@ public class MatchingModule extends AbstractModule {
                 logger.warn("No bundled keyword-rules.yaml found in classpath");
                 return KeywordRulesConfig.empty();
             }
-            String yaml = new String(is.readAllBytes());
+            String yaml = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             KeywordRulesConfig config = loader.loadFromString(yaml);
             logger.info("Loaded {} bundled keyword rules", config.getRules().size());
             return config;

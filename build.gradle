@@ -3,6 +3,7 @@ plugins {
     id 'application'
     id 'checkstyle'
     id 'pmd'
+    id 'com.github.spotbugs' version '6.4.8'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -108,11 +109,39 @@ pmd {
     ignoreFailures = false
 }
 
+// Static analysis: SpotBugs detects bug patterns in compiled bytecode
+spotbugs {
+    effort.set(com.github.spotbugs.snom.Effort.valueOf('MAX'))
+    reportLevel.set(com.github.spotbugs.snom.Confidence.valueOf('MEDIUM'))
+    excludeFilter.set(file('config/spotbugs/exclusion-filter.xml'))
+    // Fail the build on any SpotBugs violation
+    ignoreFailures = false
+}
+
+// Generate HTML reports for human review
+spotbugsMain {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/main.html")
+        }
+    }
+}
+
+spotbugsTest {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/test.html")
+        }
+    }
+}
+
 // Single command to verify the project is ready for review
 tasks.register('verify') {
-    dependsOn 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'test'
+    dependsOn 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'spotbugsMain', 'spotbugsTest', 'test'
     group = 'verification'
-    description = 'Runs all verification tasks: tests, checkstyle, pmd'
+    description = 'Runs all verification tasks: tests, checkstyle, pmd, spotbugs'
 }
 
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)

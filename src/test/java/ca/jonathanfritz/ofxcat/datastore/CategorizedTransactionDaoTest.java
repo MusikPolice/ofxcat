@@ -111,7 +111,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         }
 
         // as well as one transaction in some other category
-        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), UNKNOWN)).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), UNKNOWN));
 
         // we can select all the transactions
         final LocalDate minDate = expected.stream().map(Transaction::getDate).min(LocalDate::compareTo).orElse(null);
@@ -141,7 +141,7 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         }
 
         // insert a transaction in a different category
-        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants)).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants));
 
         // selectByCategory without date filter should return only groceries transactions
         List<CategorizedTransaction> actual = categorizedTransactionDao.selectByCategory(groceries);
