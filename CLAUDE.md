@@ -37,7 +37,18 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
 ```
 
-**Before committing, always run `./gradlew verify`** to confirm tests pass and code style is clean.
+**Before committing, always run `./gradlew verify`** to confirm tests pass and code style is clean. A pre-commit hook enforces this automatically (see below).
+
+## Pre-commit Hook
+
+A git pre-commit hook runs `./gradlew verify` before every commit. If verification fails, the commit is rejected.
+
+The hook lives in `.githooks/pre-commit` and is activated by:
+```bash
+git config core.hooksPath .githooks
+```
+
+This is a per-clone setting. After a fresh clone, run the command above to enable the hook.
 
 ## Architecture Overview
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-commit hook: runs full verification before allowing a commit.
+# Ensures tests pass and all static analysis tools (checkstyle, PMD, SpotBugs) are clean.
+
+echo "Running ./gradlew verify ..."
+./gradlew verify
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "COMMIT REJECTED: ./gradlew verify failed."
+    echo "Fix the issues above before committing."
+    exit 1
+fi
