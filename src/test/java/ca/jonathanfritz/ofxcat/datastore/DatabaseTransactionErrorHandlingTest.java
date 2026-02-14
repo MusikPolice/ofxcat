@@ -52,6 +52,7 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
     }
 
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // insert is test setup; orElseThrow asserts success
     void uniqueConstraintBehavior() throws SQLException {
         // Verify unique constraint is enforced on (bank_number, account_number)
         final Account firstAccount = TestUtils.createRandomAccount();

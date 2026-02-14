@@ -174,13 +174,12 @@ public class TransactionCategoryService {
     private Optional<CategorizedTransaction> chooseCategoryFromList(Transaction transaction, List<Category> choices) {
         logger.info("Prompting user to categorize new transaction as one of {}", choices);
         final Optional<Category> chosenCategory = cli.chooseCategoryOrChooseAnother(choices);
-        return Optional.of(chosenCategory.map(category -> {
-                    logger.info("User chose category {}", category);
-                    return new CategorizedTransaction(transaction, category);
-                })).orElseGet(() -> {
-                    logger.info("User declined to choose one of the presented categories");
-                    return Optional.empty();
-                });
+        if (chosenCategory.isPresent()) {
+            logger.info("User chose category {}", chosenCategory.get());
+            return Optional.of(new CategorizedTransaction(transaction, chosenCategory.get()));
+        }
+        logger.info("User declined to choose one of the presented categories");
+        return Optional.empty();
     }
 
     /**

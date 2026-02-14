@@ -5,6 +5,7 @@ plugins {
     id 'pmd'
     id 'jacoco'
     id 'com.github.spotbugs' version '6.4.8'
+    id 'net.ltgt.errorprone' version '4.1.0'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -49,6 +50,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    // static analysis: Error Prone compiler plugin
+    errorprone 'com.google.errorprone:error_prone_core:2.36.0'
+
     // tests
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -59,6 +63,15 @@ dependencies {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Static analysis: Error Prone catches compile-time bugs via javac plugin
+tasks.withType(JavaCompile).configureEach {
+    options.errorprone {
+        // Start with ERROR-level checks only; warnings disabled to reduce noise
+        disableAllWarnings = true
+        allErrorsAsWarnings = false
     }
 }
 

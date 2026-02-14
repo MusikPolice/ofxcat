@@ -277,6 +277,77 @@ Example:
 </Match>
 ```
 
+## Error Prone
+
+Error Prone is a Google-developed javac compiler plugin that catches bugs at compile time using the full type-resolved AST. Unlike the other static analysis tools, Error Prone runs during compilation itself — it hooks into `javac` and piggybacks on `compileJava` and `compileTestJava`, so it doesn't need a separate Gradle task.
+
+### Configuration
+
+- **Gradle plugin**: `net.ltgt.errorprone` version 4.1.0
+- **Core version**: `com.google.errorprone:error_prone_core:2.36.0`
+- **Mode**: ERROR-level checks only (`disableAllWarnings = true`)
+- **Severity**: Errors fail the build (`allErrorsAsWarnings = false`)
+
+### Running Error Prone
+
+Error Prone runs automatically during compilation:
+
+```bash
+# Runs Error Prone as part of compilation
+./gradlew compileJava compileTestJava
+
+# Also runs as part of verify (via test → compileJava/compileTestJava)
+./gradlew verify
+```
+
+There is no separate `errorprone` task — violations appear as compiler errors in the `compileJava` or `compileTestJava` output.
+
+### What Error Prone Detects
+
+Error Prone catches issues that source-level tools (Checkstyle, PMD) and bytecode-level tools (SpotBugs) miss, because it has access to the full type-resolved AST during compilation.
+
+#### Optional/Stream Misuse
+- **`OptionalOfRedundantMethod`** — `Optional.of(x).orElse(y)` where `Optional.of()` never returns empty, making the fallback dead code.
+- **`ReturnValueIgnored`** — discarding the return value of methods with no side effects (e.g., `Optional.orElseThrow()` without using the result).
+
+#### Type Safety
+- **`MissingCasesInEnumSwitch`** — switch statements that don't cover all enum values.
+- **`IncompatibleArgumentType`** — passing the wrong type to a generic method (e.g., calling `Map<String, Integer>.get(42)`).
+
+#### Correctness
+- **`InvalidPatternSyntax`** — invalid regex passed to `Pattern.compile()` or `String.matches()`.
+- **`FormatString`** — format string mismatches in `String.format()` or `printf()`.
+- **`DeadException`** — creating an exception without throwing it (e.g., `new IllegalArgumentException("msg");` instead of `throw new ...`).
+- **`SelfEquals`** — `x.equals(x)` which is always true.
+
+### Suppressions
+
+For confirmed false positives, suppress with the `@SuppressWarnings` annotation using the check name:
+
+```java
+@SuppressWarnings("ReturnValueIgnored") // reason for suppression
+public void myMethod() { ... }
+```
+
+Current suppressions:
+
+| File | Suppressed Check | Reason |
+|---|---|---|
+| `DatabaseTransactionErrorHandlingTest.java` | `ReturnValueIgnored` | DAO insert is test setup; `orElseThrow()` asserts success |
+| `ReportingWorkflowIntegrationTest.java` (3 methods) | `ReturnValueIgnored` | DAO inserts are test setup; `orElseThrow()` asserts success |
+
+### Fixing Violations
+
+Error Prone errors appear in compiler output with the check name in brackets (e.g., `[OptionalOfRedundantMethod]`). Each error includes a link to the detailed explanation at `https://errorprone.info/bugpattern/<CheckName>`.
+
+| Check | Fix |
+|---|---|
+| `OptionalOfRedundantMethod` | Remove the redundant `Optional.of()` wrapper; use the inner Optional directly or rewrite with `if`/`else` |
+| `ReturnValueIgnored` | Use the return value, assign to a variable, or suppress if the call is for its side effect |
+| `DeadException` | Add `throw` before the exception constructor |
+| `InvalidPatternSyntax` | Fix the regex string |
+| `FormatString` | Match format specifiers to argument types and count |
+
 ## JaCoCo — Code Coverage
 
 JaCoCo measures test coverage of production code. It runs automatically with the test suite and enforces a minimum coverage threshold as part of `./gradlew verify`.
@@ -351,18 +422,19 @@ The `verify` Gradle task is the single command that checks whether a change is r
 ```
 
 It runs:
-1. `checkstyleMain` - style check on production code
-2. `checkstyleTest` - style check on test code
-3. `pmdMain` - bug/smell detection on production code
-4. `pmdTest` - bug/smell detection on test code
-5. `spotbugsMain` - bug pattern detection on production bytecode
-6. `spotbugsTest` - bug pattern detection on test bytecode
-7. `test` - the full test suite
-8. `jacocoTestReport` - generate coverage report
-9. `jacocoTestCoverageVerification` - enforce minimum 80% line coverage
+1. `compileJava` / `compileTestJava` - compilation with Error Prone checks (runs automatically as a prerequisite of `test`)
+2. `checkstyleMain` - style check on production code
+3. `checkstyleTest` - style check on test code
+4. `pmdMain` - bug/smell detection on production code
+5. `pmdTest` - bug/smell detection on test code
+6. `spotbugsMain` - bug pattern detection on production bytecode
+7. `spotbugsTest` - bug pattern detection on test bytecode
+8. `test` - the full test suite
+9. `jacocoTestReport` - generate coverage report
+10. `jacocoTestCoverageVerification` - enforce minimum 80% line coverage
 
 If `verify` passes, the code is clean.
 
 ## Future Static Analysis Tools
 
-See `docs/AgentToolingPlan.md` for planned additions including Error Prone and custom architectural lint rules.
+See `docs/AgentToolingPlan.md` for planned additions including custom architectural lint rules.

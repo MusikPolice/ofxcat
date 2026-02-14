@@ -95,6 +95,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test account listing report shows all accounts with correct details.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void accountListingReport() {
         // Setup: Create multiple accounts
         accountDao.insert(Account.newBuilder()
@@ -145,6 +146,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test category listing report shows all categories.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void categoryListingReport() {
         // Setup: Create categories
         categoryDao.insert(new Category("Groceries")).orElseThrow();
@@ -208,6 +210,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test reporting with no transactions in date range.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void reportWithNoTransactionsInRange() {
         // Setup: Create account and category but no transactions
         accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();

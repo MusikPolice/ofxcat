@@ -9,7 +9,7 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 ## Build Commands
 
 ```bash
-# Verify everything before committing (tests + checkstyle + PMD + SpotBugs + coverage)
+# Verify everything before committing (tests + Error Prone + checkstyle + PMD + SpotBugs + coverage)
 ./gradlew verify
 
 # Build everything including fat JAR
@@ -114,4 +114,4 @@ Schema managed by Flyway migrations in `src/main/resources/db/migration/`. Key t
 
 - `docs/GenAIGuide.md` - Collaboration rules and coding standards (required reading)
 - `docs/CodebaseOverview.md` - Comprehensive technical documentation
-- `docs/StaticAnalysis.md` - Checkstyle, PMD, SpotBugs, and JaCoCo configuration, static analysis rules, and how to fix violations
+- `docs/StaticAnalysis.md` - Error Prone, Checkstyle, PMD, SpotBugs, and JaCoCo configuration, static analysis rules, and how to fix violations
