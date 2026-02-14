@@ -53,15 +53,14 @@ public class Transaction {
 
     @Override
     public String toString() {
-        return "Transaction{" +
-                "type=" + type +
-                ", date=" + date +
-                ", amount=" + amount +
-                ", description='" + description + '\'' +
-                ", account=" + account +
-                ", balance=" + balance +
-                ", fitId='" + fitId + '\'' +
-                '}';
+        return "Transaction{" + "type="
+                + type + ", date="
+                + date + ", amount="
+                + amount + ", description='"
+                + description + '\'' + ", account="
+                + account + ", balance="
+                + balance + ", fitId='"
+                + fitId + '\'' + '}';
     }
 
     @Override
@@ -69,13 +68,13 @@ public class Transaction {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transaction that = (Transaction) o;
-        return Float.compare(that.amount, amount) == 0 &&
-                Float.compare(that.balance, balance) == 0 &&
-                type == that.type &&
-                Objects.equals(date, that.date) &&
-                Objects.equals(description, that.description) &&
-                Objects.equals(account, that.account) &&
-                Objects.equals(fitId, that.fitId);
+        return Float.compare(that.amount, amount) == 0
+                && Float.compare(that.balance, balance) == 0
+                && type == that.type
+                && Objects.equals(date, that.date)
+                && Objects.equals(description, that.description)
+                && Objects.equals(account, that.account)
+                && Objects.equals(fitId, that.fitId);
     }
 
     @Override

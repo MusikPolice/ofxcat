@@ -8,7 +8,6 @@ import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
 import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.TransferDao;
-import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
@@ -19,11 +18,9 @@ import ca.jonathanfritz.ofxcat.exception.OfxCatException;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxParser;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
+import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import ca.jonathanfritz.ofxcat.utils.Accumulator;
 import com.webcohesion.ofx4j.io.OFXParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import jakarta.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,6 +39,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 // TODO: Improve test coverage
 public class TransactionImportService {
@@ -62,12 +61,19 @@ public class TransactionImportService {
     private static final Logger logger = LogManager.getLogger(TransactionImportService.class);
 
     @Inject
-    public TransactionImportService(CLI cli, OfxParser ofxParser, AccountDao accountDao,
-                                    TransactionCleanerFactory transactionCleanerFactory, Connection connection,
-                                    CategorizedTransactionDao categorizedTransactionDao,
-                                    TransactionCategoryService transactionCategoryService, CategoryDao categoryDao,
-                                    TransferMatchingService transferMatchingService, TransferDao transferDao,
-                                    TransactionTokenDao transactionTokenDao, TokenNormalizer tokenNormalizer) {
+    public TransactionImportService(
+            CLI cli,
+            OfxParser ofxParser,
+            AccountDao accountDao,
+            TransactionCleanerFactory transactionCleanerFactory,
+            Connection connection,
+            CategorizedTransactionDao categorizedTransactionDao,
+            TransactionCategoryService transactionCategoryService,
+            CategoryDao categoryDao,
+            TransferMatchingService transferMatchingService,
+            TransferDao transferDao,
+            TransactionTokenDao transactionTokenDao,
+            TokenNormalizer tokenNormalizer) {
         this.cli = cli;
         this.ofxParser = ofxParser;
         this.accountDao = accountDao;
@@ -108,13 +114,16 @@ public class TransactionImportService {
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
             // figure out which account these transactions belong to
-            final Account account = accountDao.selectByAccountNumber(ofxExport.getAccount().getAccountId())
+            final Account account = accountDao
+                    .selectByAccountNumber(ofxExport.getAccount().getAccountId())
                     .or(() -> accountDao.insert(cli.assignAccountName(ofxExport.getAccount())))
-                    .orElseThrow(() -> new RuntimeException(String.format("Failed to find or create account %s", ofxExport)));
+                    .orElseThrow(() ->
+                            new RuntimeException(String.format("Failed to find or create account %s", ofxExport)));
             logger.info("Processing transactions for Account {}", account);
 
             // an ofx file contains the account balance after all included transactions were processed, but does not
-            // include the initial account balance or the account balance after each individual transaction was processed.
+            // include the initial account balance or the account balance after each individual transaction was
+            // processed.
             // we can determine the initial account balance by summing up the amount of all transactions and subtracting
             // that value from the final account balance. This can then be used to determine the account balance after
             // each transaction was applied.
@@ -129,21 +138,28 @@ public class TransactionImportService {
             // balance on each, and associates each with an account
             final TransactionCleaner transactionCleaner = transactionCleanerFactory.findByBankId(account.getBankId());
             final Accumulator<Float> balanceAccumulator = new Accumulator<>(initialBalance, Float::sum);
-            accountTransactions.put(account, ofxExport.getTransactions().entrySet().stream()
-                    .flatMap((Function<Map.Entry<LocalDate, List<OfxTransaction>>, Stream<OfxTransaction>>) entry -> entry.getValue().stream())
-                    .sorted(Comparator.comparing(OfxTransaction::getDate))
-                    .map(transactionCleaner::clean)
-                    .map(builder -> builder.setBalance(balanceAccumulator.add(builder.getAmount())))
-                    .map(builder -> builder.setAccount(account).build())
-                    .toList());
-            logger.debug("Final balance for Account {} was {}", account.getAccountNumber(), balanceAccumulator.getCurrentValue());
+            accountTransactions.put(
+                    account,
+                    ofxExport.getTransactions().entrySet().stream()
+                            .flatMap((Function<Map.Entry<LocalDate, List<OfxTransaction>>, Stream<OfxTransaction>>)
+                                    entry -> entry.getValue().stream())
+                            .sorted(Comparator.comparing(OfxTransaction::getDate))
+                            .map(transactionCleaner::clean)
+                            .map(builder -> builder.setBalance(balanceAccumulator.add(builder.getAmount())))
+                            .map(builder -> builder.setAccount(account).build())
+                            .toList());
+            logger.debug(
+                    "Final balance for Account {} was {}",
+                    account.getAccountNumber(),
+                    balanceAccumulator.getCurrentValue());
         }
 
         // all of our transactions have been cleaned up and enriched with account and balance information
         // at this point, we can attempt to identify inter-account transfers
-        final List<CategorizedTransaction> categorizedTransactions = new ArrayList<>(identifyTransfers(accountTransactions));
+        final List<CategorizedTransaction> categorizedTransactions =
+                new ArrayList<>(identifyTransfers(accountTransactions));
 
-        for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
+        for (Map.Entry<Account, List<Transaction>> entry : accountTransactions.entrySet()) {
             // TODO: this can probably be cleaned up too
             // filter out duplicates, categorize transactions, and insert them into the database
             entry.getValue().forEach(transaction -> {
@@ -155,23 +171,23 @@ public class TransactionImportService {
 
                     // try to automatically categorize the transaction, prompting the user for a category if necessary
                     cli.printFoundNewTransaction(transaction);
-                    CategorizedTransaction categorizedTransaction = transactionCategoryService.categorizeTransaction(t, transaction);
+                    CategorizedTransaction categorizedTransaction =
+                            transactionCategoryService.categorizeTransaction(t, transaction);
                     if (categorizedTransaction.getCategory().getId() == null) {
                         // this is a new category, so we have to insert it before inserting the categorized transaction
                         final Transaction newTransaction = categorizedTransaction.getTransaction();
-                        final String newCategoryName = categorizedTransaction.getCategory().getName();
-                        categorizedTransaction = categoryDao.insert(t, categorizedTransaction.getCategory())
-                            .map(newCategory ->
-                                    new CategorizedTransaction(newTransaction, newCategory)
-                            ).orElseThrow(() ->
-                                    new OfxCatException(String.format("Failed to insert new Category %s", newCategoryName))
-                            );
+                        final String newCategoryName =
+                                categorizedTransaction.getCategory().getName();
+                        categorizedTransaction = categoryDao
+                                .insert(t, categorizedTransaction.getCategory())
+                                .map(newCategory -> new CategorizedTransaction(newTransaction, newCategory))
+                                .orElseThrow(() -> new OfxCatException(
+                                        String.format("Failed to insert new Category %s", newCategoryName)));
                     }
-                    categorizedTransactionDao.insert(t, categorizedTransaction)
-                            .ifPresent(inserted -> {
-                                categorizedTransactions.add(inserted);
-                                storeTokensForTransaction(t, inserted);
-                            });
+                    categorizedTransactionDao.insert(t, categorizedTransaction).ifPresent(inserted -> {
+                        categorizedTransactions.add(inserted);
+                        storeTokensForTransaction(t, inserted);
+                    });
 
                     cli.printTransactionCategorizedAs(categorizedTransaction.getCategory());
                     logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
@@ -183,7 +199,8 @@ public class TransactionImportService {
         }
 
         // find unmatched XFER type transactions in the CategorizedTransaction table and group them into Transfers.
-        // this will add support for the source and sink to appear in separate OFX files, such as when a payment takes days to clear
+        // this will add support for the source and sink to appear in separate OFX files, such as when a payment takes
+        // days to clear
         identifyTransfers(categorizedTransactionDao.findUnlinkedTransfers());
 
         return categorizedTransactions;
@@ -194,13 +211,16 @@ public class TransactionImportService {
                 .flatMap((Function<Transfer, Stream<CategorizedTransaction>>) transfer -> {
                     try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
                         // insert each transaction
-                        final CategorizedTransaction source = TransactionImportService.this.insertTransferTransaction(t, transfer.getSource());
-                        final CategorizedTransaction sink = TransactionImportService.this.insertTransferTransaction(t, transfer.getSink());
+                        final CategorizedTransaction source =
+                                TransactionImportService.this.insertTransferTransaction(t, transfer.getSource());
+                        final CategorizedTransaction sink =
+                                TransactionImportService.this.insertTransferTransaction(t, transfer.getSink());
 
                         // create the transfer
                         Transfer newTransfer = new Transfer(source, sink);
                         if (!transferDao.isDuplicate(t, newTransfer)) {
-                            newTransfer = transferDao.insert(t, newTransfer)
+                            newTransfer = transferDao
+                                    .insert(t, newTransfer)
                                     .orElseThrow(() -> new SQLException("Failed to insert Transfer"));
 
                             cli.printFoundNewTransfer(newTransfer);
@@ -210,22 +230,27 @@ public class TransactionImportService {
                         logger.error("Failed to import Transfer {}", transfer, e);
                         return Stream.empty();
                     }
-                }).collect(Collectors.toList());
+                })
+                .collect(Collectors.toList());
     }
 
-    private CategorizedTransaction insertTransferTransaction(DatabaseTransaction t, Transaction transaction) throws OfxCatException {
+    private CategorizedTransaction insertTransferTransaction(DatabaseTransaction t, Transaction transaction)
+            throws OfxCatException {
         try {
             // if the transaction was previously inserted, return the existing record
             if (categorizedTransactionDao.isDuplicate(t, transaction)) {
                 logger.info("Ignored duplicate Transaction {}", transaction);
-                return categorizedTransactionDao.selectByFitId(transaction.getFitId()).get();
+                return categorizedTransactionDao
+                        .selectByFitId(transaction.getFitId())
+                        .get();
             }
 
             // otherwise insert it
             CategorizedTransaction categorizedTransaction = new CategorizedTransaction(transaction, Category.TRANSFER);
-            categorizedTransaction = categorizedTransactionDao.insert(t, categorizedTransaction)
-                    .orElseThrow(() -> new OfxCatException("Failed to insert CategorizedTransaction with fitId " +
-                            transaction.getFitId() + " and Category " + Category.TRANSFER.getName()));
+            categorizedTransaction = categorizedTransactionDao
+                    .insert(t, categorizedTransaction)
+                    .orElseThrow(() -> new OfxCatException("Failed to insert CategorizedTransaction with fitId "
+                            + transaction.getFitId() + " and Category " + Category.TRANSFER.getName()));
 
             logger.info("Categorized Transaction {} as {}", transaction, categorizedTransaction.getCategory());
 
@@ -242,8 +267,7 @@ public class TransactionImportService {
      */
     private void storeTokensForTransaction(DatabaseTransaction t, CategorizedTransaction transaction) {
         // Don't store tokens for UNKNOWN or TRANSFER categories
-        if (Category.UNKNOWN.equals(transaction.getCategory()) ||
-            Category.TRANSFER.equals(transaction.getCategory())) {
+        if (Category.UNKNOWN.equals(transaction.getCategory()) || Category.TRANSFER.equals(transaction.getCategory())) {
             return;
         }
 

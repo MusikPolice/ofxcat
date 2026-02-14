@@ -1,16 +1,15 @@
 package ca.jonathanfritz.ofxcat.matching;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class KeywordRulesLoaderTest {
 
@@ -27,7 +26,8 @@ class KeywordRulesLoaderTest {
     @Test
     void loadsValidYamlFile() throws IOException {
         // Setup: Create a valid YAML file
-        String yaml = """
+        String yaml =
+                """
                 version: 1
                 settings:
                   auto_categorize: true
@@ -52,9 +52,12 @@ class KeywordRulesLoaderTest {
         assertEquals(3, config.getRules().size());
 
         // Verify: Rules work as expected
-        assertEquals("RESTAURANTS", config.findMatchingCategory(Set.of("starbucks")).orElse(null));
+        assertEquals(
+                "RESTAURANTS", config.findMatchingCategory(Set.of("starbucks")).orElse(null));
         assertEquals("GROCERIES", config.findMatchingCategory(Set.of("walmart")).orElse(null));
-        assertEquals("RESTAURANTS", config.findMatchingCategory(Set.of("tim", "hortons")).orElse(null));
+        assertEquals(
+                "RESTAURANTS",
+                config.findMatchingCategory(Set.of("tim", "hortons")).orElse(null));
         assertFalse(config.findMatchingCategory(Set.of("tim")).isPresent()); // Requires both
     }
 
@@ -95,7 +98,8 @@ class KeywordRulesLoaderTest {
     @Test
     void handlesInvalidYaml() throws IOException {
         // Setup: Create a file with invalid YAML
-        String invalidYaml = """
+        String invalidYaml =
+                """
                 this is not valid yaml: [
                   broken: structure
                 """;
@@ -112,7 +116,8 @@ class KeywordRulesLoaderTest {
     @Test
     void loadFromStringWithValidYaml() {
         // Setup: Valid YAML string
-        String yaml = """
+        String yaml =
+                """
                 rules:
                   - keywords: [netflix]
                     category: ENTERTAINMENT
@@ -123,7 +128,8 @@ class KeywordRulesLoaderTest {
 
         // Verify: Loaded correctly
         assertEquals(1, config.getRules().size());
-        assertEquals("ENTERTAINMENT", config.findMatchingCategory(Set.of("netflix")).orElse(null));
+        assertEquals(
+                "ENTERTAINMENT", config.findMatchingCategory(Set.of("netflix")).orElse(null));
     }
 
     @Test
@@ -147,7 +153,8 @@ class KeywordRulesLoaderTest {
     @Test
     void loadsSettingsFromYaml() throws IOException {
         // Setup: YAML with auto_categorize disabled
-        String yaml = """
+        String yaml =
+                """
                 settings:
                   auto_categorize: false
                 rules:
@@ -167,7 +174,8 @@ class KeywordRulesLoaderTest {
     @Test
     void handlesYamlWithOnlyRules() throws IOException {
         // Setup: YAML with only rules (no version or settings)
-        String yaml = """
+        String yaml =
+                """
                 rules:
                   - keywords: [costco]
                     category: GROCERIES
@@ -190,8 +198,7 @@ class KeywordRulesLoaderTest {
         KeywordRulesConfig config = new KeywordRulesConfig(List.of(
                 new KeywordRule(List.of("starbucks"), "RESTAURANTS"),
                 new KeywordRule(List.of("tim", "hortons"), "RESTAURANTS", true),
-                new KeywordRule(List.of("walmart"), "GROCERIES")
-        ));
+                new KeywordRule(List.of("walmart"), "GROCERIES")));
 
         // Execute: Save and reload
         Path outputFile = tempDir.resolve("saved-rules.yaml");
@@ -200,17 +207,21 @@ class KeywordRulesLoaderTest {
 
         // Verify: Reloaded config matches original
         assertEquals(config.getRules().size(), reloaded.getRules().size());
-        assertEquals("RESTAURANTS", reloaded.findMatchingCategory(Set.of("starbucks")).orElse(null));
-        assertEquals("RESTAURANTS", reloaded.findMatchingCategory(Set.of("tim", "hortons")).orElse(null));
-        assertEquals("GROCERIES", reloaded.findMatchingCategory(Set.of("walmart")).orElse(null));
+        assertEquals(
+                "RESTAURANTS",
+                reloaded.findMatchingCategory(Set.of("starbucks")).orElse(null));
+        assertEquals(
+                "RESTAURANTS",
+                reloaded.findMatchingCategory(Set.of("tim", "hortons")).orElse(null));
+        assertEquals(
+                "GROCERIES", reloaded.findMatchingCategory(Set.of("walmart")).orElse(null));
     }
 
     @Test
     void saveCreatesParentDirectories() throws IOException {
         // Setup: Config and nested path
-        KeywordRulesConfig config = new KeywordRulesConfig(List.of(
-                new KeywordRule(List.of("netflix"), "ENTERTAINMENT")
-        ));
+        KeywordRulesConfig config =
+                new KeywordRulesConfig(List.of(new KeywordRule(List.of("netflix"), "ENTERTAINMENT")));
         Path nestedPath = tempDir.resolve("a").resolve("b").resolve("rules.yaml");
 
         // Execute: Save to nested path
@@ -226,28 +237,29 @@ class KeywordRulesLoaderTest {
     void saveOverwritesExistingFile() throws IOException {
         // Setup: Save initial config
         Path outputFile = tempDir.resolve("rules.yaml");
-        KeywordRulesConfig original = new KeywordRulesConfig(List.of(
-                new KeywordRule(List.of("starbucks"), "RESTAURANTS")
-        ));
+        KeywordRulesConfig original =
+                new KeywordRulesConfig(List.of(new KeywordRule(List.of("starbucks"), "RESTAURANTS")));
         loader.save(original, outputFile);
 
         // Execute: Overwrite with new config
-        KeywordRulesConfig updated = new KeywordRulesConfig(List.of(
-                new KeywordRule(List.of("netflix"), "ENTERTAINMENT")
-        ));
+        KeywordRulesConfig updated =
+                new KeywordRulesConfig(List.of(new KeywordRule(List.of("netflix"), "ENTERTAINMENT")));
         loader.save(updated, outputFile);
 
         // Verify: Reloaded config is the updated one
         KeywordRulesConfig reloaded = loader.load(outputFile);
         assertEquals(1, reloaded.getRules().size());
-        assertEquals("ENTERTAINMENT", reloaded.findMatchingCategory(Set.of("netflix")).orElse(null));
+        assertEquals(
+                "ENTERTAINMENT",
+                reloaded.findMatchingCategory(Set.of("netflix")).orElse(null));
         assertFalse(reloaded.findMatchingCategory(Set.of("starbucks")).isPresent());
     }
 
     @Test
     void ignoresUnknownProperties() throws IOException {
         // Setup: YAML with extra properties
-        String yaml = """
+        String yaml =
+                """
                 version: 1
                 unknown_property: some_value
                 rules:
@@ -263,6 +275,7 @@ class KeywordRulesLoaderTest {
 
         // Verify: Rules loaded despite unknown properties
         assertEquals(1, config.getRules().size());
-        assertEquals("RESTAURANTS", config.findMatchingCategory(Set.of("starbucks")).orElse(null));
+        assertEquals(
+                "RESTAURANTS", config.findMatchingCategory(Set.of("starbucks")).orElse(null));
     }
 }

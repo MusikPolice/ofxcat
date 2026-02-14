@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
@@ -17,15 +19,12 @@ import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that verify tokens are correctly stored when transactions are imported.
@@ -54,25 +53,35 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
     @Test
     void importedTransactionGetsTokensStored() throws SQLException {
         // Given: An account and a category for new transactions
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Category testCategory = categoryDao.insert(new Category("Groceries")).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory =
+                categoryDao.insert(new Category("Groceries")).get();
 
         // Create an OFX transaction with a multi-word description
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction ofxTxn = createOfxTransaction("FIT1", -50.0f, "SAFEWAY GROCERY STORE #1234", ofxAccount);
         final OfxBalance ofxBalance = OfxBalance.newBuilder().setAmount(950.0f).build();
-        final List<OfxExport> ofxExports = Collections.singletonList(
-                new OfxExport(ofxAccount, ofxBalance, Collections.singletonList(ofxTxn))
-        );
+        final List<OfxExport> ofxExports =
+                Collections.singletonList(new OfxExport(ofxAccount, ofxBalance, Collections.singletonList(ofxTxn)));
 
         // When: We import the transaction
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -90,7 +99,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
             assertTrue(storedTokens.contains("safeway"), "Should contain 'safeway' token");
             assertTrue(storedTokens.contains("grocery"), "Should contain 'grocery' token");
             assertTrue(storedTokens.contains("store"), "Should contain 'store' token");
-            assertFalse(storedTokens.stream().anyMatch(t2 -> t2.matches("\\d+")),
+            assertFalse(
+                    storedTokens.stream().anyMatch(t2 -> t2.matches("\\d+")),
                     "Should not contain numeric tokens (store number filtered)");
         }
     }
@@ -98,24 +108,33 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
     @Test
     void importedTransactionWithUnknownCategoryDoesNotGetTokens() throws SQLException {
         // Given: An account - we'll force categorization to UNKNOWN
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
 
         // Create an OFX transaction
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction ofxTxn = createOfxTransaction("FIT1", -50.0f, "SOME MERCHANT", ofxAccount);
         final OfxBalance ofxBalance = OfxBalance.newBuilder().setAmount(950.0f).build();
-        final List<OfxExport> ofxExports = Collections.singletonList(
-                new OfxExport(ofxAccount, ofxBalance, Collections.singletonList(ofxTxn))
-        );
+        final List<OfxExport> ofxExports =
+                Collections.singletonList(new OfxExport(ofxAccount, ofxBalance, Collections.singletonList(ofxTxn)));
 
         // When: We import the transaction and user selects UNKNOWN category
         final SpyCli spyCli = new SpyCli(Category.UNKNOWN);
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -125,7 +144,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
 
         // And: No tokens were stored (UNKNOWN transactions don't contribute to matching)
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            Set<String> storedTokens = transactionTokenDao.getTokens(t, result.getFirst().getId());
+            Set<String> storedTokens =
+                    transactionTokenDao.getTokens(t, result.getFirst().getId());
             assertTrue(storedTokens.isEmpty(), "No tokens should be stored for UNKNOWN category transactions");
         }
     }
@@ -133,26 +153,36 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
     @Test
     void multipleImportedTransactionsEachGetTokens() throws SQLException {
         // Given: An account and category
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Category testCategory = categoryDao.insert(new Category("Shopping")).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory =
+                categoryDao.insert(new Category("Shopping")).get();
 
         // Create multiple OFX transactions
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction txn1 = createOfxTransaction("FIT1", -25.0f, "AMAZON MARKETPLACE", ofxAccount);
         final OfxTransaction txn2 = createOfxTransaction("FIT2", -75.0f, "WALMART SUPERCENTER", ofxAccount);
         final OfxBalance ofxBalance = OfxBalance.newBuilder().setAmount(900.0f).build();
-        final List<OfxExport> ofxExports = Collections.singletonList(
-                new OfxExport(ofxAccount, ofxBalance, List.of(txn1, txn2))
-        );
+        final List<OfxExport> ofxExports =
+                Collections.singletonList(new OfxExport(ofxAccount, ofxBalance, List.of(txn1, txn2)));
 
         // When: We import both transactions
         final SpyCli spyCli = new SpyCli(testCategory);
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         final TransactionImportService transactionImportService = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -163,8 +193,7 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             for (CategorizedTransaction ct : result) {
                 Set<String> tokens = transactionTokenDao.getTokens(t, ct.getId());
-                assertFalse(tokens.isEmpty(),
-                        "Transaction '" + ct.getDescription() + "' should have tokens stored");
+                assertFalse(tokens.isEmpty(), "Transaction '" + ct.getDescription() + "' should have tokens stored");
             }
         }
     }
@@ -172,23 +201,34 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
     @Test
     void tokensEnableTokenBasedMatchingForSubsequentImports() throws SQLException {
         // Given: First, import a transaction that gets tokens stored
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Category groceryCategory = categoryDao.insert(new Category("Groceries")).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category groceryCategory =
+                categoryDao.insert(new Category("Groceries")).get();
 
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction firstTxn = createOfxTransaction("FIT1", -50.0f, "SAFEWAY GROCERY STORE", ofxAccount);
-        final OfxBalance firstBalance = OfxBalance.newBuilder().setAmount(950.0f).build();
-        final List<OfxExport> firstExport = Collections.singletonList(
-                new OfxExport(ofxAccount, firstBalance, Collections.singletonList(firstTxn))
-        );
+        final OfxBalance firstBalance =
+                OfxBalance.newBuilder().setAmount(950.0f).build();
+        final List<OfxExport> firstExport =
+                Collections.singletonList(new OfxExport(ofxAccount, firstBalance, Collections.singletonList(firstTxn)));
 
         final SpyCli firstSpyCli = new SpyCli(groceryCategory);
-        final TransactionCategoryService firstCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, firstSpyCli);
+        final TransactionCategoryService firstCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, firstSpyCli);
         final TransactionImportService firstImportService = new TransactionImportService(
-                firstSpyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, firstCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                firstSpyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                firstCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> firstResult = firstImportService.categorizeTransactions(firstExport);
         assertEquals(1, firstResult.size());
@@ -196,25 +236,36 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
 
         // When: We import a similar transaction (different store number, same merchant)
         final OfxTransaction secondTxn = createOfxTransaction("FIT2", -75.0f, "SAFEWAY GROCERY MARKET", ofxAccount);
-        final OfxBalance secondBalance = OfxBalance.newBuilder().setAmount(875.0f).build();
+        final OfxBalance secondBalance =
+                OfxBalance.newBuilder().setAmount(875.0f).build();
         final List<OfxExport> secondExport = Collections.singletonList(
-                new OfxExport(ofxAccount, secondBalance, Collections.singletonList(secondTxn))
-        );
+                new OfxExport(ofxAccount, secondBalance, Collections.singletonList(secondTxn)));
 
         // Create a new CLI spy to track if it was prompted
         final TrackingSpyCli secondSpyCli = new TrackingSpyCli(groceryCategory);
-        final TransactionCategoryService secondCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, secondSpyCli);
+        final TransactionCategoryService secondCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, secondSpyCli);
         final TransactionImportService secondImportService = new TransactionImportService(
-                secondSpyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, secondCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                secondSpyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                secondCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> secondResult = secondImportService.categorizeTransactions(secondExport);
 
         // Then: The second transaction was auto-categorized using token matching
         assertEquals(1, secondResult.size());
-        assertEquals(groceryCategory, secondResult.getFirst().getCategory(),
+        assertEquals(
+                groceryCategory,
+                secondResult.getFirst().getCategory(),
                 "Second transaction should be auto-categorized to Groceries via token matching");
     }
 

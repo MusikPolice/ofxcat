@@ -1,13 +1,9 @@
 package ca.jonathanfritz.ofxcat.io;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import com.webcohesion.ofx4j.io.OFXParseException;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.core.Is;
-import org.hamcrest.core.IsEqual;
-import org.hamcrest.core.IsNull;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -15,8 +11,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.core.Is;
+import org.hamcrest.core.IsEqual;
+import org.hamcrest.core.IsNull;
+import org.junit.jupiter.api.Test;
 
 class OfxParserTest {
 
@@ -33,25 +32,59 @@ class OfxParserTest {
             .setBankId("900000100")
             .build();
     private static final List<OfxTransaction> expectedAccount1Transactions = Arrays.asList(
-            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december10th2018).setAmount(-31.21f)
-                    .setFitId("90000010020181210D0219892AA17").setName("CHEESECAKE FACTORY")
-                    .setMemo("IDP PURCHASE - 7135").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december10th2018).setAmount(-61.4f)
-                    .setFitId("90000010020181210D02197E2FA27").setName("WILD WING")
-                    .setMemo("IDP PURCHASE - 8381").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.ATM).setDate(december10th2018).setAmount(-360.0f)
-                    .setFitId("90000010020181210D0219652EA07").setName("Withdrawal")
-                    .setMemo("PTB WD --- KB681166").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.CREDIT).setDate(december10th2018).setAmount(300.0f)
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.POS)
+                    .setDate(december10th2018)
+                    .setAmount(-31.21f)
+                    .setFitId("90000010020181210D0219892AA17")
+                    .setName("CHEESECAKE FACTORY")
+                    .setMemo("IDP PURCHASE - 7135")
+                    .setAccount(expectedAccount1)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.POS)
+                    .setDate(december10th2018)
+                    .setAmount(-61.4f)
+                    .setFitId("90000010020181210D02197E2FA27")
+                    .setName("WILD WING")
+                    .setMemo("IDP PURCHASE - 8381")
+                    .setAccount(expectedAccount1)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.ATM)
+                    .setDate(december10th2018)
+                    .setAmount(-360.0f)
+                    .setFitId("90000010020181210D0219652EA07")
+                    .setName("Withdrawal")
+                    .setMemo("PTB WD --- KB681166")
+                    .setAccount(expectedAccount1)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.CREDIT)
+                    .setDate(december10th2018)
+                    .setAmount(300.0f)
                     .setFitId("90000010020181210D02192620AD7")
-                    .setMemo("Bank Error in Your Favour").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december10th2018).setAmount(-7.08f)
-                    .setFitId("90000010020181210D02192320AA7").setName("C-IDP PURCHASE-7123")
-                    .setMemo("FARM BOY").setAccount(expectedAccount1).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december10th2018).setAmount(-68.49f)
-                    .setFitId("90000010020181210D02194C22AA7").setName("C-IDP PURCHASE-1229")
-                    .setMemo("VALUMART").setAccount(expectedAccount1).build()
-    );
+                    .setMemo("Bank Error in Your Favour")
+                    .setAccount(expectedAccount1)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.DEBIT)
+                    .setDate(december10th2018)
+                    .setAmount(-7.08f)
+                    .setFitId("90000010020181210D02192320AA7")
+                    .setName("C-IDP PURCHASE-7123")
+                    .setMemo("FARM BOY")
+                    .setAccount(expectedAccount1)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.DEBIT)
+                    .setDate(december10th2018)
+                    .setAmount(-68.49f)
+                    .setFitId("90000010020181210D02194C22AA7")
+                    .setName("C-IDP PURCHASE-1229")
+                    .setMemo("VALUMART")
+                    .setAccount(expectedAccount1)
+                    .build());
     private static final OfxBalance expectedAccount1Balance = OfxBalance.newBuilder()
             .setDate(LocalDate.of(2019, 3, 19))
             .setAmount(15125.81f)
@@ -64,13 +97,24 @@ class OfxParserTest {
             .setBankId("900000100")
             .build();
     private static final List<OfxTransaction> expectedAccount2Transactions = Arrays.asList(
-            OfxTransaction.newBuilder().setType(TransactionType.POS).setDate(december17th2018).setAmount(-241.94f)
-                    .setFitId("90000010020181217C08184422CF1").setName("A AND M WOOD A")
-                    .setMemo("IDP PURCHASE - 2835").setAccount(expectedAccount2).build(),
-            OfxTransaction.newBuilder().setType(TransactionType.DEBIT).setDate(december17th2018).setAmount(-190.34f)
-                    .setFitId("90000010020181217C0910F89BF59").setName("UTILITY BILL PMT")
-                    .setMemo("UTILITIES").setAccount(expectedAccount2).build()
-    );
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.POS)
+                    .setDate(december17th2018)
+                    .setAmount(-241.94f)
+                    .setFitId("90000010020181217C08184422CF1")
+                    .setName("A AND M WOOD A")
+                    .setMemo("IDP PURCHASE - 2835")
+                    .setAccount(expectedAccount2)
+                    .build(),
+            OfxTransaction.newBuilder()
+                    .setType(TransactionType.DEBIT)
+                    .setDate(december17th2018)
+                    .setAmount(-190.34f)
+                    .setFitId("90000010020181217C0910F89BF59")
+                    .setName("UTILITY BILL PMT")
+                    .setMemo("UTILITIES")
+                    .setAccount(expectedAccount2)
+                    .build());
     private static final OfxBalance expectedAccount2Balance = OfxBalance.newBuilder()
             .setDate(LocalDate.of(2019, 3, 19))
             .setAmount(6239.75f)
@@ -83,10 +127,13 @@ class OfxParserTest {
 
         // there should be one account that contains six transactions
         MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(1));
-        final List<OfxTransaction> transactions = ofxExports.get(0).getTransactions().get(december10th2018);
+        final List<OfxTransaction> transactions =
+                ofxExports.get(0).getTransactions().get(december10th2018);
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(6));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
         MatcherAssert.assertThat(ofxExports.get(0).getBalance(), IsEqual.equalTo(expectedAccount1Balance));
     }
@@ -101,16 +148,20 @@ class OfxParserTest {
         // one account contains two transactions
         List<OfxTransaction> transactions = ofxExports.get(0).getTransactions().get(december17th2018);
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(2));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount2)), Is.is(true));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december17th2018)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount2)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getDate().equals(december17th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount2Transactions));
         MatcherAssert.assertThat(ofxExports.get(0).getBalance(), IsEqual.equalTo(expectedAccount2Balance));
 
         // the other account contains six transactions
         transactions = ofxExports.get(1).getTransactions().get(december10th2018);
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(6));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
-        MatcherAssert.assertThat(transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getAccount().equals(expectedAccount1)), Is.is(true));
+        MatcherAssert.assertThat(
+                transactions.stream().allMatch(t -> t.getDate().equals(december10th2018)), Is.is(true));
         MatcherAssert.assertThat(transactions, IsEqual.equalTo(expectedAccount1Transactions));
         MatcherAssert.assertThat(ofxExports.get(1).getBalance(), IsEqual.equalTo(expectedAccount1Balance));
     }
@@ -132,7 +183,8 @@ class OfxParserTest {
         MatcherAssert.assertThat(account.getBankId(), IsEqual.equalTo(null));
 
         // there was one transaction in the file
-        final Map<LocalDate, List<OfxTransaction>> transactions = ofxExports.get(0).getTransactions();
+        final Map<LocalDate, List<OfxTransaction>> transactions =
+                ofxExports.get(0).getTransactions();
         MatcherAssert.assertThat(transactions.size(), IsEqual.equalTo(1));
         final LocalDate key = transactions.keySet().stream().findFirst().get();
         MatcherAssert.assertThat(key, IsEqual.equalTo(LocalDate.of(2020, 11, 7)));
@@ -159,7 +211,11 @@ class OfxParserTest {
         MatcherAssert.assertThat(checking.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(checking.getAccount().getAccountId(), IsEqual.equalTo("078123116385"));
         MatcherAssert.assertThat(checking.getAccount().getAccountType(), IsEqual.equalTo("CHECKING"));
-        MatcherAssert.assertThat(checking.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
+        MatcherAssert.assertThat(
+                checking.getTransactions().values().stream()
+                        .mapToLong(Collection::size)
+                        .sum(),
+                IsEqual.equalTo(2L));
         assertTrue(checking.getTransactions().values().stream()
                 .flatMap(Collection::stream)
                 .anyMatch(t -> t.getFitId().equalsIgnoreCase("90000410039201316C20DD355A88F")));
@@ -172,7 +228,11 @@ class OfxParserTest {
         MatcherAssert.assertThat(savings.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(savings.getAccount().getAccountId(), IsEqual.equalTo("228035462751"));
         MatcherAssert.assertThat(savings.getAccount().getAccountType(), IsEqual.equalTo("SAVINGS"));
-        MatcherAssert.assertThat(savings.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(2L));
+        MatcherAssert.assertThat(
+                savings.getTransactions().values().stream()
+                        .mapToLong(Collection::size)
+                        .sum(),
+                IsEqual.equalTo(2L));
         assertTrue(savings.getTransactions().values().stream()
                 .flatMap(Collection::stream)
                 .anyMatch(t -> t.getFitId().equalsIgnoreCase("900000C0820601159S401A9FDD687")));
@@ -185,7 +245,11 @@ class OfxParserTest {
         MatcherAssert.assertThat(creditCard.getAccount().getBankId(), IsNull.notNullValue());
         MatcherAssert.assertThat(creditCard.getAccount().getAccountId(), IsEqual.equalTo("3580452029974826"));
         MatcherAssert.assertThat(creditCard.getAccount().getAccountType(), IsEqual.equalTo("CREDIT_CARD"));
-        MatcherAssert.assertThat(creditCard.getTransactions().values().stream().mapToLong(Collection::size).sum(), IsEqual.equalTo(1L));
+        MatcherAssert.assertThat(
+                creditCard.getTransactions().values().stream()
+                        .mapToLong(Collection::size)
+                        .sum(),
+                IsEqual.equalTo(1L));
         assertTrue(creditCard.getTransactions().values().stream()
                 .flatMap(Collection::stream)
                 .anyMatch(t -> t.getFitId().equalsIgnoreCase("9000001302920F103V05373431CF1")));

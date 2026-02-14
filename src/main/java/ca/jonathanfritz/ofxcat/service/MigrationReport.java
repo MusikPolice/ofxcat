@@ -58,15 +58,12 @@ public class MigrationReport {
     /**
      * Record of a single recategorization that occurred during migration.
      */
-    public record RecategorizationEntry(
-            String description,
-            String oldCategory,
-            String newCategory
-    ) {}
+    public record RecategorizationEntry(String description, String oldCategory, String newCategory) {}
 
     @Override
     public String toString() {
-        return String.format("MigrationReport{processed=%d, recategorized=%d, skipped=%d}",
+        return String.format(
+                "MigrationReport{processed=%d, recategorized=%d, skipped=%d}",
                 processedCount, recategorizedCount, skippedCount);
     }
 }

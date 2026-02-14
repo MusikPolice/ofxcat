@@ -2,15 +2,14 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * DAO for managing normalized tokens associated with categorized transactions.
@@ -68,15 +67,13 @@ public class TransactionTokenDao {
         logger.debug("Retrieving tokens for transaction {}", transactionId);
         final String selectStatement = "SELECT token FROM TransactionToken WHERE transaction_id = ?;";
 
-        return t.queryRaw(selectStatement,
-                ps -> ps.setLong(1, transactionId),
-                rs -> {
-                    Set<String> tokens = new HashSet<>();
-                    while (rs.next()) {
-                        tokens.add(rs.getString("token"));
-                    }
-                    return tokens;
-                });
+        return t.queryRaw(selectStatement, ps -> ps.setLong(1, transactionId), rs -> {
+            Set<String> tokens = new HashSet<>();
+            while (rs.next()) {
+                tokens.add(rs.getString("token"));
+            }
+            return tokens;
+        });
     }
 
     /**
@@ -90,9 +87,8 @@ public class TransactionTokenDao {
         logger.debug("Checking if transaction {} has tokens", transactionId);
         final String selectStatement = "SELECT COUNT(*) as count FROM TransactionToken WHERE transaction_id = ?;";
 
-        return t.queryRaw(selectStatement,
-                ps -> ps.setLong(1, transactionId),
-                rs -> rs.next() && rs.getInt("count") > 0);
+        return t.queryRaw(
+                selectStatement, ps -> ps.setLong(1, transactionId), rs -> rs.next() && rs.getInt("count") > 0);
     }
 
     /**
@@ -106,9 +102,8 @@ public class TransactionTokenDao {
         logger.debug("Getting token count for transaction {}", transactionId);
         final String selectStatement = "SELECT COUNT(*) as count FROM TransactionToken WHERE transaction_id = ?;";
 
-        return t.queryRaw(selectStatement,
-                ps -> ps.setLong(1, transactionId),
-                rs -> rs.next() ? rs.getInt("count") : 0);
+        return t.queryRaw(
+                selectStatement, ps -> ps.setLong(1, transactionId), rs -> rs.next() ? rs.getInt("count") : 0);
     }
 
     /**
@@ -119,7 +114,8 @@ public class TransactionTokenDao {
      * @param tokens the set of tokens to match against
      * @return list of match results with transaction ID, category ID, matching token count, and total token count
      */
-    public List<TokenMatchResult> findTransactionsWithMatchingTokens(DatabaseTransaction t, Set<String> tokens) throws SQLException {
+    public List<TokenMatchResult> findTransactionsWithMatchingTokens(DatabaseTransaction t, Set<String> tokens)
+            throws SQLException {
         if (tokens == null || tokens.isEmpty()) {
             logger.debug("No tokens to search for");
             return Collections.emptyList();
@@ -137,7 +133,8 @@ public class TransactionTokenDao {
         }
 
         // Use a CTE to compute total token counts, avoiding N+1 queries
-        final String selectStatement = """
+        final String selectStatement =
+                """
             WITH TokenCounts AS (
                 SELECT transaction_id, COUNT(*) as total_tokens
                 FROM TransactionToken
@@ -155,12 +152,14 @@ public class TransactionTokenDao {
               AND ct.category_id != ?
             GROUP BY ct.id, ct.category_id, tc.total_tokens
             ORDER BY matching_tokens DESC
-            """.formatted(placeholders);
+            """
+                        .formatted(placeholders);
 
         // Convert tokens to list for indexed access
         List<String> tokenList = new ArrayList<>(tokens);
 
-        return t.queryRaw(selectStatement,
+        return t.queryRaw(
+                selectStatement,
                 ps -> {
                     int paramIndex = 1;
                     for (String token : tokenList) {
@@ -175,8 +174,7 @@ public class TransactionTokenDao {
                                 rs.getLong("transaction_id"),
                                 rs.getLong("category_id"),
                                 rs.getInt("matching_tokens"),
-                                rs.getInt("total_tokens")
-                        ));
+                                rs.getInt("total_tokens")));
                     }
                     return results;
                 });

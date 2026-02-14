@@ -1,15 +1,14 @@
 package ca.jonathanfritz.ofxcat.cli;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
-import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for CLI input validation to ensure user input is properly validated
@@ -20,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * and CLI method behavior that can be tested with test doubles.
  */
 class CLIInputValidationTest {
-
 
     @Test
     void categoryNameValidationAcceptsValidName() {
@@ -257,4 +255,3 @@ class CLIInputValidationTest {
         }
     }
 }
-

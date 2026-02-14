@@ -1,8 +1,7 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
-import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-
+import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import java.util.Arrays;
 
 /**
@@ -36,9 +35,9 @@ public interface TransactionCleaner {
      */
     default Transaction.TransactionType categorizeTransactionType(final OfxTransaction ofxTransaction) {
         // if type is undefined, treat it as OTHER
-        final String name = ofxTransaction.getType() == null ?
-                Transaction.TransactionType.OTHER.name() :
-                ofxTransaction.getType().name();
+        final String name = ofxTransaction.getType() == null
+                ? Transaction.TransactionType.OTHER.name()
+                : ofxTransaction.getType().name();
 
         // map the enum values from one to the other - this works because our internal TransactionType enum is identical
         // to the TransactionType enum from the OFX library

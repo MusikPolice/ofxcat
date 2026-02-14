@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
-
 import java.util.Objects;
 
 public class Transfer implements Entity {
@@ -35,11 +34,7 @@ public class Transfer implements Entity {
 
     @Override
     public String toString() {
-        return "Transfer{" +
-                "id=" + id +
-                ", source=" + source +
-                ", sink=" + sink +
-                '}';
+        return "Transfer{" + "id=" + id + ", source=" + source + ", sink=" + sink + '}';
     }
 
     @Override
@@ -47,7 +42,9 @@ public class Transfer implements Entity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Transfer transfer = (Transfer) o;
-        return Objects.equals(id, transfer.id) && Objects.equals(source, transfer.source) && Objects.equals(sink, transfer.sink);
+        return Objects.equals(id, transfer.id)
+                && Objects.equals(source, transfer.source)
+                && Objects.equals(sink, transfer.sink);
     }
 
     @Override

@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

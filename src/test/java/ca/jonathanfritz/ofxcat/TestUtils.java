@@ -7,62 +7,61 @@ import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import com.webcohesion.ofx4j.domain.data.banking.AccountType;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-import org.apache.commons.lang3.RandomUtils;
-
 import java.time.LocalDate;
 import java.util.UUID;
+import org.apache.commons.lang3.RandomUtils;
 
 public class TestUtils {
 
-    private static final String[] fakeStores = new String[]{
-            "Outdoor Man",
-            "Empire Records",
-            "Pendant Publishing",
-            "The Very Big Corporation of America",
-            "WKRP",
-            "Los Pollos Hermanos",
-            "Vandelay Industries",
-            "Soylent Industries",
-            "Sterling Cooper Advertising Agency",
-            "Championship Vinyl",
-            "Cyberdyne Systems",
-            "Ollivanders Wand Shop",
-            "International Genetic Technologies",
-            "Bluth Company",
-            "Duff Beer",
-            "Central Perk",
-            "Cheers",
-            "Ghostbusters",
-            "Initech",
-            "Wayne Enterprises",
-            "Stark Industries",
-            "Wonka Industries",
-            "Monsters, Inc",
-            "Dunder Mifflin Paper Company",
-            "ACME Corp"
+    private static final String[] fakeStores = new String[] {
+        "Outdoor Man",
+        "Empire Records",
+        "Pendant Publishing",
+        "The Very Big Corporation of America",
+        "WKRP",
+        "Los Pollos Hermanos",
+        "Vandelay Industries",
+        "Soylent Industries",
+        "Sterling Cooper Advertising Agency",
+        "Championship Vinyl",
+        "Cyberdyne Systems",
+        "Ollivanders Wand Shop",
+        "International Genetic Technologies",
+        "Bluth Company",
+        "Duff Beer",
+        "Central Perk",
+        "Cheers",
+        "Ghostbusters",
+        "Initech",
+        "Wayne Enterprises",
+        "Stark Industries",
+        "Wonka Industries",
+        "Monsters, Inc",
+        "Dunder Mifflin Paper Company",
+        "ACME Corp"
     };
 
     private static final String[] fakeCategories = new String[] {
-            "Famous Kareem Abdul-Jabbars",
-            "Countries between Mexico and Canada",
-            "Automatic Points",
-            "Tie Your Shoe",
-            "Potent Potables",
-            "Le Tits, Now",
-            "Catch the Semen",
-            "S' Words",
-            "The Rapists",
-            "Things You Shouldn't Put in Your Mouth",
-            "The Number After 2",
-            "Rhymes With 'Dog'",
-            "Jap Anus Relations",
-            "States That End in Hampshire",
-            "What Color Is Green?",
-            "Current Black presidents",
-            "Sounds That Kitties Make",
-            "The Penis Mightier",
-            "States That Begin with California",
-            "Anal Bum Cover"
+        "Famous Kareem Abdul-Jabbars",
+        "Countries between Mexico and Canada",
+        "Automatic Points",
+        "Tie Your Shoe",
+        "Potent Potables",
+        "Le Tits, Now",
+        "Catch the Semen",
+        "S' Words",
+        "The Rapists",
+        "Things You Shouldn't Put in Your Mouth",
+        "The Number After 2",
+        "Rhymes With 'Dog'",
+        "Jap Anus Relations",
+        "States That End in Hampshire",
+        "What Color Is Green?",
+        "Current Black presidents",
+        "Sounds That Kitties Make",
+        "The Penis Mightier",
+        "States That Begin with California",
+        "Anal Bum Cover"
     };
 
     public static Account createRandomAccount(String name) {
@@ -79,7 +78,8 @@ public class TestUtils {
         return createRandomAccount(UUID.randomUUID().toString());
     }
 
-    public static Transaction createRandomTransaction(Account account, String fitId, LocalDate date, float amount, Transaction.TransactionType type) {
+    public static Transaction createRandomTransaction(
+            Account account, String fitId, LocalDate date, float amount, Transaction.TransactionType type) {
         return Transaction.newBuilder(fitId)
                 .setAccount(account)
                 .setDate(date)
@@ -91,9 +91,11 @@ public class TestUtils {
     }
 
     public static Transaction createRandomTransaction(Account account, String fitId) {
-        final LocalDate date = LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
+        final LocalDate date =
+                LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
         final float amount = getRandomAmount();
-        final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        final Transaction.TransactionType type =
+                amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         return createRandomTransaction(account, fitId, date, amount, type);
     }
 
@@ -103,21 +105,25 @@ public class TestUtils {
 
     public static Transaction createRandomTransaction(Account account, LocalDate date) {
         final float amount = getRandomAmount();
-        final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        final Transaction.TransactionType type =
+                amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         return createRandomTransaction(account, UUID.randomUUID().toString(), date, amount, type);
     }
 
     public static Transaction createRandomTransaction(Account account, LocalDate date, float amount) {
-        final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        final Transaction.TransactionType type =
+                amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         final String fitId = UUID.randomUUID().toString();
         return createRandomTransaction(account, fitId, date, amount, type);
     }
 
     public static Transaction createRandomTransaction() {
         final Account account = createRandomAccount();
-        final LocalDate date = LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
+        final LocalDate date =
+                LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
         final float amount = getRandomAmount();
-        final Transaction.TransactionType type = amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        final Transaction.TransactionType type =
+                amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
         final String fitId = UUID.randomUUID().toString();
         return createRandomTransaction(account, fitId, date, amount, type);
     }

@@ -1,18 +1,17 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class TransactionTokenDaoTest extends AbstractDatabaseTest {
 
@@ -33,9 +32,9 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         // Setup: Create a categorized transaction
         Category category = categoryDao.insert(new Category("RESTAURANTS")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction transaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction transaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         // Setup: Tokens to insert
         Set<String> tokens = Set.of("starbucks", "coffee");
@@ -55,9 +54,9 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         // Setup: Create a categorized transaction with tokens
         Category category = categoryDao.insert(new Category("GROCERIES")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction transaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction transaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         Set<String> tokens = Set.of("walmart", "store");
 
@@ -87,13 +86,13 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         Category groceries = categoryDao.insert(new Category("GROCERIES")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
 
-        CategorizedTransaction starbucksTxn = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants)
-        ).orElseThrow();
+        CategorizedTransaction starbucksTxn = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants))
+                .orElseThrow();
 
-        CategorizedTransaction walmartTxn = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), groceries)
-        ).orElseThrow();
+        CategorizedTransaction walmartTxn = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), groceries))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // Insert tokens for both transactions
@@ -101,9 +100,8 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
             transactionTokenDao.insertTokens(t, walmartTxn.getId(), Set.of("walmart", "grocery"));
 
             // Execute: Find transactions matching "starbucks"
-            List<TransactionTokenDao.TokenMatchResult> results = transactionTokenDao.findTransactionsWithMatchingTokens(
-                    t, Set.of("starbucks", "coffee")
-            );
+            List<TransactionTokenDao.TokenMatchResult> results =
+                    transactionTokenDao.findTransactionsWithMatchingTokens(t, Set.of("starbucks", "coffee"));
 
             // Verify: Only starbucks transaction is found
             assertEquals(1, results.size());
@@ -118,9 +116,9 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         // Setup: Create a transaction with tokens
         Category category = categoryDao.insert(new Category("SHOPPING")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction transaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction transaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // Initially no tokens
@@ -139,9 +137,9 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         // Setup: Create a transaction WITHOUT tokens
         Category category = categoryDao.insert(new Category("UTILITIES")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction transaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction transaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // Verify: hasTokens returns false
@@ -153,17 +151,16 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
     void findTransactionsWithMatchingTokens_excludesUnknownCategory() throws SQLException {
         // Setup: Create transaction in UNKNOWN category
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction unknownTxn = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), Category.UNKNOWN)
-        ).orElseThrow();
+        CategorizedTransaction unknownTxn = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), Category.UNKNOWN))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             transactionTokenDao.insertTokens(t, unknownTxn.getId(), Set.of("random", "merchant"));
 
             // Execute: Search for matching tokens
-            List<TransactionTokenDao.TokenMatchResult> results = transactionTokenDao.findTransactionsWithMatchingTokens(
-                    t, Set.of("random", "merchant")
-            );
+            List<TransactionTokenDao.TokenMatchResult> results =
+                    transactionTokenDao.findTransactionsWithMatchingTokens(t, Set.of("random", "merchant"));
 
             // Verify: UNKNOWN category transactions are excluded
             assertTrue(results.isEmpty());
@@ -176,22 +173,21 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         Category restaurants = categoryDao.insert(new Category("RESTAURANTS")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
 
-        CategorizedTransaction txn1 = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants)
-        ).orElseThrow();
+        CategorizedTransaction txn1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants))
+                .orElseThrow();
 
-        CategorizedTransaction txn2 = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants)
-        ).orElseThrow();
+        CategorizedTransaction txn2 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), restaurants))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             transactionTokenDao.insertTokens(t, txn1.getId(), Set.of("starbucks"));
             transactionTokenDao.insertTokens(t, txn2.getId(), Set.of("starbucks", "coffee"));
 
             // Execute: Find transactions with "starbucks"
-            List<TransactionTokenDao.TokenMatchResult> results = transactionTokenDao.findTransactionsWithMatchingTokens(
-                    t, Set.of("starbucks")
-            );
+            List<TransactionTokenDao.TokenMatchResult> results =
+                    transactionTokenDao.findTransactionsWithMatchingTokens(t, Set.of("starbucks"));
 
             // Verify: Both transactions match
             assertEquals(2, results.size());
@@ -203,9 +199,9 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         // Setup: Create transaction with multiple tokens
         Category category = categoryDao.insert(new Category("ENTERTAINMENT")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        CategorizedTransaction transaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction transaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             transactionTokenDao.insertTokens(t, transaction.getId(), Set.of("netflix", "streaming", "entertainment"));
@@ -221,13 +217,13 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
         Category category = categoryDao.insert(new Category("SHOPPING")).orElseThrow();
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
 
-        CategorizedTransaction txn1 = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction txn1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
-        CategorizedTransaction txn2 = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(account), category)
-        ).orElseThrow();
+        CategorizedTransaction txn2 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             transactionTokenDao.insertTokens(t, txn1.getId(), Set.of("amazon", "shopping"));

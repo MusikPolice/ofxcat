@@ -6,12 +6,11 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Loads and saves application configuration from YAML files.
@@ -25,8 +24,7 @@ public class AppConfigLoader {
     private final ObjectMapper yamlMapper;
 
     public AppConfigLoader() {
-        YAMLFactory yamlFactory = new YAMLFactory()
-                .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
+        YAMLFactory yamlFactory = new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
         this.yamlMapper = new ObjectMapper(yamlFactory)
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
@@ -36,8 +34,7 @@ public class AppConfigLoader {
     /**
      * Result of loading configuration, includes whether the file was newly created.
      */
-    public record LoadResult(AppConfig config, Path configPath, boolean wasCreated) {
-    }
+    public record LoadResult(AppConfig config, Path configPath, boolean wasCreated) {}
 
     /**
      * Loads configuration from the specified directory.
@@ -114,19 +111,19 @@ public class AppConfigLoader {
      * Generates YAML configuration content with helpful comments.
      */
     private String generateConfigWithComments(AppConfig config) throws IOException {
-        return "# OFXCat Configuration\n" +
-                "# Edit this file to customize application behavior.\n" +
-                "\n" +
-                "# Path to keyword rules file (relative to this config directory, or absolute)\n" +
-                "# Default: keyword-rules.yaml\n" +
-                "keyword_rules_path: " + config.getKeywordRulesPath() + "\n" +
-                "\n" +
-                "# Token-based transaction matching settings\n" +
-                "token_matching:\n" +
-                "  # Minimum overlap ratio (0.0-1.0) required for a match\n" +
-                "  # Higher values require more tokens to match\n" +
-                "  # Default: 0.6 (60% of tokens must match)\n" +
-                "  overlap_threshold: " + config.getTokenMatching().getOverlapThreshold() + "\n";
+        return "# OFXCat Configuration\n" + "# Edit this file to customize application behavior.\n"
+                + "\n"
+                + "# Path to keyword rules file (relative to this config directory, or absolute)\n"
+                + "# Default: keyword-rules.yaml\n"
+                + "keyword_rules_path: "
+                + config.getKeywordRulesPath() + "\n" + "\n"
+                + "# Token-based transaction matching settings\n"
+                + "token_matching:\n"
+                + "  # Minimum overlap ratio (0.0-1.0) required for a match\n"
+                + "  # Higher values require more tokens to match\n"
+                + "  # Default: 0.6 (60% of tokens must match)\n"
+                + "  overlap_threshold: "
+                + config.getTokenMatching().getOverlapThreshold() + "\n";
     }
 
     /**

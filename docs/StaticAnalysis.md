@@ -2,6 +2,41 @@
 
 This document describes the static analysis tools configured for this project, what they enforce, and how to work with them.
 
+## Spotless — Code Formatting
+
+Spotless provides deterministic, automatic code formatting using [Palantir Java Format](https://github.com/palantir/palantir-java-format). It runs as part of `./gradlew verify` and will fail the build if any file is not formatted correctly.
+
+### Configuration
+
+- **Gradle plugin**: `com.diffplug.spotless` version 7.0.2
+- **Formatter**: Palantir Java Format (4-space indentation, 120-char line width)
+- **Additional steps**: `removeUnusedImports()`, `trimTrailingWhitespace()`, `endWithNewline()`
+
+### Running Spotless
+
+```bash
+# Auto-fix all formatting issues
+./gradlew spotlessApply
+
+# Check formatting without modifying files (used by verify)
+./gradlew spotlessCheck
+```
+
+### What Spotless Enforces
+
+- **Consistent indentation** (4 spaces, no tabs)
+- **Line wrapping** at 120 characters
+- **Import ordering** (deterministic, normalized)
+- **Trailing whitespace** removal
+- **Newline at end of file**
+- **Consistent spacing** around operators, keywords, braces, parentheses, etc.
+
+### Relationship to Checkstyle
+
+Spotless handles all **layout and whitespace** formatting deterministically — the formatter produces the one correct output, so there's nothing to check. Checkstyle handles **semantic style rules** that a formatter can't enforce: naming conventions, import restrictions (no star imports, no unused imports), code structure (braces required, one statement per line), and correctness checks (equals/hashCode pairing, fall-through documentation).
+
+The whitespace-related Checkstyle modules (`FileTabCharacter`, `LineLength`, `NewlineAtEndOfFile`, `EmptyForIteratorPad`, `GenericWhitespace`, `MethodParamPad`, `NoWhitespaceAfter`, `NoWhitespaceBefore`, `ParenPad`, `TypecastParenPad`, `WhitespaceAfter`, `WhitespaceAround`, `CommentsIndentation`) were removed when Spotless was added since the formatter now enforces these deterministically.
+
 ## Checkstyle
 
 Checkstyle enforces consistent code style across the project. It runs as part of `./gradlew verify` and will fail the build on any violation.
@@ -59,10 +94,7 @@ Reports are generated at:
 - **No redundant modifiers** (e.g., `public` on JUnit 5 test methods, `final` on try-with-resources variables).
 
 #### Formatting
-- **No tab characters**. Use spaces for indentation.
-- **Line length**: 200 characters maximum. Import and package lines are exempt.
-- **Files must end with a newline**.
-- **Whitespace required** around operators, after commas, after keywords (`if`, `for`, `try`, etc.).
+Whitespace and layout rules are now enforced by Spotless (Palantir Java Format). See the [Spotless section](#spotless--code-formatting) above.
 
 ### Suppressions
 
@@ -83,9 +115,9 @@ When checkstyle reports a violation, the error message includes the rule name in
 | `UnusedImports` | Delete the unused import line |
 | `RedundantModifier` | Remove `public` from JUnit 5 test methods/classes, or `final` from try-with-resources variables |
 | `NeedBraces` | Add `{ }` around the body of `if`/`else`/`for`/`while` |
-| `LineLength` | Break the line. For builder chains, wrap after each `.method()` call. For long parameter lists, put each parameter on its own line |
-| `WhitespaceAfter` | Add a space after commas, keywords, etc. |
 | `ConstantName` | Use `UPPER_SNAKE_CASE` or `camelCase` for `static final` fields |
+
+For formatting issues (whitespace, line length, indentation), run `./gradlew spotlessApply` instead — the formatter fixes them automatically.
 
 ## PMD
 
@@ -423,15 +455,16 @@ The `verify` Gradle task is the single command that checks whether a change is r
 
 It runs:
 1. `compileJava` / `compileTestJava` - compilation with Error Prone checks (runs automatically as a prerequisite of `test`)
-2. `checkstyleMain` - style check on production code
-3. `checkstyleTest` - style check on test code
-4. `pmdMain` - bug/smell detection on production code
-5. `pmdTest` - bug/smell detection on test code
-6. `spotbugsMain` - bug pattern detection on production bytecode
-7. `spotbugsTest` - bug pattern detection on test bytecode
-8. `test` - the full test suite
-9. `jacocoTestReport` - generate coverage report
-10. `jacocoTestCoverageVerification` - enforce minimum 80% line coverage
+2. `spotlessCheck` - code formatting verification (Palantir Java Format)
+3. `checkstyleMain` - style check on production code
+4. `checkstyleTest` - style check on test code
+5. `pmdMain` - bug/smell detection on production code
+6. `pmdTest` - bug/smell detection on test code
+7. `spotbugsMain` - bug pattern detection on production bytecode
+8. `spotbugsTest` - bug pattern detection on test bytecode
+9. `test` - the full test suite
+10. `jacocoTestReport` - generate coverage report
+11. `jacocoTestCoverageVerification` - enforce minimum 80% line coverage
 
 If `verify` passes, the code is clean.
 

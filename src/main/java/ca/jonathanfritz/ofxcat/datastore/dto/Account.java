@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
-
 import java.util.Objects;
 
 public class Account implements Entity {
@@ -46,11 +45,11 @@ public class Account implements Entity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Account account = (Account) o;
-        return Objects.equals(bankId, account.bankId) &&
-                Objects.equals(accountNumber, account.accountNumber) &&
-                Objects.equals(accountType, account.accountType) &&
-                Objects.equals(name, account.name) &&
-                Objects.equals(id, account.id);
+        return Objects.equals(bankId, account.bankId)
+                && Objects.equals(accountNumber, account.accountNumber)
+                && Objects.equals(accountType, account.accountType)
+                && Objects.equals(name, account.name)
+                && Objects.equals(id, account.id);
     }
 
     @Override
@@ -60,13 +59,12 @@ public class Account implements Entity {
 
     @Override
     public String toString() {
-        return "Account{" +
-                "bankId='" + bankId + '\'' +
-                ", accountNumber='" + accountNumber + '\'' +
-                ", accountType='" + accountType + '\'' +
-                ", name='" + name + '\'' +
-                ", id=" + id +
-                '}';
+        return "Account{" + "bankId='"
+                + bankId + '\'' + ", accountNumber='"
+                + accountNumber + '\'' + ", accountType='"
+                + accountType + '\'' + ", name='"
+                + name + '\'' + ", id="
+                + id + '}';
     }
 
     public static Builder newBuilder() {
@@ -92,8 +90,7 @@ public class Account implements Entity {
         private String accountType;
         private String name;
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder setId(Long id) {
             this.id = id;

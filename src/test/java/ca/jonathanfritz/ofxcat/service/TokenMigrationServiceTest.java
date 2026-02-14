@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
@@ -13,16 +15,13 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRule;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class TokenMigrationServiceTest extends AbstractDatabaseTest {
 
@@ -133,8 +132,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn = insertTransactionWithoutTokens("COSTCO WHOLESALE", Category.UNKNOWN);
 
         // And: keyword rules that match "costco" to "Groceries"
-        KeywordRulesConfig config = createKeywordRulesConfig(true,
-                new KeywordRule(List.of("costco"), "Groceries"));
+        KeywordRulesConfig config = createKeywordRulesConfig(true, new KeywordRule(List.of("costco"), "Groceries"));
 
         TokenMigrationService migrationService = createMigrationService(config);
 
@@ -147,13 +145,15 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         assertTrue(report.hasRecategorizations());
 
         // Verify the recategorization details
-        MigrationReport.RecategorizationEntry entry = report.getRecategorizations().getFirst();
+        MigrationReport.RecategorizationEntry entry =
+                report.getRecategorizations().getFirst();
         assertEquals("COSTCO WHOLESALE", entry.description());
         assertEquals("UNKNOWN", entry.oldCategory());
-        assertEquals("Groceries", entry.newCategory());  // Report stores name from keyword rule
+        assertEquals("Groceries", entry.newCategory()); // Report stores name from keyword rule
 
         // Verify the transaction now has the new category (Category uppercases names)
-        CategorizedTransaction updated = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction updated =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(updated);
         assertEquals("GROCERIES", updated.getCategory().getName());
     }
@@ -164,8 +164,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn = insertTransactionWithoutTokens("COSTCO WHOLESALE", Category.UNKNOWN);
 
         // And: keyword rules that match "costco" but auto_categorize is disabled
-        KeywordRulesConfig config = createKeywordRulesConfig(false,
-                new KeywordRule(List.of("costco"), "Groceries"));
+        KeywordRulesConfig config = createKeywordRulesConfig(false, new KeywordRule(List.of("costco"), "Groceries"));
 
         TokenMigrationService migrationService = createMigrationService(config);
 
@@ -178,7 +177,8 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         assertFalse(report.hasRecategorizations());
 
         // Verify the transaction still has the original category
-        CategorizedTransaction updated = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction updated =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(updated);
         assertEquals("UNKNOWN", updated.getCategory().getName());
     }
@@ -190,8 +190,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         insertTransactionWithoutTokens("COSTCO WHOLESALE", groceries);
 
         // And: keyword rules that also match to "Groceries"
-        KeywordRulesConfig config = createKeywordRulesConfig(true,
-                new KeywordRule(List.of("costco"), "Groceries"));
+        KeywordRulesConfig config = createKeywordRulesConfig(true, new KeywordRule(List.of("costco"), "Groceries"));
 
         TokenMigrationService migrationService = createMigrationService(config);
 
@@ -288,13 +287,13 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn = insertTransactionWithTokens("COSTCO WHOLESALE", Category.UNKNOWN);
 
         // Verify transaction is in UNKNOWN category
-        CategorizedTransaction before = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction before =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(before);
         assertEquals("UNKNOWN", before.getCategory().getName());
 
         // When: we force migration with keyword rules that match "costco" to "Groceries"
-        KeywordRulesConfig config = createKeywordRulesConfig(true,
-                new KeywordRule(List.of("costco"), "Groceries"));
+        KeywordRulesConfig config = createKeywordRulesConfig(true, new KeywordRule(List.of("costco"), "Groceries"));
         TokenMigrationService migrationService = createMigrationService(config);
 
         MigrationReport report = migrationService.forceMigration();
@@ -304,7 +303,8 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         assertEquals(1, report.getRecategorizedCount());
 
         // And: the category was updated
-        CategorizedTransaction after = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction after =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(after);
         assertEquals("GROCERIES", after.getCategory().getName());
     }
@@ -315,8 +315,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn = insertTransactionWithTokens("COSTCO WHOLESALE", Category.UNKNOWN);
 
         // When: we force migration with dry-run enabled
-        KeywordRulesConfig config = createKeywordRulesConfig(true,
-                new KeywordRule(List.of("costco"), "Groceries"));
+        KeywordRulesConfig config = createKeywordRulesConfig(true, new KeywordRule(List.of("costco"), "Groceries"));
         TokenMigrationService migrationService = createMigrationService(config);
 
         MigrationReport report = migrationService.forceMigration(true);
@@ -327,7 +326,8 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
         assertTrue(report.hasRecategorizations());
 
         // But: the transaction was NOT actually changed
-        CategorizedTransaction unchanged = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction unchanged =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(unchanged);
         assertEquals("UNKNOWN", unchanged.getCategory().getName());
 
@@ -363,8 +363,7 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 categoryDao,
                 tokenNormalizer,
-                keywordRulesConfig
-        );
+                keywordRulesConfig);
     }
 
     private CategorizedTransaction insertTransactionWithoutTokens(String description, Category category) {
@@ -376,10 +375,13 @@ class TokenMigrationServiceTest extends AbstractDatabaseTest {
                 .setAmount(-50.0f)
                 .build();
 
-        return categorizedTransactionDao.insert(new CategorizedTransaction(transaction, category)).orElse(null);
+        return categorizedTransactionDao
+                .insert(new CategorizedTransaction(transaction, category))
+                .orElse(null);
     }
 
-    private CategorizedTransaction insertTransactionWithTokens(String description, Category category) throws SQLException {
+    private CategorizedTransaction insertTransactionWithTokens(String description, Category category)
+            throws SQLException {
         CategorizedTransaction txn = insertTransactionWithoutTokens(description, category);
 
         // Store tokens

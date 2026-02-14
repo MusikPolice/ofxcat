@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
-
 import java.util.Objects;
 
 /**
@@ -42,9 +41,7 @@ public class TransactionToken implements Entity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TransactionToken that = (TransactionToken) o;
-        return transactionId == that.transactionId &&
-                Objects.equals(id, that.id) &&
-                Objects.equals(token, that.token);
+        return transactionId == that.transactionId && Objects.equals(id, that.id) && Objects.equals(token, that.token);
     }
 
     @Override
@@ -54,10 +51,6 @@ public class TransactionToken implements Entity {
 
     @Override
     public String toString() {
-        return "TransactionToken{" +
-                "id=" + id +
-                ", transactionId=" + transactionId +
-                ", token='" + token + '\'' +
-                '}';
+        return "TransactionToken{" + "id=" + id + ", transactionId=" + transactionId + ", token='" + token + '\'' + '}';
     }
 }

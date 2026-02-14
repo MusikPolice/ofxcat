@@ -17,18 +17,8 @@
         <property name="optional" value="true"/>
     </module>
 
-    <!-- File-level checks -->
-    <module name="FileTabCharacter">
-        <property name="eachLine" value="true"/>
-    </module>
-
-    <module name="LineLength">
-        <property name="fileExtensions" value="java"/>
-        <property name="max" value="200"/>
-        <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-    </module>
-
-    <module name="NewlineAtEndOfFile"/>
+    <!-- File-level formatting checks removed — now enforced by Spotless (Palantir Java Format):
+         FileTabCharacter, LineLength, NewlineAtEndOfFile -->
 
     <module name="TreeWalker">
         <!-- Annotations -->
@@ -79,7 +69,7 @@
 
         <!-- Miscellaneous -->
         <module name="ArrayTypeStyle"/>
-        <module name="CommentsIndentation"/>
+        <!-- CommentsIndentation removed — now enforced by Spotless (Palantir Java Format) -->
         <module name="OuterTypeFilename"/>
         <module name="UpperEll"/>
 
@@ -110,22 +100,9 @@
         <module name="StaticVariableName"/>
         <module name="TypeName"/>
 
-        <!-- Whitespace -->
-        <module name="EmptyForIteratorPad"/>
-        <module name="GenericWhitespace"/>
-        <module name="MethodParamPad"/>
-        <module name="NoWhitespaceAfter"/>
-        <module name="NoWhitespaceBefore"/>
-        <module name="ParenPad"/>
-        <module name="TypecastParenPad"/>
-        <module name="WhitespaceAfter"/>
-        <module name="WhitespaceAround">
-            <property name="allowEmptyConstructors" value="true"/>
-            <property name="allowEmptyMethods" value="true"/>
-            <property name="allowEmptyTypes" value="true"/>
-            <property name="allowEmptyLoops" value="true"/>
-            <property name="allowEmptyLambdas" value="true"/>
-            <property name="allowEmptyCatches" value="true"/>
-        </module>
+        <!-- Whitespace modules removed — now enforced by Spotless (Palantir Java Format):
+             EmptyForIteratorPad, GenericWhitespace, MethodParamPad,
+             NoWhitespaceAfter, NoWhitespaceBefore, ParenPad,
+             TypecastParenPad, WhitespaceAfter, WhitespaceAround -->
     </module>
 </module>

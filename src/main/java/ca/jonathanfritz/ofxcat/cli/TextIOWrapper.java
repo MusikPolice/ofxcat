@@ -1,9 +1,8 @@
 package ca.jonathanfritz.ofxcat.cli;
 
-import org.beryx.textio.TextIO;
-
 import jakarta.inject.Inject;
 import java.util.List;
+import org.beryx.textio.TextIO;
 
 /**
  * A light wrapper around {@link TextIO} that makes it possible to mock in CLI tests
@@ -18,14 +17,10 @@ public class TextIOWrapper {
     }
 
     public String promptChooseString(String prompt, List<String> choices) {
-        return textIO.newStringInputReader()
-                .withNumberedPossibleValues(choices)
-                .read(prompt);
+        return textIO.newStringInputReader().withNumberedPossibleValues(choices).read(prompt);
     }
 
     public boolean promptYesNo(String prompt) {
-        return textIO.newBooleanInputReader()
-                .withDefaultValue(true)
-                .read(prompt);
+        return textIO.newBooleanInputReader().withDefaultValue(true).read(prompt);
     }
 }

@@ -4,6 +4,7 @@ plugins {
     id 'checkstyle'
     id 'pmd'
     id 'jacoco'
+    id 'com.diffplug.spotless' version '7.0.2'
     id 'com.github.spotbugs' version '6.4.8'
     id 'net.ltgt.errorprone' version '4.1.0'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
@@ -104,6 +105,16 @@ jar {
     }
 }
 
+// Code formatting: Spotless with Palantir Java Format
+spotless {
+    java {
+        palantirJavaFormat()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
 // Static analysis: Checkstyle enforces consistent code style
 checkstyle {
     toolVersion = '10.21.4'
@@ -194,9 +205,9 @@ jacocoTestCoverageVerification {
 
 // Single command to verify the project is ready for review
 tasks.register('verify') {
-    dependsOn 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'spotbugsMain', 'spotbugsTest', 'test', 'jacocoTestReport', 'jacocoTestCoverageVerification'
+    dependsOn 'spotlessCheck', 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'spotbugsMain', 'spotbugsTest', 'test', 'jacocoTestReport', 'jacocoTestCoverageVerification'
     group = 'verification'
-    description = 'Runs all verification tasks: tests, checkstyle, pmd, spotbugs, coverage'
+    description = 'Runs all verification tasks: tests, spotless, checkstyle, pmd, spotbugs, coverage'
 }
 
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)

@@ -18,15 +18,14 @@ import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class TransactionImportServiceTest extends AbstractDatabaseTest {
 
@@ -52,35 +51,54 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
     void categorizeTransactionsSingleTransactionTest() {
         // there is one existing account and category
         final String fitId = UUID.randomUUID().toString();
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Category testCategory = categoryDao.insert(new Category("Test Category")).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory =
+                categoryDao.insert(new Category("Test Category")).get();
 
         // create an OFX file that contains a new transaction belonging to both
-        final CategorizedTransaction testTransaction = new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory);
+        final CategorizedTransaction testTransaction =
+                new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory);
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
         final List<OfxTransaction> transactions = Collections.singletonList(transaction);
-        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
+        final List<OfxExport> ofxExports = Collections.singletonList(
+                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
 
         // try to insert it
         final SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertEquals(1, categorizedTransactions.size());
-        Assertions.assertEquals(fitId, categorizedTransactions.get(0).getTransaction().getFitId());
+        Assertions.assertEquals(
+                fitId, categorizedTransactions.get(0).getTransaction().getFitId());
         Assertions.assertEquals(testAccount, categorizedTransactions.get(0).getAccount());
         Assertions.assertEquals(testCategory, categorizedTransactions.get(0).getCategory());
 
         // the new transaction was printed to the CLI
         Assertions.assertEquals(1, spyCli.getCapturedTransactions().size());
-        Assertions.assertEquals(testTransaction.getTransaction().getFitId(), spyCli.getCapturedTransactions().get(0).getFitId());
+        Assertions.assertEquals(
+                testTransaction.getTransaction().getFitId(),
+                spyCli.getCapturedTransactions().get(0).getFitId());
 
         // make sure that the transaction was created as expected
-        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        final CategorizedTransaction actual =
+                categorizedTransactionDao.selectByFitId(fitId).get();
         Assertions.assertNotNull(actual.getId());
         Assertions.assertEquals(testCategory, actual.getCategory());
     }
@@ -89,78 +107,123 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
     void categorizeTransactionsDuplicateTransactionIsIgnoredTest() {
         // there is one existing transaction with a known fitId
         final String fitId = UUID.randomUUID().toString();
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Category testCategory = categoryDao.insert(new Category("Test Category")).get();
-        final CategorizedTransaction testTransaction = categorizedTransactionDao.insert(
-                new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory)
-        ).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Category testCategory =
+                categoryDao.insert(new Category("Test Category")).get();
+        final CategorizedTransaction testTransaction = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), testCategory))
+                .get();
 
         // try to insert the same transaction
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
         final List<OfxTransaction> transactions = Collections.singletonList(transaction);
-        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
+        final List<OfxExport> ofxExports = Collections.singletonList(
+                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), transactions));
 
         // actually run the test
-        final TransactionImportService transactionImportService = new TransactionImportService(null, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                null, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                null,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                null,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(ofxExports);
         Assertions.assertTrue(categorizedTransactions.isEmpty());
 
         // make sure that the original transaction still exists
         // this will throw an SQLException if there are two transactions with the same FitID
-        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        final CategorizedTransaction actual =
+                categorizedTransactionDao.selectByFitId(fitId).get();
         Assertions.assertEquals(testTransaction, actual);
     }
 
     @Test
     void categorizeTransactionsTransferTest() {
         // create two accounts
-        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account checking =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
 
         // transfer money from one to the other
         final LocalDate today = LocalDate.now();
         final CategorizedTransaction source = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        checking, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
         final CategorizedTransaction sink = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        savings, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
 
         // create an OFX file that contains both transactions
         final OfxBalance zeroBalance = OfxBalance.newBuilder().setAmount(0f).build();
         final List<OfxExport> ofxExports = List.of(
-            new OfxExport(TestUtils.accountToOfxAccount(checking), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(source))),
-            new OfxExport(TestUtils.accountToOfxAccount(savings), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(sink)))
-        );
+                new OfxExport(
+                        TestUtils.accountToOfxAccount(checking),
+                        zeroBalance,
+                        List.of(TestUtils.transactionToOfxTransaction(source))),
+                new OfxExport(
+                        TestUtils.accountToOfxAccount(savings),
+                        zeroBalance,
+                        List.of(TestUtils.transactionToOfxTransaction(sink))));
 
         // try to insert them
         final SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(ofxExports);
 
         Assertions.assertEquals(2, categorizedTransactions.size());
-        Assertions.assertTrue(categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(source.getFitId())));
-        Assertions.assertTrue(categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sink.getFitId())));
+        Assertions.assertTrue(
+                categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(source.getFitId())));
+        Assertions.assertTrue(
+                categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sink.getFitId())));
 
         // the transfer was printed to the CLI
         Assertions.assertEquals(1, spyCli.getCapturedTransfers().size());
-        Assertions.assertEquals(sink.getTransaction().getFitId(), spyCli.getCapturedTransfers().get(0).getSink().getFitId());
-        Assertions.assertEquals(source.getTransaction().getFitId(), spyCli.getCapturedTransfers().get(0).getSource().getFitId());
+        Assertions.assertEquals(
+                sink.getTransaction().getFitId(),
+                spyCli.getCapturedTransfers().get(0).getSink().getFitId());
+        Assertions.assertEquals(
+                source.getTransaction().getFitId(),
+                spyCli.getCapturedTransfers().get(0).getSource().getFitId());
 
-        // zero transactions were printed to the CLI (because they are implicitly inserted as a part of transfer handling)
+        // zero transactions were printed to the CLI (because they are implicitly inserted as a part of transfer
+        // handling)
         Assertions.assertTrue(spyCli.getCapturedTransactions().isEmpty());
 
         // make sure that the transactions were inserted as expected
-        Assertions.assertEquals(source.getFitId(), categorizedTransactionDao.selectByFitId(source.getFitId()).get().getFitId());
-        Assertions.assertEquals(sink.getFitId(), categorizedTransactionDao.selectByFitId(sink.getFitId()).get().getFitId());
+        Assertions.assertEquals(
+                source.getFitId(),
+                categorizedTransactionDao.selectByFitId(source.getFitId()).get().getFitId());
+        Assertions.assertEquals(
+                sink.getFitId(),
+                categorizedTransactionDao.selectByFitId(sink.getFitId()).get().getFitId());
 
         // make sure that the transfer was inserted as expected
         final Transfer transfer = transferDao.selectByFitId(source.getFitId()).get();
@@ -174,94 +237,161 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         final OfxBalance zeroBalance = OfxBalance.newBuilder().setAmount(0f).build();
 
         // create one OFX file that contains the source of a transfer
-        final Account sourceAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account sourceAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
         final CategorizedTransaction sourceTransaction = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(sourceAccount, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        sourceAccount, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
-        final List<OfxExport> sourceOfxFile = List.of(
-                new OfxExport(TestUtils.accountToOfxAccount(sourceAccount), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(sourceTransaction)))
-        );
+        final List<OfxExport> sourceOfxFile = List.of(new OfxExport(
+                TestUtils.accountToOfxAccount(sourceAccount),
+                zeroBalance,
+                List.of(TestUtils.transactionToOfxTransaction(sourceTransaction))));
 
         // create another OFX file that contains the sink of a transfer
-        final Account sinkAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account sinkAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
         final CategorizedTransaction sinkTransaction = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(sinkAccount, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        sinkAccount, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
-        final List<OfxExport> sinkOfxFile = List.of(
-                new OfxExport(TestUtils.accountToOfxAccount(sinkAccount), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(sinkTransaction)))
-        );
+        final List<OfxExport> sinkOfxFile = List.of(new OfxExport(
+                TestUtils.accountToOfxAccount(sinkAccount),
+                zeroBalance,
+                List.of(TestUtils.transactionToOfxTransaction(sinkTransaction))));
 
         // process the source OFX file
         SpyCli spyCli = new SpyCli();
-        TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
-        TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(sourceOfxFile);
+        TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(sourceOfxFile);
 
-        // the source transaction was categorized, printed to the CLI, and inserted into the database; a transfer was not created
+        // the source transaction was categorized, printed to the CLI, and inserted into the database; a transfer was
+        // not created
         Assertions.assertEquals(1, categorizedTransactions.size());
-        Assertions.assertTrue(categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sourceTransaction.getFitId())));
-        Assertions.assertTrue(spyCli.getCapturedTransactions().stream().anyMatch(t -> t.getFitId().equals(sourceTransaction.getFitId())));
-        Assertions.assertEquals(sourceTransaction.getFitId(), categorizedTransactionDao.selectByFitId(sourceTransaction.getFitId()).get().getFitId());
-        Assertions.assertTrue(transferDao.selectByFitId(sourceTransaction.getFitId()).isEmpty());
+        Assertions.assertTrue(
+                categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sourceTransaction.getFitId())));
+        Assertions.assertTrue(spyCli.getCapturedTransactions().stream()
+                .anyMatch(t -> t.getFitId().equals(sourceTransaction.getFitId())));
+        Assertions.assertEquals(
+                sourceTransaction.getFitId(),
+                categorizedTransactionDao
+                        .selectByFitId(sourceTransaction.getFitId())
+                        .get()
+                        .getFitId());
+        Assertions.assertTrue(
+                transferDao.selectByFitId(sourceTransaction.getFitId()).isEmpty());
 
         // process the sink OFX file
         spyCli = new SpyCli();
         transactionCategoryService = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
-        transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
+        transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
         categorizedTransactions = transactionImportService.categorizeTransactions(sinkOfxFile);
 
         // the sink transaction was categorized, printed to the CLI, and inserted into the database
         Assertions.assertEquals(1, categorizedTransactions.size());
-        Assertions.assertTrue(categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sinkTransaction.getFitId())));
-        Assertions.assertTrue(spyCli.getCapturedTransactions().stream().anyMatch(t -> t.getFitId().equals(sinkTransaction.getFitId())));
-        Assertions.assertEquals(sinkTransaction.getFitId(), categorizedTransactionDao.selectByFitId(sinkTransaction.getFitId()).get().getFitId());
+        Assertions.assertTrue(
+                categorizedTransactions.stream().anyMatch(ct -> ct.getFitId().equals(sinkTransaction.getFitId())));
+        Assertions.assertTrue(spyCli.getCapturedTransactions().stream()
+                .anyMatch(t -> t.getFitId().equals(sinkTransaction.getFitId())));
+        Assertions.assertEquals(
+                sinkTransaction.getFitId(),
+                categorizedTransactionDao
+                        .selectByFitId(sinkTransaction.getFitId())
+                        .get()
+                        .getFitId());
 
         // the transfer was printed to the CLI
         Assertions.assertEquals(1, spyCli.getCapturedTransfers().size());
-        Assertions.assertEquals(sinkTransaction.getTransaction().getFitId(), spyCli.getCapturedTransfers().get(0).getSink().getFitId());
-        Assertions.assertEquals(sourceTransaction.getTransaction().getFitId(), spyCli.getCapturedTransfers().get(0).getSource().getFitId());
+        Assertions.assertEquals(
+                sinkTransaction.getTransaction().getFitId(),
+                spyCli.getCapturedTransfers().get(0).getSink().getFitId());
+        Assertions.assertEquals(
+                sourceTransaction.getTransaction().getFitId(),
+                spyCli.getCapturedTransfers().get(0).getSource().getFitId());
 
         // and the transfer was inserted into the database
-        final Transfer transfer = transferDao.selectByFitId(sourceTransaction.getFitId()).get();
-        Assertions.assertEquals(sourceTransaction.getFitId(), transfer.getSource().getFitId());
+        final Transfer transfer =
+                transferDao.selectByFitId(sourceTransaction.getFitId()).get();
+        Assertions.assertEquals(
+                sourceTransaction.getFitId(), transfer.getSource().getFitId());
         Assertions.assertEquals(sinkTransaction.getFitId(), transfer.getSink().getFitId());
     }
 
     @Test
     void categorizeTransactionsDuplicateTransferIsIgnoredTest() {
         // create two accounts
-        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account checking =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
 
         // transfer money from one to the other
         final LocalDate today = LocalDate.now();
         final CategorizedTransaction source = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(checking, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        checking, UUID.randomUUID().toString(), today, -100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
         final CategorizedTransaction sink = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(savings, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
+                TestUtils.createRandomTransaction(
+                        savings, UUID.randomUUID().toString(), today, 100f, Transaction.TransactionType.XFER),
                 Category.TRANSFER);
 
         // create an OFX file that contains both transactions
         final OfxBalance zeroBalance = OfxBalance.newBuilder().setAmount(0f).build();
         final List<OfxExport> ofxExports = List.of(
-                new OfxExport(TestUtils.accountToOfxAccount(checking), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(source))),
-                new OfxExport(TestUtils.accountToOfxAccount(savings), zeroBalance, List.of(TestUtils.transactionToOfxTransaction(sink)))
-        );
+                new OfxExport(
+                        TestUtils.accountToOfxAccount(checking),
+                        zeroBalance,
+                        List.of(TestUtils.transactionToOfxTransaction(source))),
+                new OfxExport(
+                        TestUtils.accountToOfxAccount(savings),
+                        zeroBalance,
+                        List.of(TestUtils.transactionToOfxTransaction(sink))));
 
         // insert the transfer for the first time
         SpyCli spyCli = new SpyCli();
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
         transactionImportService.categorizeTransactions(ofxExports);
 
         // try to insert the transfer again
@@ -271,75 +401,102 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         // the transfer was NOT printed to the CLI because it is implicitly ignored
         Assertions.assertTrue(spyCli.getCapturedTransfers().isEmpty());
 
-        // zero transactions were printed to the CLI (because they are implicitly inserted as a part of transfer handling)
+        // zero transactions were printed to the CLI (because they are implicitly inserted as a part of transfer
+        // handling)
         Assertions.assertTrue(spyCli.getCapturedTransactions().isEmpty());
     }
 
     @Test
     void categorizeTransactions_newCategoryCreated() {
         // there is one existing account but no custom categories (only UNKNOWN and TRANSFER from migrations)
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
 
         // create an OFX file that contains a transaction
         final String fitId = UUID.randomUUID().toString();
-        final CategorizedTransaction testTransaction = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
+        final CategorizedTransaction testTransaction =
+                new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
-        final List<OfxExport> ofxExports = Collections.singletonList(
-                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
+        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(
+                ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
 
         // the SpyCli will decline the existing categories and provide a new category name
         final SpyCli spyCli = new NewCategorySpyCli("BRAND_NEW_CATEGORY");
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(ofxExports);
 
         // the transaction was categorized with the brand new category
         Assertions.assertEquals(1, categorizedTransactions.size());
-        Assertions.assertEquals("BRAND_NEW_CATEGORY", categorizedTransactions.get(0).getCategory().getName());
+        Assertions.assertEquals(
+                "BRAND_NEW_CATEGORY",
+                categorizedTransactions.get(0).getCategory().getName());
         Assertions.assertNotNull(categorizedTransactions.get(0).getCategory().getId());
 
         // verify the new category was persisted
         Assertions.assertTrue(categoryDao.select("BRAND_NEW_CATEGORY").isPresent());
 
         // verify the transaction was persisted with the new category
-        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        final CategorizedTransaction actual =
+                categorizedTransactionDao.selectByFitId(fitId).get();
         Assertions.assertEquals("BRAND_NEW_CATEGORY", actual.getCategory().getName());
     }
 
     @Test
     void categorizeTransactions_unknownCategorySkipsTokenStorage() {
         // create account and a transaction
-        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account testAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
         final String fitId = UUID.randomUUID().toString();
-        final CategorizedTransaction testTransaction = new CategorizedTransaction(
-                TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
+        final CategorizedTransaction testTransaction =
+                new CategorizedTransaction(TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
         final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
         final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
-        final List<OfxExport> ofxExports = Collections.singletonList(
-                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
+        final List<OfxExport> ofxExports = Collections.singletonList(new OfxExport(
+                ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
 
         // the SpyCli will categorize as UNKNOWN
         final SpyCli spyCli = new UnknownCategorySpyCli();
-        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
-        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
-                transactionCleanerFactory, connection, categorizedTransactionDao,
-                transactionCategoryService, categoryDao, transferMatchingService,
-                transferDao, transactionTokenDao, tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+        final TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions =
+                transactionImportService.categorizeTransactions(ofxExports);
 
         // the transaction was categorized as UNKNOWN
         Assertions.assertEquals(1, categorizedTransactions.size());
         Assertions.assertEquals(Category.UNKNOWN, categorizedTransactions.get(0).getCategory());
 
         // verify the transaction was persisted
-        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        final CategorizedTransaction actual =
+                categorizedTransactionDao.selectByFitId(fitId).get();
         Assertions.assertEquals(Category.UNKNOWN, actual.getCategory());
     }
 
@@ -410,9 +567,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
     private static class UnknownCategorySpyCli extends SpyCli {
         @Override
         public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
-            return categories.stream()
-                    .filter(c -> c.equals(Category.UNKNOWN))
-                    .findFirst();
+            return categories.stream().filter(c -> c.equals(Category.UNKNOWN)).findFirst();
         }
     }
 }

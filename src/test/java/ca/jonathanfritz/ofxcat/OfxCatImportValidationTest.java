@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.config.AppConfig;
 import ca.jonathanfritz.ofxcat.exception.CliException;
@@ -10,19 +12,16 @@ import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
-import org.flywaydb.core.Flyway;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests for OfxCat.importTransactions file validation.
@@ -55,8 +54,7 @@ class OfxCatImportValidationTest {
                 testPathUtils,
                 new StubCLI(),
                 KeywordRulesConfig.empty(),
-                AppConfig.defaults()
-        );
+                AppConfig.defaults());
     }
 
     @Test
@@ -69,8 +67,9 @@ class OfxCatImportValidationTest {
             ofxCat.importTransactions(nonExistentPath);
         });
 
-        assertTrue(exception.getMessage().contains("does not exist") ||
-                   exception.getMessage().contains("cannot be read"),
+        assertTrue(
+                exception.getMessage().contains("does not exist")
+                        || exception.getMessage().contains("cannot be read"),
                 "Error message should indicate file doesn't exist, got: " + exception.getMessage());
         assertFalse(importServiceCalled, "Import service should not be called for non-existent file");
     }
@@ -93,8 +92,8 @@ class OfxCatImportValidationTest {
         });
 
         // The import service was called (it would fail in real usage when parsing)
-        assertTrue(importServiceCalled,
-                "Import service is called even for directories (validation doesn't check isFile)");
+        assertTrue(
+                importServiceCalled, "Import service is called even for directories (validation doesn't check isFile)");
     }
 
     @Test
@@ -144,8 +143,7 @@ class OfxCatImportValidationTest {
         });
 
         // Import service was called (it would fail in real usage when parsing a directory)
-        assertTrue(importServiceCalled,
-                "Empty path resolves to current directory, which passes exists/readable check");
+        assertTrue(importServiceCalled, "Empty path resolves to current directory, which passes exists/readable check");
     }
 
     @Test
@@ -159,8 +157,7 @@ class OfxCatImportValidationTest {
 
         // Verify: Backup directory should be created
         Path importedDir = testPathUtils.getImportedFilesPath();
-        assertTrue(Files.isDirectory(importedDir),
-                "Imported files directory should be created");
+        assertTrue(Files.isDirectory(importedDir), "Imported files directory should be created");
     }
 
     @Test
@@ -215,8 +212,7 @@ class OfxCatImportValidationTest {
         ofxCat.importTransactions(validFile.toString());
 
         // Verify: Backups directory should be created
-        assertTrue(Files.isDirectory(testPathUtils.getBackupsPath()),
-                "Backups directory should be created");
+        assertTrue(Files.isDirectory(testPathUtils.getBackupsPath()), "Backups directory should be created");
     }
 
     @Test
@@ -241,8 +237,8 @@ class OfxCatImportValidationTest {
         ofxCat.importTransactions(validFile.toString());
 
         // Verify: Existing backup should not be overwritten
-        assertEquals(existingBackupContent, Files.readString(existingBackup),
-                "Existing backup should not be overwritten");
+        assertEquals(
+                existingBackupContent, Files.readString(existingBackup), "Existing backup should not be overwritten");
     }
 
     @Test
@@ -265,7 +261,8 @@ class OfxCatImportValidationTest {
             ofxCat.importTransactions(validFile.toString());
         });
 
-        assertTrue(exception.getMessage().contains("backup"),
+        assertTrue(
+                exception.getMessage().contains("backup"),
                 "Error message should mention backup failure, got: " + exception.getMessage());
         assertFalse(importServiceCalled, "Import service should not be called when backup fails");
     }

@@ -10,15 +10,14 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.matching.TokenMatchingService;
 import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import jakarta.inject.Inject;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class TransactionCategoryService {
 
@@ -38,8 +37,7 @@ public class TransactionCategoryService {
             TokenNormalizer tokenNormalizer,
             TokenMatchingService tokenMatchingService,
             KeywordRulesConfig keywordRulesConfig,
-            CLI cli
-    ) {
+            CLI cli) {
         this.categoryDao = categoryDao;
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.tokenNormalizer = tokenNormalizer;
@@ -55,7 +53,8 @@ public class TransactionCategoryService {
      * 3. Token match: Find similar transactions using token-based matching
      * 4. Manual: Prompt user to choose or create a category
      */
-    public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction) throws SQLException {
+    public CategorizedTransaction categorizeTransaction(DatabaseTransaction t, Transaction transaction)
+            throws SQLException {
         // Step 1: Try keyword rules matching first (auto-categorization based on rules)
         if (keywordRulesConfig.isAutoCategorizeEnabled()) {
             Optional<CategorizedTransaction> categorizedTransaction = categorizeTransactionByKeywordRules(transaction);
@@ -107,9 +106,11 @@ public class TransactionCategoryService {
         return Optional.of(new CategorizedTransaction(transaction, category.get()));
     }
 
-    private Optional<CategorizedTransaction> categorizeTransactionExactMatch(DatabaseTransaction t, Transaction transaction) throws SQLException {
+    private Optional<CategorizedTransaction> categorizeTransactionExactMatch(
+            DatabaseTransaction t, Transaction transaction) throws SQLException {
         // first search is on the entire description of the incoming transaction
-        final List<CategorizedTransaction> categorizedTransactions = categorizedTransactionDao.findByDescription(t, transaction.getDescription());
+        final List<CategorizedTransaction> categorizedTransactions =
+                categorizedTransactionDao.findByDescription(t, transaction.getDescription());
         final List<Category> distinctCategories = categorizedTransactions.stream()
                 .map(CategorizedTransaction::getCategory)
                 .filter(c -> !c.equals(Category.UNKNOWN)) // do not automatically categorize transactions as UNKNOWN
@@ -118,17 +119,24 @@ public class TransactionCategoryService {
 
         if (distinctCategories.isEmpty()) {
             // there were no exact matches for this transaction description
-            logger.info("There are no existing transactions that exactly match the description of the specified Transaction");
+            logger.info(
+                    "There are no existing transactions that exactly match the description of the specified Transaction");
             return Optional.empty();
         } else if (distinctCategories.size() == 1) {
             // all matching transactions share the same category - use it
-            logger.info("New transaction description exactly matches that of {} existing transactions " +
-                    "with category {}", categorizedTransactions.size(), distinctCategories.get(0));
+            logger.info(
+                    "New transaction description exactly matches that of {} existing transactions "
+                            + "with category {}",
+                    categorizedTransactions.size(),
+                    distinctCategories.get(0));
             return Optional.of(new CategorizedTransaction(transaction, distinctCategories.get(0)));
         } else {
             // there is more than one potential category - prompt the user to choose
-            logger.info("New transaction description exactly matches that of {} existing transactions " +
-                    "with {} distinct categories", categorizedTransactions.size(), distinctCategories.size());
+            logger.info(
+                    "New transaction description exactly matches that of {} existing transactions "
+                            + "with {} distinct categories",
+                    categorizedTransactions.size(),
+                    distinctCategories.size());
             return chooseCategoryFromList(transaction, distinctCategories);
         }
     }
@@ -139,9 +147,8 @@ public class TransactionCategoryService {
      */
     private Optional<CategorizedTransaction> categorizeTransactionByTokenMatch(Transaction transaction) {
         // Use TokenMatchingService to find matching categories
-        List<TokenMatchingService.CategoryMatch> matches = tokenMatchingService.findMatchingCategoriesForDescription(
-                transaction.getDescription()
-        );
+        List<TokenMatchingService.CategoryMatch> matches =
+                tokenMatchingService.findMatchingCategoriesForDescription(transaction.getDescription());
 
         if (matches.isEmpty()) {
             logger.info("No token-based matches found for transaction description");

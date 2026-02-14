@@ -7,10 +7,9 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import java.sql.SQLException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import java.sql.SQLException;
 
 class TransferDaoTest extends AbstractDatabaseTest {
 
@@ -27,10 +26,16 @@ class TransferDaoTest extends AbstractDatabaseTest {
     @Test
     public void test() {
         // create a source and sink
-        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final CategorizedTransaction source = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER)).get();
-        final CategorizedTransaction sink = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER)).get();
+        final Account checking =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final CategorizedTransaction source = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER))
+                .get();
+        final CategorizedTransaction sink = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER))
+                .get();
 
         // create a transfer
         final Transfer expected = transferDao.insert(new Transfer(source, sink)).get();
@@ -44,10 +49,16 @@ class TransferDaoTest extends AbstractDatabaseTest {
     @Test
     public void selectByFitIdTest() {
         // create a source and sink
-        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final CategorizedTransaction source = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER)).get();
-        final CategorizedTransaction sink = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER)).get();
+        final Account checking =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final CategorizedTransaction source = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER))
+                .get();
+        final CategorizedTransaction sink = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER))
+                .get();
 
         // create a transfer
         final Transfer expected = transferDao.insert(new Transfer(source, sink)).get();
@@ -63,10 +74,16 @@ class TransferDaoTest extends AbstractDatabaseTest {
     @Test
     public void isDuplicateTest() throws SQLException {
         // create a source and sink
-        final Account checking = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final Account savings = accountDao.insert(TestUtils.createRandomAccount()).get();
-        final CategorizedTransaction source = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER)).get();
-        final CategorizedTransaction sink = categorizedTransactionDao.insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER)).get();
+        final Account checking =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final Account savings =
+                accountDao.insert(TestUtils.createRandomAccount()).get();
+        final CategorizedTransaction source = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(checking), Category.TRANSFER))
+                .get();
+        final CategorizedTransaction sink = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(savings), Category.TRANSFER))
+                .get();
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // the transfer is not a duplicate before it has been inserted

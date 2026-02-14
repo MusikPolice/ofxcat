@@ -1,11 +1,10 @@
 package ca.jonathanfritz.ofxcat.matching;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for TokenNormalizer which converts transaction descriptions into normalized token sets.
@@ -251,9 +250,8 @@ class TokenNormalizerTest {
     @Test
     void respectsCustomStopWords() {
         // Setup: Create config with custom stop words that includes "coffee"
-        NormalizationConfig config = NormalizationConfig.builder()
-                .stopWords(Set.of("coffee"))
-                .build();
+        NormalizationConfig config =
+                NormalizationConfig.builder().stopWords(Set.of("coffee")).build();
         TokenNormalizer configuredNormalizer = new TokenNormalizer(config);
         String input = "STARBUCKS COFFEE";
 
@@ -268,9 +266,8 @@ class TokenNormalizerTest {
     @Test
     void respectsCustomMinTokenLength() {
         // Setup: Create config with minimum token length of 3
-        NormalizationConfig config = NormalizationConfig.builder()
-                .minTokenLength(3)
-                .build();
+        NormalizationConfig config =
+                NormalizationConfig.builder().minTokenLength(3).build();
         TokenNormalizer configuredNormalizer = new TokenNormalizer(config);
         String input = "SP STARBUCKS";
 

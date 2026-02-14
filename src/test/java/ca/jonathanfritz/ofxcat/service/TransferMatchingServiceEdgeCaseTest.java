@@ -1,11 +1,11 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Edge case tests for TransferMatchingService to verify correct handling of ambiguous,
@@ -195,9 +194,17 @@ class TransferMatchingServiceEdgeCaseTest {
         final Account savings = TestUtils.createRandomAccount("Savings");
 
         final Transaction source = TestUtils.createRandomTransaction(
-                checking, UUID.randomUUID().toString(), LocalDate.of(2023, 1, 1), -100f, Transaction.TransactionType.XFER);
+                checking,
+                UUID.randomUUID().toString(),
+                LocalDate.of(2023, 1, 1),
+                -100f,
+                Transaction.TransactionType.XFER);
         final Transaction sink = TestUtils.createRandomTransaction(
-                savings, UUID.randomUUID().toString(), LocalDate.of(2023, 1, 2), 100f, Transaction.TransactionType.XFER);
+                savings,
+                UUID.randomUUID().toString(),
+                LocalDate.of(2023, 1, 2),
+                100f,
+                Transaction.TransactionType.XFER);
 
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         accountTransactions.put(checking, new ArrayList<>(Collections.singletonList(source)));
@@ -327,14 +334,12 @@ class TransferMatchingServiceEdgeCaseTest {
         assertEquals(2, transfers.size());
 
         // Verify both transfers are correct
-        assertTrue(transfers.stream().anyMatch(t ->
-                t.getSource().getFitId().equals(t1Source.getFitId()) &&
-                        t.getSink().getFitId().equals(t1Sink.getFitId())
-        ));
-        assertTrue(transfers.stream().anyMatch(t ->
-                t.getSource().getFitId().equals(t2Source.getFitId()) &&
-                        t.getSink().getFitId().equals(t2Sink.getFitId())
-        ));
+        assertTrue(transfers.stream()
+                .anyMatch(t -> t.getSource().getFitId().equals(t1Source.getFitId())
+                        && t.getSink().getFitId().equals(t1Sink.getFitId())));
+        assertTrue(transfers.stream()
+                .anyMatch(t -> t.getSource().getFitId().equals(t2Source.getFitId())
+                        && t.getSink().getFitId().equals(t2Sink.getFitId())));
 
         // All transactions should be removed from the map
         assertTrue(accountTransactions.get(checking).isEmpty());
@@ -342,4 +347,3 @@ class TransferMatchingServiceEdgeCaseTest {
         assertTrue(accountTransactions.get(investment).isEmpty());
     }
 }
-

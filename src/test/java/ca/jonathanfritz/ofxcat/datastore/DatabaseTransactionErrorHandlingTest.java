@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.datastore;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
@@ -8,16 +10,13 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import org.junit.jupiter.api.Test;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for database transaction error handling to ensure proper rollback
@@ -47,8 +46,7 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
 
         // Verify: Category was committed
         final int finalCategoryCount = categoryDao.select().size();
-        assertEquals(initialCategoryCount + 1, finalCategoryCount,
-                "Category should have been committed");
+        assertEquals(initialCategoryCount + 1, finalCategoryCount, "Category should have been committed");
     }
 
     @Test
@@ -62,20 +60,20 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
 
         // Try to insert duplicate account with same bank_number + account_number
         final Account duplicateAccount = Account.newBuilder(firstAccount)
-                .setName("Different Name")  // Different name, same bank + account number
+                .setName("Different Name") // Different name, same bank + account number
                 .build();
         Optional<Account> result = accountDao.insert(duplicateAccount);
 
         // Verify insert failed due to unique constraint
-        assertTrue(result.isEmpty(),
-                "Insert should fail when unique constraint violated");
+        assertTrue(result.isEmpty(), "Insert should fail when unique constraint violated");
 
         // Verify no new account was added
         final int finalAccountCount = accountDao.select().size();
-        assertEquals(initialAccountCount, finalAccountCount,
+        assertEquals(
+                initialAccountCount,
+                finalAccountCount,
                 "Duplicate account should not have been committed when constraint violated");
     }
-
 
     @Test
     void multipleOperationsInTransactionAllCommitted() throws SQLException {
@@ -90,8 +88,8 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
         }
 
         // Verify: Everything was committed
-        assertEquals(initialCategoryCount + 2, categoryDao.select().size(),
-                "Both categories should have been committed");
+        assertEquals(
+                initialCategoryCount + 2, categoryDao.select().size(), "Both categories should have been committed");
     }
 
     @Test
@@ -107,11 +105,11 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
 
         // Verify: Committed by default when close() is called
         final int finalCategoryCount = categoryDao.select().size();
-        assertEquals(initialCategoryCount + 1, finalCategoryCount,
+        assertEquals(
+                initialCategoryCount + 1,
+                finalCategoryCount,
                 "Transaction should commit when close() is called (no exception)");
     }
-
-
 
     @Test
     void foreignKeyConstraintsNotEnforcedByDefault() throws SQLException {
@@ -123,24 +121,25 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
         // Verify foreign keys are NOT enabled (SQLite default)
         int fkEnabled;
         try (var stmt = connection.createStatement();
-             var rs = stmt.executeQuery("PRAGMA foreign_keys")) {
+                var rs = stmt.executeQuery("PRAGMA foreign_keys")) {
             rs.next();
             fkEnabled = rs.getInt(1);
         }
-        assertEquals(0, fkEnabled,
-                "Foreign keys are disabled by default in SQLite (enabling breaks Flyway clean)");
+        assertEquals(0, fkEnabled, "Foreign keys are disabled by default in SQLite (enabling breaks Flyway clean)");
 
         // Since FK constraints are not enforced, inserts with invalid references succeed
-        final String violatingInsert = "INSERT INTO CategorizedTransaction " +
-                "(type, date, amount, description, account_id, category_id) " +
-                "VALUES ('DEBIT', '2023-01-01', 100.0, 'Test', 99999, 99999)";
+        final String violatingInsert =
+                "INSERT INTO CategorizedTransaction " + "(type, date, amount, description, account_id, category_id) "
+                        + "VALUES ('DEBIT', '2023-01-01', 100.0, 'Test', 99999, 99999)";
 
         // This does NOT throw - FK constraints are not enforced
-        assertDoesNotThrow(() -> {
-            try (var stmt = connection.createStatement()) {
-                stmt.executeUpdate(violatingInsert);
-            }
-        }, "With FK constraints disabled, invalid references are allowed");
+        assertDoesNotThrow(
+                () -> {
+                    try (var stmt = connection.createStatement()) {
+                        stmt.executeUpdate(violatingInsert);
+                    }
+                },
+                "With FK constraints disabled, invalid references are allowed");
     }
 
     @Test
@@ -151,8 +150,8 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
                 list.add(new Category(rs.getLong("id"), rs.getString("name")));
             });
 
-            SQLException ex = assertThrows(SQLException.class,
-                    () -> t.query("UPDATE Category SET name = 'X' WHERE id = 1", deserializer));
+            SQLException ex = assertThrows(
+                    SQLException.class, () -> t.query("UPDATE Category SET name = 'X' WHERE id = 1", deserializer));
             assertTrue(ex.getMessage().contains("selectStatement must start with SELECT"));
         }
     }
@@ -183,8 +182,8 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
                 list.add(new Category(rs.getLong("id"), rs.getString("name")));
             });
 
-            SQLException ex = assertThrows(SQLException.class,
-                    () -> t.insert("SELECT * FROM Category", ps -> {}, deserializer));
+            SQLException ex =
+                    assertThrows(SQLException.class, () -> t.insert("SELECT * FROM Category", ps -> {}, deserializer));
             assertTrue(ex.getMessage().contains("insertStatement must start with INSERT INTO"));
         }
     }
@@ -206,9 +205,7 @@ class DatabaseTransactionErrorHandlingTest extends AbstractDatabaseTest {
     @Test
     void getFirstResult_multipleElements_throwsSQLException() {
         List<Category> multiple = Arrays.asList(new Category(1L, "A"), new Category(2L, "B"));
-        SQLException ex = assertThrows(SQLException.class,
-                () -> DatabaseTransaction.getFirstResult(multiple));
+        SQLException ex = assertThrows(SQLException.class, () -> DatabaseTransaction.getFirstResult(multiple));
         assertTrue(ex.getMessage().contains("Expected a single result, but got 2"));
     }
 }
-

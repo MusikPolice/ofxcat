@@ -1,8 +1,8 @@
 package ca.jonathanfritz.ofxcat.utils;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the Accumulator utility class.
@@ -131,8 +131,7 @@ class AccumulatorTest {
     @Test
     void accumulatorWithNullSafeFunction() {
         // Setup: Accumulator that handles null gracefully
-        Accumulator<String> accumulator = new Accumulator<>("default",
-                (a, b) -> b != null ? a + b : a);
+        Accumulator<String> accumulator = new Accumulator<>("default", (a, b) -> b != null ? a + b : a);
 
         // Execute: Add null value
         accumulator.add(null);

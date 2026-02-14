@@ -5,9 +5,6 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -15,6 +12,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class CategoryDao {
 
@@ -74,7 +73,8 @@ public class CategoryDao {
         try {
             logger.debug("Attempting to query Category with name {}", name);
             final String selectStatement = "SELECT * FROM Category WHERE upper(name) = ?";
-            final List<Category> results = t.query(selectStatement, ps -> ps.setString(1, name.toUpperCase()), categoryDeserializer);
+            final List<Category> results =
+                    t.query(selectStatement, ps -> ps.setString(1, name.toUpperCase()), categoryDeserializer);
             return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
             logger.error("Failed to query Category with name {}", name, e);

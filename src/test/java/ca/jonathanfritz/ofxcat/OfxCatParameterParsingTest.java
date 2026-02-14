@@ -1,9 +1,9 @@
 package ca.jonathanfritz.ofxcat;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for OfxCat CLI parameter parsing and validation.
@@ -22,7 +22,8 @@ class OfxCatParameterParsingTest {
             OfxCat.getMode(args);
         });
 
-        assertTrue(exception.getMessage().contains("Too few arguments"),
+        assertTrue(
+                exception.getMessage().contains("Too few arguments"),
                 "Error message should indicate too few arguments");
     }
 
@@ -36,8 +37,7 @@ class OfxCatParameterParsingTest {
             OfxCat.getMode(args);
         });
 
-        assertTrue(exception.getMessage().contains("Invalid mode"),
-                "Error message should indicate invalid mode");
+        assertTrue(exception.getMessage().contains("Invalid mode"), "Error message should indicate invalid mode");
     }
 
     @Test
@@ -98,7 +98,8 @@ class OfxCatParameterParsingTest {
             OfxCat.getConcern(args);
         });
 
-        assertTrue(exception.getMessage().contains("Too few arguments"),
+        assertTrue(
+                exception.getMessage().contains("Too few arguments"),
                 "Error message should indicate too few arguments");
     }
 
@@ -112,8 +113,7 @@ class OfxCatParameterParsingTest {
             OfxCat.getConcern(args);
         });
 
-        assertTrue(exception.getMessage().contains("Invalid concern"),
-                "Error message should indicate invalid concern");
+        assertTrue(exception.getMessage().contains("Invalid concern"), "Error message should indicate invalid concern");
     }
 
     @Test
@@ -178,8 +178,8 @@ class OfxCatParameterParsingTest {
         // Verify: End date should be today
         assertNotNull(options);
         assertEquals("2023-01-01", options.startDate().toString());
-        assertEquals(java.time.LocalDate.now(), options.endDate(),
-                "End date should default to today when not specified");
+        assertEquals(
+                java.time.LocalDate.now(), options.endDate(), "End date should default to today when not specified");
     }
 
     @Test
@@ -204,8 +204,8 @@ class OfxCatParameterParsingTest {
         });
 
         // The exception should indicate date parsing failure
-        assertTrue(exception.getMessage().contains("Failed to parse"),
-                "Exception should indicate date parsing failure");
+        assertTrue(
+                exception.getMessage().contains("Failed to parse"), "Exception should indicate date parsing failure");
     }
 
     @Test
@@ -232,8 +232,7 @@ class OfxCatParameterParsingTest {
         });
 
         // Verify it's trying to parse "abc"
-        assertTrue(exception.getMessage().contains("abc"),
-                "Exception should indicate the invalid input");
+        assertTrue(exception.getMessage().contains("abc"), "Exception should indicate the invalid input");
     }
 
     @Test
@@ -271,8 +270,7 @@ class OfxCatParameterParsingTest {
             OfxCat.toLocalDate(dateString);
         });
 
-        assertTrue(exception.getMessage().contains("null or blank"),
-                "Error message should indicate blank date");
+        assertTrue(exception.getMessage().contains("null or blank"), "Error message should indicate blank date");
     }
 
     @Test
@@ -285,8 +283,7 @@ class OfxCatParameterParsingTest {
             OfxCat.toLocalDate(dateString);
         });
 
-        assertTrue(exception.getMessage().contains("null or blank"),
-                "Error message should indicate null date");
+        assertTrue(exception.getMessage().contains("null or blank"), "Error message should indicate null date");
     }
 
     @Test
@@ -299,8 +296,7 @@ class OfxCatParameterParsingTest {
             OfxCat.toLocalDate(dateString);
         });
 
-        assertTrue(exception.getMessage().contains("Failed to parse"),
-                "Error message should indicate parsing failure");
+        assertTrue(exception.getMessage().contains("Failed to parse"), "Error message should indicate parsing failure");
     }
 
     @Test
@@ -448,4 +444,3 @@ class OfxCatParameterParsingTest {
         assertThrows(CliException.class, () -> OfxCat.getRenameOptions(args));
     }
 }
-

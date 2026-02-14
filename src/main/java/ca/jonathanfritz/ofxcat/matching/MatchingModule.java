@@ -4,10 +4,9 @@ import ca.jonathanfritz.ofxcat.config.AppConfig;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import java.nio.file.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.nio.file.Path;
 
 /**
  * Guice module for matching-related dependencies.

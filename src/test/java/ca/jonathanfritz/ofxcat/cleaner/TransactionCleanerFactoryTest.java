@@ -1,10 +1,9 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
+import java.util.UUID;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.Is;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 class TransactionCleanerFactoryTest {
 

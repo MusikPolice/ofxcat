@@ -9,8 +9,6 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.common.collect.Streams;
-import org.apache.commons.lang3.tuple.Pair;
-
 import jakarta.inject.Inject;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
@@ -22,6 +20,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class ReportingService {
 
@@ -34,7 +33,11 @@ public class ReportingService {
     public static final String CSV_DELIMITER = ", ";
 
     @Inject
-    public ReportingService(CategorizedTransactionDao categorizedTransactionDao, AccountDao accountDao, CategoryDao categoryDao, CLI cli) {
+    public ReportingService(
+            CategorizedTransactionDao categorizedTransactionDao,
+            AccountDao accountDao,
+            CategoryDao categoryDao,
+            CLI cli) {
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.accountDao = accountDao;
         this.categoryDao = categoryDao;
@@ -51,30 +54,33 @@ public class ReportingService {
         } while (startMonth.isBefore(endDate));
 
         // get amount spent in each category for every 1 month long bucket
-        final Map<LocalDate, Map<Category, Float>> dateSpend = months.stream().map(localDateRange -> {
-            final Map<Category, List<CategorizedTransaction>> categorizedTransactions =
-                    categorizedTransactionDao.selectGroupByCategory(localDateRange.start, localDateRange.end);
+        final Map<LocalDate, Map<Category, Float>> dateSpend = months.stream()
+                .map(localDateRange -> {
+                    final Map<Category, List<CategorizedTransaction>> categorizedTransactions =
+                            categorizedTransactionDao.selectGroupByCategory(localDateRange.start, localDateRange.end);
 
-            return Pair.of(
-                    localDateRange.start,
-                    categorizedTransactions.entrySet().stream()
-                            .map(categoryListEntry -> Pair.of(
-                                    categoryListEntry.getKey(),
-                                    categoryListEntry.getValue().stream()
-                                            .map(Transaction::getAmount)
-                                            .reduce(0f, Float::sum))
-                            ).collect(Collectors.toMap(Pair::getKey, Pair::getValue))
-            );
-        }).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+                    return Pair.of(
+                            localDateRange.start,
+                            categorizedTransactions.entrySet().stream()
+                                    .map(categoryListEntry -> Pair.of(
+                                            categoryListEntry.getKey(),
+                                            categoryListEntry.getValue().stream()
+                                                    .map(Transaction::getAmount)
+                                                    .reduce(0f, Float::sum)))
+                                    .collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
+                })
+                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
         // all categories, sorted by name
         final List<Category> sortedCategories = categoryDao.select().stream()
                 .sorted((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()))
                 .toList();
 
-        // print a matrix with categories along the x axis, months along the y axis, category spend for each month at the intersection
+        // print a matrix with categories along the x axis, months along the y axis, category spend for each month at
+        // the intersection
         final List<String> lines = new ArrayList<>();
-        lines.add("MONTH" + CSV_DELIMITER + sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)));
+        lines.add("MONTH" + CSV_DELIMITER
+                + sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)));
 
         final Map<Category, List<Float>> categoryTransactionAmounts = new HashMap<>();
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : dateSpend.entrySet()) {
@@ -85,24 +91,24 @@ public class ReportingService {
 
             // subsequent columns hold sum of transactions for that month and category
             sb.append(sortedCategories.stream()
-                        .map(category -> entry.getValue().getOrDefault(category, 0f))
-                        .map(CURRENCY_FORMATTER::format)
-                        .collect(Collectors.joining(CSV_DELIMITER))
-            );
+                    .map(category -> entry.getValue().getOrDefault(category, 0f))
+                    .map(CURRENCY_FORMATTER::format)
+                    .collect(Collectors.joining(CSV_DELIMITER)));
             lines.add(sb.toString());
 
             // group the monthly spend amounts for each category together
             for (Map.Entry<Category, Float> categorySpend : entry.getValue().entrySet()) {
-                final List<Float> monthlyAmounts = categoryTransactionAmounts.getOrDefault(categorySpend.getKey(), new ArrayList<>());
+                final List<Float> monthlyAmounts =
+                        categoryTransactionAmounts.getOrDefault(categorySpend.getKey(), new ArrayList<>());
                 monthlyAmounts.add(categorySpend.getValue());
                 categoryTransactionAmounts.putIfAbsent(categorySpend.getKey(), monthlyAmounts);
             }
         }
 
         // calculate stats for each category
-        final Map<Category, Stats> categoryStats = categoryTransactionAmounts
-                .entrySet().stream()
-                .map(categorySpendEntry -> Pair.of(categorySpendEntry.getKey(), computeStats(categorySpendEntry.getValue())))
+        final Map<Category, Stats> categoryStats = categoryTransactionAmounts.entrySet().stream()
+                .map(categorySpendEntry ->
+                        Pair.of(categorySpendEntry.getKey(), computeStats(categorySpendEntry.getValue())))
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
         // spit the stats data out for each category
@@ -114,9 +120,14 @@ public class ReportingService {
         cli.println(lines);
     }
 
-    private String generateStatsString(String name, Function<Stats, Float> func, List<Category> sortedCategories, Map<Category, Stats> categoryStats) {
-        return name + CSV_DELIMITER +
-                sortedCategories.stream()
+    private String generateStatsString(
+            String name,
+            Function<Stats, Float> func,
+            List<Category> sortedCategories,
+            Map<Category, Stats> categoryStats) {
+        return name
+                + CSV_DELIMITER
+                + sortedCategories.stream()
                         .map(categoryStats::get)
                         .map(stats -> {
                             if (stats == null) {
@@ -127,16 +138,19 @@ public class ReportingService {
                         .collect(Collectors.joining(CSV_DELIMITER));
     }
 
-    public void reportTransactionsInCategory(final Long categoryId, final LocalDate startDate, final LocalDate endDate) {
+    public void reportTransactionsInCategory(
+            final Long categoryId, final LocalDate startDate, final LocalDate endDate) {
         // input validation
-        final Category category = categoryDao.select(categoryId)
+        final Category category = categoryDao
+                .select(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Category with id " + categoryId + " does not exist"));
         if (startDate == null) {
             throw new IllegalArgumentException("Start date must be specified");
         }
         final LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
         if (startDate.isAfter(effectiveEndDate)) {
-            throw new IllegalArgumentException("Start date " + startDate + " must be before end date " + effectiveEndDate);
+            throw new IllegalArgumentException(
+                    "Start date " + startDate + " must be before end date " + effectiveEndDate);
         }
 
         // get all transactions in the specified category
@@ -152,10 +166,11 @@ public class ReportingService {
                 .map(CategorizedTransaction::getTransaction)
                 .forEach(transaction -> {
                     amounts.add(transaction.getAmount());
-                    lines.add(dateFormatter.format(transaction.getDate()) + CSV_DELIMITER +
-                            transaction.getDescription() + CSV_DELIMITER +
-                            CURRENCY_FORMATTER.format(transaction.getAmount())
-                    );
+                    lines.add(dateFormatter.format(transaction.getDate())
+                            + CSV_DELIMITER
+                            + transaction.getDescription()
+                            + CSV_DELIMITER
+                            + CURRENCY_FORMATTER.format(transaction.getAmount()));
                 });
 
         final Stats stats = computeStats(amounts);
@@ -179,7 +194,8 @@ public class ReportingService {
             // or else we'll eliminate the smallest negative values from the list instead of the largest outliers
             sorted = amounts.stream().sorted((x, y) -> x.compareTo(y) * -1).toList();
         } else {
-            // if all amounts are positive or if we have a mix of positive and negative values, the normal sort order will do
+            // if all amounts are positive or if we have a mix of positive and negative values, the normal sort order
+            // will do
             sorted = amounts.stream().sorted().toList();
         }
 
@@ -201,11 +217,12 @@ public class ReportingService {
     public void reportAccounts() {
         final List<Account> accounts = accountDao.select();
         cli.println(Streams.concat(
-                Stream.of("Account Name,Account Number,Bank Id,Account Type"),
-                accounts.stream()
-                .map(a -> String.format("%s,%s,%s,%s", a.getName(), a.getAccountNumber(), a.getBankId(), a.getAccountType()))
-            )
-            .collect(Collectors.toList()));
+                        Stream.of("Account Name,Account Number,Bank Id,Account Type"),
+                        accounts.stream()
+                                .map(a -> String.format(
+                                        "%s,%s,%s,%s",
+                                        a.getName(), a.getAccountNumber(), a.getBankId(), a.getAccountType())))
+                .collect(Collectors.toList()));
     }
 
     /**
@@ -219,9 +236,7 @@ public class ReportingService {
         // print category ids and names, sorted by name alphabetically
         categoryDao.select().stream()
                 .sorted((o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()))
-                .forEach(category ->
-                        lines.add(category.getId() + CSV_DELIMITER + category.getName())
-                );
+                .forEach(category -> lines.add(category.getId() + CSV_DELIMITER + category.getName()));
         cli.println(lines);
     }
 }

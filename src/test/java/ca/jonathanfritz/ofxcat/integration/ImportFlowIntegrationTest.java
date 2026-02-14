@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.integration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cleaner.TransactionCleanerFactory;
@@ -22,8 +24,6 @@ import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.service.TransferMatchingService;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,8 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for end-to-end import flows.
@@ -65,8 +64,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void firstTimeImportWithMultipleTransactions() {
         // Setup: Create an account and categories
-        Account checkingAccount = accountDao.insert(
-                TestUtils.createRandomAccount("My Checking")).orElseThrow();
+        Account checkingAccount =
+                accountDao.insert(TestUtils.createRandomAccount("My Checking")).orElseThrow();
 
         // Create categories that will be used for categorization
         Category groceries = categoryDao.insert(new Category("Groceries")).orElseThrow();
@@ -79,23 +78,30 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Add grocery transactions
         transactions.add(createOfxTransaction("SAFEWAY STORE #1234", -75.50f, baseDate, TransactionType.DEBIT));
-        transactions.add(createOfxTransaction("WHOLE FOODS MARKET", -120.00f, baseDate.plusDays(7), TransactionType.DEBIT));
-        transactions.add(createOfxTransaction("SAFEWAY STORE #5678", -45.25f, baseDate.plusDays(14), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("WHOLE FOODS MARKET", -120.00f, baseDate.plusDays(7), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("SAFEWAY STORE #5678", -45.25f, baseDate.plusDays(14), TransactionType.DEBIT));
 
         // Add restaurant transactions
-        transactions.add(createOfxTransaction("CHIPOTLE MEXICAN GRILL", -12.50f, baseDate.plusDays(3), TransactionType.DEBIT));
-        transactions.add(createOfxTransaction("STARBUCKS COFFEE", -6.75f, baseDate.plusDays(10), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("CHIPOTLE MEXICAN GRILL", -12.50f, baseDate.plusDays(3), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("STARBUCKS COFFEE", -6.75f, baseDate.plusDays(10), TransactionType.DEBIT));
 
         // Add utility payment
-        transactions.add(createOfxTransaction("CITY WATER UTILITY", -85.00f, baseDate.plusDays(15), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("CITY WATER UTILITY", -85.00f, baseDate.plusDays(15), TransactionType.DEBIT));
 
         // Add paycheck (credit)
-        transactions.add(createOfxTransaction("DIRECT DEP ACME CORP PAYROLL", 2500.00f, baseDate.plusDays(15), TransactionType.CREDIT));
+        transactions.add(createOfxTransaction(
+                "DIRECT DEP ACME CORP PAYROLL", 2500.00f, baseDate.plusDays(15), TransactionType.CREDIT));
 
         // Add random transactions
         transactions.add(createOfxTransaction("AMAZON.COM", -45.99f, baseDate.plusDays(20), TransactionType.DEBIT));
         transactions.add(createOfxTransaction("NETFLIX.COM", -15.99f, baseDate.plusDays(1), TransactionType.DEBIT));
-        transactions.add(createOfxTransaction("ATM WITHDRAWAL", -100.00f, baseDate.plusDays(25), TransactionType.DEBIT));
+        transactions.add(
+                createOfxTransaction("ATM WITHDRAWAL", -100.00f, baseDate.plusDays(25), TransactionType.DEBIT));
 
         // Create OFX export
         OfxAccount ofxAccount = TestUtils.accountToOfxAccount(checkingAccount);
@@ -104,12 +110,21 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute import with SpyCli that returns pre-defined categories
         SpyCli spyCli = new SpyCli(List.of(groceries, restaurants, utilities));
-        TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        TransactionCategoryService transactionCategoryService =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService transactionImportService = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, transactionCategoryService, categoryDao,
-                transferMatchingService, transferDao, transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                transactionCategoryService,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> imported = transactionImportService.categorizeTransactions(ofxExports);
 
@@ -117,17 +132,19 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         assertEquals(10, imported.size(), "All 10 transactions should be imported");
 
         // Verify: Transactions are stored in database (check via selectByFitId for first transaction)
-        assertTrue(imported.stream().allMatch(t ->
-                categorizedTransactionDao.selectByFitId(t.getFitId()).isPresent()),
+        assertTrue(
+                imported.stream().allMatch(t -> categorizedTransactionDao
+                        .selectByFitId(t.getFitId())
+                        .isPresent()),
                 "All transactions should be stored in database");
 
         // Verify: Each transaction has a category
-        assertTrue(imported.stream().allMatch(t -> t.getCategory() != null),
+        assertTrue(
+                imported.stream().allMatch(t -> t.getCategory() != null),
                 "All transactions should have a category assigned");
 
         // Verify: CLI was notified of each new transaction
-        assertEquals(10, spyCli.getTransactionCount(),
-                "CLI should be notified of each transaction");
+        assertEquals(10, spyCli.getTransactionCount(), "CLI should be notified of each transaction");
     }
 
     /**
@@ -142,8 +159,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         LocalDate date = LocalDate.now();
         List<OfxTransaction> transactions = List.of(
                 createOfxTransaction("MERCHANT A", -50.00f, date, TransactionType.DEBIT),
-                createOfxTransaction("MERCHANT B", -25.00f, date, TransactionType.DEBIT)
-        );
+                createOfxTransaction("MERCHANT B", -25.00f, date, TransactionType.DEBIT));
 
         OfxAccount ofxAccount = TestUtils.accountToOfxAccount(account);
         OfxBalance balance = OfxBalance.newBuilder().setAmount(500.00f).build();
@@ -151,31 +167,51 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // First import
         SpyCli spyCli1 = new SpyCli(List.of(category));
-        TransactionCategoryService tcs1 = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli1);
+        TransactionCategoryService tcs1 =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli1);
         TransactionImportService tis1 = new TransactionImportService(
-                spyCli1, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs1, categoryDao, transferMatchingService, transferDao,
-                transactionTokenDao, tokenNormalizer);
+                spyCli1,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs1,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> firstImport = tis1.categorizeTransactions(ofxExports);
         assertEquals(2, firstImport.size(), "First import should have 2 transactions");
 
         // Second import of same file
         SpyCli spyCli2 = new SpyCli(List.of(category));
-        TransactionCategoryService tcs2 = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli2);
+        TransactionCategoryService tcs2 =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli2);
         TransactionImportService tis2 = new TransactionImportService(
-                spyCli2, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs2, categoryDao, transferMatchingService, transferDao,
-                transactionTokenDao, tokenNormalizer);
+                spyCli2,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs2,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> secondImport = tis2.categorizeTransactions(ofxExports);
         assertEquals(0, secondImport.size(), "Second import should have 0 new transactions (duplicates ignored)");
 
         // Verify database still has only 2 transactions (by checking fitIds from first import)
-        assertTrue(firstImport.stream().allMatch(t ->
-                categorizedTransactionDao.selectByFitId(t.getFitId()).isPresent()),
+        assertTrue(
+                firstImport.stream().allMatch(t -> categorizedTransactionDao
+                        .selectByFitId(t.getFitId())
+                        .isPresent()),
                 "Original transactions should still exist in database");
     }
 
@@ -204,12 +240,21 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute
         SpyCli spyCli = new SpyCli(List.of(category));
-        TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        TransactionCategoryService tcs =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
-                transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 
@@ -217,9 +262,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         assertEquals(3, imported.size());
 
         // Verify dates are preserved correctly
-        Set<LocalDate> dates = imported.stream()
-                .map(t -> t.getTransaction().getDate())
-                .collect(Collectors.toSet());
+        Set<LocalDate> dates =
+                imported.stream().map(t -> t.getTransaction().getDate()).collect(Collectors.toSet());
         assertTrue(dates.contains(month1));
         assertTrue(dates.contains(month2));
         assertTrue(dates.contains(month3));
@@ -240,8 +284,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 createOfxTransaction("PAYCHECK", 1000.00f, date, TransactionType.CREDIT),
                 createOfxTransaction("RENT", -800.00f, date.plusDays(1), TransactionType.DEBIT),
                 createOfxTransaction("BONUS", 200.00f, date.plusDays(2), TransactionType.CREDIT),
-                createOfxTransaction("GROCERY", -50.00f, date.plusDays(3), TransactionType.DEBIT)
-        );
+                createOfxTransaction("GROCERY", -50.00f, date.plusDays(3), TransactionType.DEBIT));
 
         OfxAccount ofxAccount = TestUtils.accountToOfxAccount(account);
         float endingBalance = 350.00f; // 1000 - 800 + 200 - 50
@@ -250,12 +293,21 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
         // Execute
         SpyCli spyCli = new SpyCli(List.of(income, expense));
-        TransactionCategoryService tcs = createTransactionCategoryService(
-                categoryDao, categorizedTransactionDao, spyCli);
+        TransactionCategoryService tcs =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
         TransactionImportService tis = new TransactionImportService(
-                spyCli, null, accountDao, transactionCleanerFactory, connection,
-                categorizedTransactionDao, tcs, categoryDao, transferMatchingService, transferDao,
-                transactionTokenDao, tokenNormalizer);
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
 
         List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
 
@@ -274,9 +326,7 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
         assertEquals(2, debits, "Should have 2 debit transactions");
 
         // Verify total
-        float total = imported.stream()
-                .map(t -> t.getTransaction().getAmount())
-                .reduce(0f, Float::sum);
+        float total = imported.stream().map(t -> t.getTransaction().getAmount()).reduce(0f, Float::sum);
         assertEquals(350.00f, total, 0.01f, "Net change should match");
     }
 

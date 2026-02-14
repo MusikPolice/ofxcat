@@ -9,7 +9,7 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 ## Build Commands
 
 ```bash
-# Verify everything before committing (tests + Error Prone + checkstyle + PMD + SpotBugs + coverage)
+# Verify everything before committing (tests + Error Prone + Spotless + checkstyle + PMD + SpotBugs + coverage)
 ./gradlew verify
 
 # Build everything including fat JAR
@@ -23,6 +23,12 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 
 # Run a specific test method
 ./gradlew test --tests "ca.jonathanfritz.ofxcat.datastore.AccountDaoTest.testSelectById"
+
+# Auto-fix formatting (Spotless + Palantir Java Format)
+./gradlew spotlessApply
+
+# Check formatting without modifying files
+./gradlew spotlessCheck
 
 # Run checkstyle only
 ./gradlew checkstyleMain checkstyleTest
@@ -114,4 +120,4 @@ Schema managed by Flyway migrations in `src/main/resources/db/migration/`. Key t
 
 - `docs/GenAIGuide.md` - Collaboration rules and coding standards (required reading)
 - `docs/CodebaseOverview.md` - Comprehensive technical documentation
-- `docs/StaticAnalysis.md` - Error Prone, Checkstyle, PMD, SpotBugs, and JaCoCo configuration, static analysis rules, and how to fix violations
+- `docs/StaticAnalysis.md` - Spotless, Error Prone, Checkstyle, PMD, SpotBugs, and JaCoCo configuration, static analysis rules, and how to fix violations

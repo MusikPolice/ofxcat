@@ -1,11 +1,10 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
-import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import org.apache.commons.lang3.StringUtils;
-
+import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * The default transaction cleaner that is used if the source institution is unrecognized
@@ -33,9 +32,9 @@ public class DefaultTransactionCleaner implements TransactionCleaner {
                 .collect(Collectors.joining(" "));
 
         return Transaction.newBuilder(ofxTransaction.getFitId())
-            .setType(categorizeTransactionType(ofxTransaction))
-            .setDate(ofxTransaction.getDate())
-            .setAmount(ofxTransaction.getAmount())
-            .setDescription(description);
+                .setType(categorizeTransactionType(ofxTransaction))
+                .setDate(ofxTransaction.getDate())
+                .setAmount(ofxTransaction.getAmount())
+                .setDescription(description);
     }
 }

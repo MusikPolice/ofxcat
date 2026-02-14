@@ -1,10 +1,9 @@
 package ca.jonathanfritz.ofxcat.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.File;
 import java.nio.file.Path;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PathUtils {
 
@@ -39,7 +38,8 @@ public class PathUtils {
     }
 
     public String getDatabaseConnectionString() {
-        final String connectionString = String.format("%s%s", "jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
+        final String connectionString =
+                String.format("%s%s", "jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
         logger.info("Database connection string is " + connectionString);
         return connectionString;
     }

@@ -6,13 +6,12 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import jakarta.inject.Inject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Combines two categories by moving all transactions from the source category
@@ -28,7 +27,8 @@ public class CategoryCombineService {
     private final CategorizedTransactionDao categorizedTransactionDao;
 
     @Inject
-    public CategoryCombineService(Connection connection, CategoryDao categoryDao, CategorizedTransactionDao categorizedTransactionDao) {
+    public CategoryCombineService(
+            Connection connection, CategoryDao categoryDao, CategorizedTransactionDao categorizedTransactionDao) {
         this.connection = connection;
         this.categoryDao = categoryDao;
         this.categorizedTransactionDao = categorizedTransactionDao;
@@ -45,17 +45,18 @@ public class CategoryCombineService {
      * @throws IllegalArgumentException if the source category doesn't exist, or source and target are the same
      */
     public CombineResult combine(String sourceName, String targetName, MigrationProgressCallback progressCallback) {
-        final Category source = categoryDao.select(sourceName)
+        final Category source = categoryDao
+                .select(sourceName)
                 .orElseThrow(() -> new IllegalArgumentException(
                         String.format("Source category \"%s\" does not exist", sourceName)));
 
         // look up the target, creating it if it doesn't exist
         final Optional<Category> existingTarget = categoryDao.select(targetName);
         final boolean targetCreated = existingTarget.isEmpty();
-        final Category target = existingTarget.orElseGet(() ->
-                categoryDao.insert(new Category(targetName))
-                        .orElseThrow(() -> new RuntimeException(
-                                String.format("Failed to create target category \"%s\"", targetName))));
+        final Category target = existingTarget.orElseGet(() -> categoryDao
+                .insert(new Category(targetName))
+                .orElseThrow(() ->
+                        new RuntimeException(String.format("Failed to create target category \"%s\"", targetName))));
 
         if (source.getId().equals(target.getId())) {
             throw new IllegalArgumentException("Source and target categories are the same");
@@ -69,8 +70,11 @@ public class CategoryCombineService {
         final int total = transactions.size();
         int processed = 0;
 
-        logger.info("Combining category \"{}\" into \"{}\": {} transactions to move",
-                source.getName(), target.getName(), total);
+        logger.info(
+                "Combining category \"{}\" into \"{}\": {} transactions to move",
+                source.getName(),
+                target.getName(),
+                total);
 
         // move transactions in batches
         for (int i = 0; i < transactions.size(); i += BATCH_SIZE) {
