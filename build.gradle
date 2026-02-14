@@ -214,21 +214,10 @@ tasks.register('verify') {
 test {
     useJUnitPlatform()
 
-    // Enhanced test logging for better debugging and visibility
     testLogging {
-        // Show these test events in the console
-        events "passed", "skipped", "failed", "standard_error"
-
-        // Show full exception details when tests fail
+        events "failed"
         exceptionFormat "full"
-        showStackTraces true
-        showCauses true
-        showStandardStreams false
 
-        // Show individual test results
-        showExceptions true
-
-        // Display a summary after the test suite completes
         afterSuite { desc, result ->
             if (!desc.parent) { // Only print for the top-level test suite
                 println ""
