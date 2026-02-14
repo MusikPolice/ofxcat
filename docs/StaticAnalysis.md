@@ -277,6 +277,71 @@ Example:
 </Match>
 ```
 
+## JaCoCo — Code Coverage
+
+JaCoCo measures test coverage of production code. It runs automatically with the test suite and enforces a minimum coverage threshold as part of `./gradlew verify`.
+
+### Configuration
+
+- **Plugin**: Built-in Gradle `jacoco` plugin
+- **Scope**: Main source set only (`src/main/java`). Test code is not measured.
+- **Minimum line coverage**: 80%
+- **Reports**: HTML + XML
+
+### Running JaCoCo
+
+```bash
+# Generate coverage report (runs tests first)
+./gradlew jacocoTestReport
+
+# Check coverage meets minimum threshold (runs tests first)
+./gradlew jacocoTestCoverageVerification
+
+# Run everything (tests + static analysis + coverage)
+./gradlew verify
+```
+
+Reports are generated at:
+- `build/reports/jacoco/test/html/index.html` (HTML, browse per-class and per-method coverage)
+- `build/reports/jacoco/test/jacocoTestReport.xml` (XML, machine-parseable)
+
+### Coverage Threshold
+
+The build enforces a minimum 80% line coverage across production code (excluding infrastructure classes listed below). If coverage drops below this threshold, `./gradlew verify` will fail with a message like:
+
+```
+Rule violated for bundle ofxcat: lines covered ratio is 0.79, but expected minimum is 0.80
+```
+
+To fix: add tests that exercise the uncovered lines. Use the HTML report to identify which classes and methods lack coverage.
+
+### What JaCoCo Measures
+
+JaCoCo tracks several coverage metrics. The enforced metric is **line coverage** — the percentage of executable lines in `src/main/java` that are exercised by at least one test.
+
+The HTML report also shows:
+- **Instruction coverage** — bytecode-level coverage
+- **Branch coverage** — percentage of `if`/`switch` branches taken
+- **Complexity coverage** — cyclomatic complexity paths exercised
+- **Method coverage** — percentage of methods called by at least one test
+- **Class coverage** — percentage of classes loaded during testing
+
+### Coverage Exclusions
+
+JaCoCo only instruments main source set classes by default. Test code, resources, and documentation are never included.
+
+The following infrastructure classes are excluded from coverage measurement because they are thin wrappers around third-party libraries or Guice DI modules that cannot be meaningfully unit tested:
+
+| Class | Reason |
+|---|---|
+| `CLI.java` | Wrapper around TextIO library for interactive CLI prompts |
+| `CLIModule.java` | Guice module that binds CLI dependencies |
+| `TextIOWrapper.java` | TextIO library adapter |
+| `MatchingModule.java` | Guice module that loads keyword rules from filesystem |
+| `Log4jLogger.java` | Adapter bridging Log4j to TextIO's logging interface |
+
+To add a new exclusion, add the class path to the `jacocoExcludes` list in `build.gradle`.
+
 ## Verify Task
 
 The `verify` Gradle task is the single command that checks whether a change is ready to commit:
@@ -293,9 +358,11 @@ It runs:
 5. `spotbugsMain` - bug pattern detection on production bytecode
 6. `spotbugsTest` - bug pattern detection on test bytecode
 7. `test` - the full test suite
+8. `jacocoTestReport` - generate coverage report
+9. `jacocoTestCoverageVerification` - enforce minimum 80% line coverage
 
 If `verify` passes, the code is clean.
 
 ## Future Static Analysis Tools
 
-See `docs/AgentToolingPlan.md` for planned additions including JaCoCo, Error Prone, and custom architectural lint rules.
+See `docs/AgentToolingPlan.md` for planned additions including Error Prone and custom architectural lint rules.

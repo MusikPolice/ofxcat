@@ -275,6 +275,74 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         Assertions.assertTrue(spyCli.getCapturedTransactions().isEmpty());
     }
 
+    @Test
+    void categorizeTransactions_newCategoryCreated() {
+        // there is one existing account but no custom categories (only UNKNOWN and TRANSFER from migrations)
+        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+
+        // create an OFX file that contains a transaction
+        final String fitId = UUID.randomUUID().toString();
+        final CategorizedTransaction testTransaction = new CategorizedTransaction(
+                TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
+        final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
+        final List<OfxExport> ofxExports = Collections.singletonList(
+                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
+
+        // the SpyCli will decline the existing categories and provide a new category name
+        final SpyCli spyCli = new NewCategorySpyCli("BRAND_NEW_CATEGORY");
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
+                transactionCleanerFactory, connection, categorizedTransactionDao,
+                transactionCategoryService, categoryDao, transferMatchingService,
+                transferDao, transactionTokenDao, tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+
+        // the transaction was categorized with the brand new category
+        Assertions.assertEquals(1, categorizedTransactions.size());
+        Assertions.assertEquals("BRAND_NEW_CATEGORY", categorizedTransactions.get(0).getCategory().getName());
+        Assertions.assertNotNull(categorizedTransactions.get(0).getCategory().getId());
+
+        // verify the new category was persisted
+        Assertions.assertTrue(categoryDao.select("BRAND_NEW_CATEGORY").isPresent());
+
+        // verify the transaction was persisted with the new category
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        Assertions.assertEquals("BRAND_NEW_CATEGORY", actual.getCategory().getName());
+    }
+
+    @Test
+    void categorizeTransactions_unknownCategorySkipsTokenStorage() {
+        // create account and a transaction
+        final Account testAccount = accountDao.insert(TestUtils.createRandomAccount()).get();
+        final String fitId = UUID.randomUUID().toString();
+        final CategorizedTransaction testTransaction = new CategorizedTransaction(
+                TestUtils.createRandomTransaction(testAccount, fitId), Category.UNKNOWN);
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(testAccount);
+        final OfxTransaction transaction = TestUtils.transactionToOfxTransaction(testTransaction);
+        final List<OfxExport> ofxExports = Collections.singletonList(
+                new OfxExport(ofxAccount, OfxBalance.newBuilder().setAmount(0f).build(), Collections.singletonList(transaction)));
+
+        // the SpyCli will categorize as UNKNOWN
+        final SpyCli spyCli = new UnknownCategorySpyCli();
+        final TransactionCategoryService transactionCategoryService = createTransactionCategoryService(
+                categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService transactionImportService = new TransactionImportService(spyCli, null, accountDao,
+                transactionCleanerFactory, connection, categorizedTransactionDao,
+                transactionCategoryService, categoryDao, transferMatchingService,
+                transferDao, transactionTokenDao, tokenNormalizer);
+        final List<CategorizedTransaction> categorizedTransactions = transactionImportService.categorizeTransactions(ofxExports);
+
+        // the transaction was categorized as UNKNOWN
+        Assertions.assertEquals(1, categorizedTransactions.size());
+        Assertions.assertEquals(Category.UNKNOWN, categorizedTransactions.get(0).getCategory());
+
+        // verify the transaction was persisted
+        final CategorizedTransaction actual = categorizedTransactionDao.selectByFitId(fitId).get();
+        Assertions.assertEquals(Category.UNKNOWN, actual.getCategory());
+    }
+
     private static class SpyCli extends CLI {
 
         private final List<Transaction> capturedTransactions = new ArrayList<>();
@@ -310,6 +378,41 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
 
         public List<Transfer> getCapturedTransfers() {
             return Collections.unmodifiableList(capturedTransfers);
+        }
+    }
+
+    /**
+     * SpyCli that declines existing categories and provides a new category name,
+     * triggering the new category creation path in TransactionImportService.
+     */
+    private static class NewCategorySpyCli extends SpyCli {
+        private final String newCategoryName;
+
+        NewCategorySpyCli(String newCategoryName) {
+            this.newCategoryName = newCategoryName;
+        }
+
+        @Override
+        public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
+            return Optional.empty();
+        }
+
+        @Override
+        public String promptForNewCategoryName(List<Category> allCategories) {
+            return newCategoryName;
+        }
+    }
+
+    /**
+     * SpyCli that always categorizes transactions as UNKNOWN,
+     * triggering the token storage skip path.
+     */
+    private static class UnknownCategorySpyCli extends SpyCli {
+        @Override
+        public Optional<Category> chooseCategoryOrAddNew(List<Category> categories) {
+            return categories.stream()
+                    .filter(c -> c.equals(Category.UNKNOWN))
+                    .findFirst();
         }
     }
 }
