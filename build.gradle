@@ -62,7 +62,7 @@ dependencies {
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
 
     // SpotBugs needs this to analyze ArchUnit classes that reference lombok annotations
-    testCompileOnly 'org.projectlombok:lombok:1.18.36'
+    testCompileOnly 'org.projectlombok:lombok:1.18.42'
 }
 
 java {
