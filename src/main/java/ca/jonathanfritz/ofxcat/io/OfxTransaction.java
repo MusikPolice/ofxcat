@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.io;
 
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-
 import java.time.LocalDate;
 import java.util.Objects;
 
@@ -66,17 +65,17 @@ public class OfxTransaction {
                 .setType(other.type)
                 .setAccount(other.account);
     }
+
     @Override
     public String toString() {
-        return "OfxTransaction{" +
-                "type='" + type + '\'' +
-                ", date=" + date +
-                ", amount=" + amount +
-                ", fitId='" + fitId + '\'' +
-                ", name='" + name + '\'' +
-                ", memo='" + memo + '\'' +
-                ", account=" + account +
-                '}';
+        return "OfxTransaction{" + "type='"
+                + type + '\'' + ", date="
+                + date + ", amount="
+                + amount + ", fitId='"
+                + fitId + '\'' + ", name='"
+                + name + '\'' + ", memo='"
+                + memo + '\'' + ", account="
+                + account + '}';
     }
 
     @Override
@@ -84,13 +83,13 @@ public class OfxTransaction {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OfxTransaction that = (OfxTransaction) o;
-        return Float.compare(that.amount, amount) == 0 &&
-                Objects.equals(type, that.type) &&
-                Objects.equals(date, that.date) &&
-                Objects.equals(fitId, that.fitId) &&
-                Objects.equals(name, that.name) &&
-                Objects.equals(memo, that.memo) &&
-                Objects.equals(account, that.account);
+        return Float.compare(that.amount, amount) == 0
+                && Objects.equals(type, that.type)
+                && Objects.equals(date, that.date)
+                && Objects.equals(fitId, that.fitId)
+                && Objects.equals(name, that.name)
+                && Objects.equals(memo, that.memo)
+                && Objects.equals(account, that.account);
     }
 
     @Override

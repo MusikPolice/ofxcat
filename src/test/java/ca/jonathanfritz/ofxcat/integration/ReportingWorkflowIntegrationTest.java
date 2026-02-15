@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.integration;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.cli.CLI;
@@ -11,25 +13,26 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for reporting workflows.
  * Tests the complete flow from data setup through report generation.
  */
+@Tag("integration")
 class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
 
-    public ReportingWorkflowIntegrationTest() {
+    ReportingWorkflowIntegrationTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -41,7 +44,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void monthlySpendingReportByCategory() {
         // Setup: Create account and categories
-        Account account = accountDao.insert(TestUtils.createRandomAccount("Checking")).orElseThrow();
+        Account account =
+                accountDao.insert(TestUtils.createRandomAccount("Checking")).orElseThrow();
         Category groceries = categoryDao.insert(new Category("Groceries")).orElseThrow();
         Category restaurants = categoryDao.insert(new Category("Restaurants")).orElseThrow();
         Category utilities = categoryDao.insert(new Category("Utilities")).orElseThrow();
@@ -64,8 +68,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Generate report
         SpyCli spyCli = new SpyCli();
-        ReportingService reportingService = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
@@ -77,8 +81,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         assertFalse(output.isEmpty(), "Report should produce output");
 
         // Verify header is present (reportTransactionsMonthly uses "MONTH" as first column)
-        assertTrue(output.get(0).contains("MONTH"),
-                "Report should have a header row with MONTH column");
+        assertTrue(output.get(0).contains("MONTH"), "Report should have a header row with MONTH column");
 
         // Convert output to string for easier searching
         String reportText = String.join("\n", output);
@@ -93,33 +96,40 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test account listing report shows all accounts with correct details.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void accountListingReport() {
         // Setup: Create multiple accounts
-        Account checking = accountDao.insert(Account.newBuilder()
-                .setName("Primary Checking")
-                .setAccountNumber("1234567890")
-                .setBankId("BANK001")
-                .setAccountType("CHECKING")
-                .build()).orElseThrow();
+        accountDao
+                .insert(Account.newBuilder()
+                        .setName("Primary Checking")
+                        .setAccountNumber("1234567890")
+                        .setBankId("BANK001")
+                        .setAccountType("CHECKING")
+                        .build())
+                .orElseThrow();
 
-        Account savings = accountDao.insert(Account.newBuilder()
-                .setName("High Yield Savings")
-                .setAccountNumber("9876543210")
-                .setBankId("BANK001")
-                .setAccountType("SAVINGS")
-                .build()).orElseThrow();
+        accountDao
+                .insert(Account.newBuilder()
+                        .setName("High Yield Savings")
+                        .setAccountNumber("9876543210")
+                        .setBankId("BANK001")
+                        .setAccountType("SAVINGS")
+                        .build())
+                .orElseThrow();
 
-        Account creditCard = accountDao.insert(Account.newBuilder()
-                .setName("Rewards Card")
-                .setAccountNumber("4111111111111111")
-                .setBankId("CARD_ISSUER")
-                .setAccountType("CREDITLINE")
-                .build()).orElseThrow();
+        accountDao
+                .insert(Account.newBuilder()
+                        .setName("Rewards Card")
+                        .setAccountNumber("4111111111111111")
+                        .setBankId("CARD_ISSUER")
+                        .setAccountType("CREDITLINE")
+                        .build())
+                .orElseThrow();
 
         // Generate account report
         SpyCli spyCli = new SpyCli();
-        ReportingService reportingService = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
         reportingService.reportAccounts();
 
@@ -143,16 +153,17 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test category listing report shows all categories.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void categoryListingReport() {
         // Setup: Create categories
-        Category groceries = categoryDao.insert(new Category("Groceries")).orElseThrow();
-        Category restaurants = categoryDao.insert(new Category("Dining Out")).orElseThrow();
-        Category entertainment = categoryDao.insert(new Category("Entertainment")).orElseThrow();
+        categoryDao.insert(new Category("Groceries")).orElseThrow();
+        categoryDao.insert(new Category("Dining Out")).orElseThrow();
+        categoryDao.insert(new Category("Entertainment")).orElseThrow();
 
         // Generate category report
         SpyCli spyCli = new SpyCli();
-        ReportingService reportingService = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
         reportingService.reportCategories();
 
@@ -189,8 +200,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Generate report for Feb-Mar only
         SpyCli spyCli = new SpyCli();
-        ReportingService reportingService = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
         LocalDate startDate = LocalDate.of(2024, 2, 1);
         LocalDate endDate = LocalDate.of(2024, 3, 31);
@@ -206,15 +217,16 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
      * Test reporting with no transactions in date range.
      */
     @Test
+    @SuppressWarnings("ReturnValueIgnored") // inserts are test setup; orElseThrow asserts success
     void reportWithNoTransactionsInRange() {
         // Setup: Create account and category but no transactions
-        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
-        Category category = categoryDao.insert(new Category("Empty Category")).orElseThrow();
+        accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+        categoryDao.insert(new Category("Empty Category")).orElseThrow();
 
         // Generate report for a period with no transactions
         SpyCli spyCli = new SpyCli();
-        ReportingService reportingService = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
@@ -234,7 +246,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     @Test
     void completeImportToReportWorkflow() {
         // Setup: Create account and categories
-        Account account = accountDao.insert(TestUtils.createRandomAccount("Checking")).orElseThrow();
+        Account account =
+                accountDao.insert(TestUtils.createRandomAccount("Checking")).orElseThrow();
         Category income = categoryDao.insert(new Category("Income")).orElseThrow();
         Category bills = categoryDao.insert(new Category("Bills")).orElseThrow();
 
@@ -248,8 +261,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 1: Generate account report
         SpyCli accountReportCli = new SpyCli();
-        ReportingService reportingService1 = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, accountReportCli);
+        ReportingService reportingService1 =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, accountReportCli);
         reportingService1.reportAccounts();
 
         List<String> accountReport = accountReportCli.getCapturedLines();
@@ -257,8 +270,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 2: Generate category report
         SpyCli categoryReportCli = new SpyCli();
-        ReportingService reportingService2 = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, categoryReportCli);
+        ReportingService reportingService2 =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, categoryReportCli);
         reportingService2.reportCategories();
 
         List<String> categoryReport = categoryReportCli.getCapturedLines();
@@ -266,8 +279,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 3: Generate transaction report
         SpyCli transactionReportCli = new SpyCli();
-        ReportingService reportingService3 = new ReportingService(
-                categorizedTransactionDao, accountDao, categoryDao, transactionReportCli);
+        ReportingService reportingService3 =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, transactionReportCli);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
@@ -280,10 +293,10 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
     // ==================== Helper Methods ====================
 
-    private void insertTransaction(Account account, Category category, String description,
-                                   float amount, LocalDate date) {
-        Transaction.TransactionType type = amount >= 0 ?
-                Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+    private void insertTransaction(
+            Account account, Category category, String description, float amount, LocalDate date) {
+        Transaction.TransactionType type =
+                amount >= 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
 
         Transaction transaction = Transaction.newBuilder(UUID.randomUUID().toString())
                 .setAccount(account)
@@ -302,7 +315,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     private static class SpyCli extends CLI {
         private final List<String> capturedLines = new ArrayList<>();
 
-        public SpyCli() {
+        SpyCli() {
             super(null, null);
         }
 

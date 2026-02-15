@@ -1,15 +1,12 @@
 package ca.jonathanfritz.ofxcat.matching;
 
 import ca.jonathanfritz.ofxcat.config.AppConfig;
-import ca.jonathanfritz.ofxcat.config.AppConfigLoader;
-import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import java.nio.file.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.nio.file.Path;
 
 /**
  * Guice module for matching-related dependencies.
@@ -72,7 +69,7 @@ public class MatchingModule extends AbstractModule {
                 logger.warn("No bundled keyword-rules.yaml found in classpath");
                 return KeywordRulesConfig.empty();
             }
-            String yaml = new String(is.readAllBytes());
+            String yaml = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
             KeywordRulesConfig config = loader.loadFromString(yaml);
             logger.info("Loaded {} bundled keyword rules", config.getRules().size());
             return config;

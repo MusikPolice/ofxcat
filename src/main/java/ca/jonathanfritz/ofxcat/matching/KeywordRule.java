@@ -14,8 +14,7 @@ public class KeywordRule {
     private boolean matchAll;
 
     // Default constructor for Jackson deserialization
-    public KeywordRule() {
-    }
+    public KeywordRule() {}
 
     public KeywordRule(List<String> keywords, String category, boolean matchAll) {
         this.keywords = keywords;
@@ -63,9 +62,8 @@ public class KeywordRule {
         }
 
         // Normalize keywords to lowercase for comparison
-        List<String> normalizedKeywords = keywords.stream()
-                .map(String::toLowerCase)
-                .toList();
+        List<String> normalizedKeywords =
+                keywords.stream().map(String::toLowerCase).toList();
 
         if (matchAll) {
             // All keywords must be present in tokens
@@ -78,10 +76,9 @@ public class KeywordRule {
 
     @Override
     public String toString() {
-        return "KeywordRule{" +
-                "keywords=" + keywords +
-                ", category='" + category + '\'' +
-                ", matchAll=" + matchAll +
-                '}';
+        return "KeywordRule{" + "keywords="
+                + keywords + ", category='"
+                + category + '\'' + ", matchAll="
+                + matchAll + '}';
     }
 }

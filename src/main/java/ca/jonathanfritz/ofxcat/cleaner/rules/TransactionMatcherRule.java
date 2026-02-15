@@ -1,13 +1,12 @@
 package ca.jonathanfritz.ofxcat.cleaner.rules;
 
+import static ca.jonathanfritz.ofxcat.utils.StringUtils.coerceNullableString;
+
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-
 import java.util.function.Function;
 import java.util.regex.Pattern;
-
-import static ca.jonathanfritz.ofxcat.utils.StringUtils.coerceNullableString;
 
 public class TransactionMatcherRule {
     // if all of these conditions match...
@@ -30,16 +29,18 @@ public class TransactionMatcherRule {
     public boolean matches(OfxTransaction ofxTransaction) {
         final boolean typeMatches = typeMatcher == null || ofxTransaction.getType() == typeMatcher;
         final boolean amountMatches = amountMatcher == null || amountMatcher.match(ofxTransaction);
-        final boolean nameMatches = nameMatcher == null || nameMatcher.matcher(
-                coerceNullableString(ofxTransaction.getName())
-                        .toUpperCase()
-                        .trim()
-        ).matches();
-        final boolean memoMatches = memoMatcher == null || memoMatcher.matcher(
-                (coerceNullableString(ofxTransaction.getMemo()))
-                        .toUpperCase()
-                        .trim()
-        ).matches();
+        final boolean nameMatches = nameMatcher == null
+                || nameMatcher
+                        .matcher(coerceNullableString(ofxTransaction.getName())
+                                .toUpperCase()
+                                .trim())
+                        .matches();
+        final boolean memoMatches = memoMatcher == null
+                || memoMatcher
+                        .matcher((coerceNullableString(ofxTransaction.getMemo()))
+                                .toUpperCase()
+                                .trim())
+                        .matches();
 
         return typeMatches && amountMatches && nameMatches && memoMatches;
     }
@@ -58,8 +59,7 @@ public class TransactionMatcherRule {
         private Pattern nameMatcher = null;
         private Pattern memoMatcher = null;
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder withType(TransactionType typeMatcher) {
             this.typeMatcher = typeMatcher;

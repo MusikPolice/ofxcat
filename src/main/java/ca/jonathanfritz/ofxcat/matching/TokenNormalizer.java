@@ -78,8 +78,7 @@ public class TokenNormalizer {
     }
 
     private String decodeXmlEntities(String input) {
-        return input
-                .replace("&amp;", "&")
+        return input.replace("&amp;", "&")
                 .replace("&lt;", "<")
                 .replace("&gt;", ">")
                 .replace("&quot;", "\"")

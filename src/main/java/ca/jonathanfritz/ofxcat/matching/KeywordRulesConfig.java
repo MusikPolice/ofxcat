@@ -16,8 +16,7 @@ public class KeywordRulesConfig {
     private List<KeywordRule> rules = new ArrayList<>();
 
     // Default constructor for Jackson deserialization
-    public KeywordRulesConfig() {
-    }
+    public KeywordRulesConfig() {}
 
     public KeywordRulesConfig(List<KeywordRule> rules) {
         this.rules = rules != null ? rules : new ArrayList<>();
@@ -59,10 +58,7 @@ public class KeywordRulesConfig {
             return Optional.empty();
         }
 
-        return rules.stream()
-                .filter(rule -> rule.matches(tokens))
-                .findFirst()
-                .map(KeywordRule::getCategory);
+        return rules.stream().filter(rule -> rule.matches(tokens)).findFirst().map(KeywordRule::getCategory);
     }
 
     /**

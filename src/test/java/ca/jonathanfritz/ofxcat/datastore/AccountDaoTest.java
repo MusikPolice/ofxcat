@@ -2,12 +2,11 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class AccountDaoTest extends AbstractDatabaseTest {
 
@@ -69,7 +68,9 @@ class AccountDaoTest extends AbstractDatabaseTest {
         final Account insertedAccount = accountDao.insert(accountToInsert).get();
 
         // get it back
-        final Account foundAccount = accountDao.selectByAccountNumber(accountToInsert.getAccountNumber()).get();
+        final Account foundAccount = accountDao
+                .selectByAccountNumber(accountToInsert.getAccountNumber())
+                .get();
         Assertions.assertEquals(foundAccount, insertedAccount);
     }
 }

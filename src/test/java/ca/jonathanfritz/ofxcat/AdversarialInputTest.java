@@ -1,20 +1,19 @@
 package ca.jonathanfritz.ofxcat;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
-import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.CategorizedTransactionDao;
+import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * Adversarial input tests to verify the application handles malicious or edge-case
@@ -26,7 +25,7 @@ class AdversarialInputTest extends AbstractDatabaseTest {
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao transactionDao;
 
-    public AdversarialInputTest() {
+    AdversarialInputTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.transactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -48,12 +47,13 @@ class AdversarialInputTest extends AbstractDatabaseTest {
         // Verify: Category was inserted safely
         // Note: Category names are uppercased by the system
         assertNotNull(insertedCategory, "Category with SQL injection should be inserted");
-        assertEquals(maliciousName.toUpperCase(), insertedCategory.getName(),
+        assertEquals(
+                maliciousName.toUpperCase(),
+                insertedCategory.getName(),
                 "Category name should be stored literally (uppercased), not executed as SQL");
 
         // Verify table wasn't dropped by attempting another operation
-        assertDoesNotThrow(() -> categoryDao.select(),
-                "Category table should still exist after SQL injection attempt");
+        assertDoesNotThrow(() -> categoryDao.select(), "Category table should still exist after SQL injection attempt");
     }
 
     @Test
@@ -103,7 +103,9 @@ class AdversarialInputTest extends AbstractDatabaseTest {
 
         // Verify: Transaction stored safely
         assertTrue(result.isPresent(), "Transaction should be inserted");
-        assertEquals(maliciousDescription, result.get().getTransaction().getDescription(),
+        assertEquals(
+                maliciousDescription,
+                result.get().getTransaction().getDescription(),
                 "Description should be stored literally, not executed as SQL");
     }
 
@@ -122,7 +124,9 @@ class AdversarialInputTest extends AbstractDatabaseTest {
         // Verify: Unicode category is stored correctly
         // Note: Category names are uppercased by the system
         assertNotNull(insertedCategory, "Unicode category should be inserted");
-        assertEquals(unicodeName.toUpperCase(), insertedCategory.getName(),
+        assertEquals(
+                unicodeName.toUpperCase(),
+                insertedCategory.getName(),
                 "Unicode characters should be preserved (uppercased)");
     }
 
@@ -190,13 +194,16 @@ class AdversarialInputTest extends AbstractDatabaseTest {
 
         Category insertedCategory;
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            insertedCategory = categoryDao.insert(t, new Category(emojiCategory)).orElse(null);
+            insertedCategory =
+                    categoryDao.insert(t, new Category(emojiCategory)).orElse(null);
         }
 
         // Verify: Emoji category is stored correctly
         // Note: Category names are uppercased, emoji are preserved
         assertNotNull(insertedCategory, "Category with emoji should be inserted");
-        assertEquals(emojiCategory.toUpperCase(), insertedCategory.getName(),
+        assertEquals(
+                emojiCategory.toUpperCase(),
+                insertedCategory.getName(),
                 "Emoji characters should be preserved in category name (text uppercased)");
     }
 

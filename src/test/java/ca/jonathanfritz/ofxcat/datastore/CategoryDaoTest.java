@@ -2,11 +2,10 @@ package ca.jonathanfritz.ofxcat.datastore;
 
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 // TODO: mock connection to test failure cases
 class CategoryDaoTest extends AbstractDatabaseTest {
@@ -78,12 +77,15 @@ class CategoryDaoTest extends AbstractDatabaseTest {
     @Test
     void selectAllSuccessTest() {
         final CategoryDao categoryDao = new CategoryDao(connection);
-        final Category category1 = categoryDao.insert(new Category("The Pen is Mightier")).get();
-        final Category category2 = categoryDao.insert(new Category("Japan US Relations")).get();
+        final Category category1 =
+                categoryDao.insert(new Category("The Pen is Mightier")).get();
+        final Category category2 =
+                categoryDao.insert(new Category("Japan US Relations")).get();
 
         final List<Category> categories = categoryDao.select();
 
-        // the default UNKNOWN and TRANSFER categories will be returned, along with the two new categories that were inserted
+        // the default UNKNOWN and TRANSFER categories will be returned, along with the two new categories that were
+        // inserted
         Assertions.assertEquals(4, categories.size());
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(Category.UNKNOWN)));
         Assertions.assertTrue(categories.stream().anyMatch(c -> c.equals(Category.TRANSFER)));
@@ -130,7 +132,8 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         final CategoryDao categoryDao = new CategoryDao(connection);
 
         // Insert a category with uppercase name
-        final Category inserted = categoryDao.insert(new Category("RESTAURANTS")).get();
+        final Category inserted =
+                categoryDao.insert(new Category("RESTAURANTS")).get();
 
         // Use getOrCreate with different case
         final Optional<Category> result = categoryDao.getOrCreate("restaurants");
@@ -145,7 +148,8 @@ class CategoryDaoTest extends AbstractDatabaseTest {
         final CategoryDao categoryDao = new CategoryDao(connection);
 
         // insert a category, then delete it
-        final Category inserted = categoryDao.insert(new Category("Doomed Category")).get();
+        final Category inserted =
+                categoryDao.insert(new Category("Doomed Category")).get();
         final boolean deleted = categoryDao.delete(inserted.getId());
 
         // verify it was deleted

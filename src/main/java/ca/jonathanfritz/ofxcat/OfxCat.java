@@ -18,14 +18,8 @@ import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
-import jakarta.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.commons.cli.*;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.flywaydb.core.Flyway;
-
+import jakarta.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,6 +28,16 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.flywaydb.core.Flyway;
 
 /**
  * The entrypoint to the application
@@ -54,9 +58,16 @@ public class OfxCat {
     private static final Logger logger = LogManager.getLogger(OfxCat.class);
 
     @Inject
-    OfxCat(Flyway flyway, TransactionImportService transactionImportService, ReportingService reportingService,
-           TokenMigrationService tokenMigrationService, CategoryCombineService categoryCombineService,
-           PathUtils pathUtils, CLI cli, KeywordRulesConfig keywordRulesConfig, AppConfig appConfig) {
+    OfxCat(
+            Flyway flyway,
+            TransactionImportService transactionImportService,
+            ReportingService reportingService,
+            TokenMigrationService tokenMigrationService,
+            CategoryCombineService categoryCombineService,
+            PathUtils pathUtils,
+            CLI cli,
+            KeywordRulesConfig keywordRulesConfig,
+            AppConfig appConfig) {
         this.flyway = flyway;
         this.transactionImportService = transactionImportService;
         this.reportingService = reportingService;
@@ -83,17 +94,18 @@ public class OfxCat {
         cli.println("Migrating existing transactions to use tokens...");
 
         MigrationReport report = tokenMigrationService.migrateExistingTransactions(
-                (current, total) -> cli.updateProgressBar("Migrating", current, total)
-        );
+                (current, total) -> cli.updateProgressBar("Migrating", current, total));
         cli.finishProgressBar();
 
-        cli.println(String.format("Token migration complete: %d processed, %d recategorized, %d skipped",
+        cli.println(String.format(
+                "Token migration complete: %d processed, %d recategorized, %d skipped",
                 report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
 
         if (report.hasRecategorizations()) {
             cli.println("Recategorized transactions:");
             for (MigrationReport.RecategorizationEntry entry : report.getRecategorizations()) {
-                cli.println(String.format("  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
+                cli.println(String.format(
+                        "  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
             }
         }
     }
@@ -141,10 +153,12 @@ public class OfxCat {
 
     private void backupOfxFile(Path pathToImportFile) throws CliException {
         try {
-            // copy the imported file to the data directory so that we have a record of everything that has been imported
+            // copy the imported file to the data directory so that we have a record of everything that has been
+            // imported
             final Path backupPath = pathUtils.getImportedFilesPath().resolve(pathToImportFile.getFileName());
-            if (!Files.isDirectory(backupPath.getParent())) {
-                Files.createDirectories(backupPath.getParent());
+            final Path backupDir = backupPath.getParent();
+            if (backupDir != null && !Files.isDirectory(backupDir)) {
+                Files.createDirectories(backupDir);
             }
             if (!Files.exists(backupPath)) {
                 Files.copy(pathToImportFile, backupPath);
@@ -189,22 +203,26 @@ public class OfxCat {
 
         MigrationReport report = tokenMigrationService.forceMigration(
                 options.dryRun(),
-                (current, total) -> cli.updateProgressBar(options.dryRun() ? "Analyzing" : "Migrating", current, total)
-        );
+                (current, total) ->
+                        cli.updateProgressBar(options.dryRun() ? "Analyzing" : "Migrating", current, total));
         cli.finishProgressBar();
 
         if (options.dryRun()) {
-            cli.println(String.format("\nDry run results: %d would be processed, %d would be recategorized, %d would be skipped",
+            cli.println(String.format(
+                    "\nDry run results: %d would be processed, %d would be recategorized, %d would be skipped",
                     report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
         } else {
-            cli.println(String.format("\nMigration complete: %d processed, %d recategorized, %d skipped",
+            cli.println(String.format(
+                    "\nMigration complete: %d processed, %d recategorized, %d skipped",
                     report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount()));
         }
 
         if (report.hasRecategorizations()) {
-            cli.println(options.dryRun() ? "\nTransactions that would be recategorized:" : "\nRecategorized transactions:");
+            cli.println(
+                    options.dryRun() ? "\nTransactions that would be recategorized:" : "\nRecategorized transactions:");
             for (MigrationReport.RecategorizationEntry entry : report.getRecategorizations()) {
-                cli.println(String.format("  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
+                cli.println(String.format(
+                        "  %s : %s -> %s", entry.description(), entry.oldCategory(), entry.newCategory()));
             }
         } else {
             cli.println("\nNo recategorizations " + (options.dryRun() ? "would be" : "were") + " made.");
@@ -218,14 +236,14 @@ public class OfxCat {
             CategoryCombineService.CombineResult result = categoryCombineService.combine(
                     options.source(),
                     options.target(),
-                    (current, total) -> cli.updateProgressBar("Moving", current, total)
-            );
+                    (current, total) -> cli.updateProgressBar("Moving", current, total));
             cli.finishProgressBar();
 
             if (result.targetCreated()) {
                 cli.println(String.format("\nCreated category \"%s\"", result.targetName()));
             }
-            cli.println(String.format("Complete: %d transactions moved from \"%s\" to \"%s\"",
+            cli.println(String.format(
+                    "Complete: %d transactions moved from \"%s\" to \"%s\"",
                     result.transactionsMoved(), result.sourceName(), result.targetName()));
             cli.println(String.format("Category \"%s\" has been deleted.", result.sourceName()));
 
@@ -241,7 +259,8 @@ public class OfxCat {
             return;
         }
 
-        cli.println(String.format("\nWarning: %d keyword rule(s) still reference category \"%s\":", affectedRules.size(), sourceName));
+        cli.println(String.format(
+                "\nWarning: %d keyword rule(s) still reference category \"%s\":", affectedRules.size(), sourceName));
         for (KeywordRule rule : affectedRules) {
             cli.println(String.format("  keywords: %s -> %s", rule.getKeywords(), rule.getCategory()));
         }
@@ -292,8 +311,7 @@ public class OfxCat {
                 "   Alias for 'combine categories'. Renames a category by moving all its",
                 "   transactions to the target (created if it doesn't exist) and deleting the source.",
                 "ofxcat help",
-                "   Displays this help text"
-        ));
+                "   Displays this help text"));
     }
 
     // TODO: add a mode that allows reprocessing of transactions from some category
@@ -325,12 +343,12 @@ public class OfxCat {
                     // if mode is GET, determine which concern needs to be got
                     switch (getConcern(args)) {
                         case TRANSACTIONS ->
-                                // TODO: add a way to export actual transactions, not just category sums
-                                ofxCat.reportTransactions(getOptions(args));
+                        // TODO: add a way to export actual transactions, not just category sums
+                        ofxCat.reportTransactions(getOptions(args));
                         case ACCOUNTS -> ofxCat.reportAccounts();
                         case CATEGORIES ->
-                                // TODO: need a way to edit categories and category descriptions
-                                ofxCat.reportCategories();
+                        // TODO: need a way to edit categories and category descriptions
+                        ofxCat.reportCategories();
                     }
                     break;
                 case MIGRATE:
@@ -356,12 +374,12 @@ public class OfxCat {
         final Injector injector = Guice.createInjector(
                 new CLIModule(),
                 DatastoreModule.onDisk(pathUtils.getDatabaseConnectionString()),
-                new MatchingModule(appConfig, pathUtils.getConfigPath())
-        );
+                new MatchingModule(appConfig, pathUtils.getConfigPath()));
         final OfxCat ofxCat = injector.getInstance(OfxCat.class);
         ofxCat.migrateDatabase();
         ofxCat.migrateTokens();
-        logger.debug("Application initialized with config: keyword_rules_path={}, overlap_threshold={}",
+        logger.debug(
+                "Application initialized with config: keyword_rules_path={}, overlap_threshold={}",
                 appConfig.getKeywordRulesPath(),
                 appConfig.getTokenMatching().getOverlapThreshold());
         return ofxCat;
@@ -417,21 +435,21 @@ public class OfxCat {
                     .desc("Start date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("e")
                     .longOpt("end-date")
                     .desc("End date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
                     .required(false)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("c")
                     .longOpt("category-id")
                     .desc("Unique id of the Category with which to filter results")
                     .hasArg(true)
                     .required(false)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
@@ -466,7 +484,7 @@ public class OfxCat {
     }
 
     // Package-private for testing
-    record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) { }
+    record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) {}
 
     // Package-private for testing
     static MigrateOptions getMigrateOptions(String[] args) throws CliException {
@@ -478,7 +496,7 @@ public class OfxCat {
                     .desc("Show what would change without making actual changes")
                     .hasArg(false)
                     .required(false)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 1, args.length));
@@ -490,7 +508,7 @@ public class OfxCat {
     }
 
     // Package-private for testing
-    record MigrateOptions(boolean dryRun) { }
+    record MigrateOptions(boolean dryRun) {}
 
     // Package-private for testing
     static CombineOptions getCombineOptions(String[] args) throws CliException {
@@ -517,14 +535,14 @@ public class OfxCat {
                     .desc("Name of the source category")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("t")
                     .longOpt("target")
                     .desc("Name of the target category")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
@@ -537,5 +555,5 @@ public class OfxCat {
     }
 
     // Package-private for testing
-    record CombineOptions(String source, String target) { }
+    record CombineOptions(String source, String target) {}
 }

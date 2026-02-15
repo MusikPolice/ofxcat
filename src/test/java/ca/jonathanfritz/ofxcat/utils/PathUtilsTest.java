@@ -1,12 +1,11 @@
 package ca.jonathanfritz.ofxcat.utils;
 
-import org.hamcrest.core.IsEqual;
-import org.junit.jupiter.api.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.io.File;
 import java.nio.file.Path;
-
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.hamcrest.core.IsEqual;
+import org.junit.jupiter.api.Test;
 
 class PathUtilsTest {
 

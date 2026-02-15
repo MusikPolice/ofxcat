@@ -12,15 +12,16 @@ import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import ca.jonathanfritz.ofxcat.service.TransactionCategoryService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.sql.Connection;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
-import java.sql.Connection;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Parent class for unit tests that require an initialized database to be present
  */
+@Tag("database")
 public abstract class AbstractDatabaseTest {
 
     protected final Injector injector;
@@ -55,23 +56,13 @@ public abstract class AbstractDatabaseTest {
      * Uses empty keyword rules to avoid auto-categorization from rules during tests.
      */
     protected TransactionCategoryService createTransactionCategoryService(
-            CategoryDao categoryDao,
-            CategorizedTransactionDao categorizedTransactionDao,
-            CLI cli
-    ) {
+            CategoryDao categoryDao, CategorizedTransactionDao categorizedTransactionDao, CLI cli) {
         TransactionTokenDao transactionTokenDao = new TransactionTokenDao();
         TokenMatchingService tokenMatchingService = new TokenMatchingService(
-                connection, transactionTokenDao, categoryDao, tokenNormalizer, tokenMatchingConfig
-        );
+                connection, transactionTokenDao, categoryDao, tokenNormalizer, tokenMatchingConfig);
         KeywordRulesConfig keywordRulesConfig = KeywordRulesConfig.empty();
 
         return new TransactionCategoryService(
-                categoryDao,
-                categorizedTransactionDao,
-                tokenNormalizer,
-                tokenMatchingService,
-                keywordRulesConfig,
-                cli
-        );
+                categoryDao, categorizedTransactionDao, tokenNormalizer, tokenMatchingService, keywordRulesConfig, cli);
     }
 }

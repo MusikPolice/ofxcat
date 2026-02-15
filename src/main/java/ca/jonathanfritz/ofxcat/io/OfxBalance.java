@@ -22,10 +22,7 @@ public class OfxBalance {
 
     @Override
     public String toString() {
-        return "OfxBalance{" +
-                "amount=" + amount +
-                ", date=" + date +
-                '}';
+        return "OfxBalance{" + "amount=" + amount + ", date=" + date + '}';
     }
 
     @Override
@@ -33,8 +30,7 @@ public class OfxBalance {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OfxBalance that = (OfxBalance) o;
-        return Float.compare(that.amount, amount) == 0 &&
-                Objects.equals(date, that.date);
+        return Float.compare(that.amount, amount) == 0 && Objects.equals(date, that.date);
     }
 
     @Override
@@ -53,13 +49,11 @@ public class OfxBalance {
         return builder;
     }
 
-
     public static final class Builder {
         private float amount;
         private LocalDate date;
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder setAmount(float amount) {
             this.amount = amount;

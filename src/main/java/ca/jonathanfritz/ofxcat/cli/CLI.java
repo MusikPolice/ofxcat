@@ -6,16 +6,15 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import jakarta.inject.Inject;
-import org.apache.commons.lang3.StringUtils;
-import org.beryx.textio.InputReader;
-import org.beryx.textio.TextIO;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
+import org.beryx.textio.InputReader;
+import org.beryx.textio.TextIO;
 
 // TODO: test me?
 public class CLI {
@@ -33,15 +32,15 @@ public class CLI {
     }
 
     public void printWelcomeBanner() {
-        textIO.getTextTerminal().println(Arrays.asList(
-                "         __               _   ",
-                "        / _|             | |  ",
-                "   ___ | |___  _____ __ _| |_ ",
-                "  / _ \\|  _\\ \\/ / __/ _` | __|",
-                " | (_) | |  >  < (_| (_| | |_ ",
-                "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
-                "                              "
-        ));
+        textIO.getTextTerminal()
+                .println(Arrays.asList(
+                        "         __               _   ",
+                        "        / _|             | |  ",
+                        "   ___ | |___  _____ __ _| |_ ",
+                        "  / _ \\|  _\\ \\/ / __/ _` | __|",
+                        " | (_) | |  >  < (_| (_| | |_ ",
+                        "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
+                        "                              "));
     }
 
     /**
@@ -127,11 +126,15 @@ public class CLI {
 
         // date
         textIO.getTextTerminal().print("Date: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDate().toString()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(transaction.getDate().toString()));
 
         // type
         textIO.getTextTerminal().print("Type: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getType().name()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(transaction.getType().name()));
 
         // amount
         textIO.getTextTerminal().print("Amount: ");
@@ -143,7 +146,9 @@ public class CLI {
 
         // account name
         textIO.getTextTerminal().print("Account: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getAccount().getName()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(transaction.getAccount().getName()));
 
         // remaining balance
         textIO.getTextTerminal().print("Balance: ");
@@ -159,8 +164,9 @@ public class CLI {
     }
 
     private void printCurrencyValue(String formatString, float value) {
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t ->
-                t.println(String.format(java.util.Locale.US, formatString, Math.abs(value))));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(String.format(java.util.Locale.US, formatString, Math.abs(value))));
     }
 
     public Optional<Category> chooseCategoryOrChooseAnother(List<Category> categories) {
@@ -180,11 +186,10 @@ public class CLI {
      */
     private Optional<Category> chooseCategory(List<Category> categories, final String prompt) {
         final List<String> potentialCategories = Stream.concat(
-                categories.stream().map(Category::getName),
-                Arrays.stream(new String[]{prompt})
-        )
-        .collect(Collectors.toList());
-        final String choice = textIOWrapper.promptChooseString("\nSelect an existing category for the transaction:", potentialCategories);
+                        categories.stream().map(Category::getName), Arrays.stream(new String[] {prompt}))
+                .collect(Collectors.toList());
+        final String choice = textIOWrapper.promptChooseString(
+                "\nSelect an existing category for the transaction:", potentialCategories);
         return categories.stream()
                 .filter(pc -> pc.getName().equalsIgnoreCase(choice))
                 .findFirst();
@@ -200,10 +205,13 @@ public class CLI {
                         // TODO: better csv escaping?
                         return Collections.singletonList("Category names must not contain a comma");
                     } else if (val.equalsIgnoreCase(NEW_CATEGORY_PROMPT)) {
-                        return Collections.singletonList(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
+                        return Collections.singletonList(
+                                String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
                     } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
-                        return Collections.singletonList(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
-                    } else if (allCategories.stream().anyMatch(c -> c.getName().trim().equalsIgnoreCase(val.trim()))) {
+                        return Collections.singletonList(
+                                String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
+                    } else if (allCategories.stream()
+                            .anyMatch(c -> c.getName().trim().equalsIgnoreCase(val.trim()))) {
                         return Collections.singletonList("Category names must be unique");
                     }
                     return null;
@@ -261,12 +269,19 @@ public class CLI {
         printCurrencyValue(transfer.getSink().getAmount());
 
         textIO.getTextTerminal().print("From: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSource().getAccount().getName()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value",
+                        t -> t.println(transfer.getSource().getAccount().getName()));
 
         textIO.getTextTerminal().print("To: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSink().getAccount().getName()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(transfer.getSink().getAccount().getName()));
 
         textIO.getTextTerminal().print("On: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transfer.getSource().getDate().toString()));
+        textIO.getTextTerminal()
+                .executeWithPropertiesPrefix(
+                        "value", t -> t.println(transfer.getSource().getDate().toString()));
     }
 }

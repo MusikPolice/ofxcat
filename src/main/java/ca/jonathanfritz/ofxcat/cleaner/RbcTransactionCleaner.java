@@ -1,24 +1,25 @@
 package ca.jonathanfritz.ofxcat.cleaner;
 
+import static ca.jonathanfritz.ofxcat.utils.StringUtils.coerceNullableString;
+
 import ca.jonathanfritz.ofxcat.cleaner.rules.AmountMatcherRule;
 import ca.jonathanfritz.ofxcat.cleaner.rules.TransactionMatcherRule;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static ca.jonathanfritz.ofxcat.utils.StringUtils.coerceNullableString;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * A transaction cleaner that tidies up data imported from RBC
  */
-public class RbcTransactionCleaner implements TransactionCleaner {
+public final class RbcTransactionCleaner implements TransactionCleaner {
 
     private static final List<TransactionMatcherRule> rules = new ArrayList<>();
 
@@ -298,7 +299,8 @@ public class RbcTransactionCleaner implements TransactionCleaner {
 
     @Override
     public Transaction.Builder clean(OfxTransaction ofxTransaction) {
-        final Optional<TransactionMatcherRule> transformer = rules.stream().filter(r -> r.matches(ofxTransaction)).findFirst();
+        final Optional<TransactionMatcherRule> transformer =
+                rules.stream().filter(r -> r.matches(ofxTransaction)).findFirst();
         if (transformer.isPresent()) {
             return transformer.get().apply(ofxTransaction);
         }
@@ -311,10 +313,10 @@ public class RbcTransactionCleaner implements TransactionCleaner {
                 .collect(Collectors.joining(" "));
 
         return Transaction.newBuilder(ofxTransaction.getFitId())
-            .setType(categorizeTransactionType(ofxTransaction))
-            .setDate(ofxTransaction.getDate())
-            .setAmount(ofxTransaction.getAmount())
-            .setDescription(description);
+                .setType(categorizeTransactionType(ofxTransaction))
+                .setDate(ofxTransaction.getDate())
+                .setAmount(ofxTransaction.getAmount())
+                .setDescription(description);
     }
 
     private String clean(final String input) {

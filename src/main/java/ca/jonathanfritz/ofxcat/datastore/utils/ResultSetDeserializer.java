@@ -1,12 +1,11 @@
 package ca.jonathanfritz.ofxcat.datastore.utils;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Generic deserializer for {@link ResultSet} objects that contain rows of type {@link Entity}
@@ -30,6 +29,7 @@ public class ResultSetDeserializer<T extends Entity> implements SqlFunction<Tran
     }
 
     @Override
+    @SuppressWarnings("PMD.CloseResource") // ResultSet lifecycle is managed by TransactionState
     public List<T> apply(TransactionState transactionState) throws SQLException {
         final List<T> results = new ArrayList<>();
         final ResultSet resultSet = transactionState.getResultSet();

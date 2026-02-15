@@ -9,14 +9,13 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
 import jakarta.inject.Inject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Service for migrating existing transactions to have tokens and optionally
@@ -41,8 +40,7 @@ public class TokenMigrationService {
             TransactionTokenDao transactionTokenDao,
             CategoryDao categoryDao,
             TokenNormalizer tokenNormalizer,
-            KeywordRulesConfig keywordRulesConfig
-    ) {
+            KeywordRulesConfig keywordRulesConfig) {
         this.connection = connection;
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.transactionTokenDao = transactionTokenDao;
@@ -103,13 +101,18 @@ public class TokenMigrationService {
 
             // Log progress for large migrations
             if (needsMigration.size() > BATCH_SIZE && (i + BATCH_SIZE) % (BATCH_SIZE * 10) == 0) {
-                logger.info("Token migration progress: {} / {} transactions processed",
-                        Math.min(i + BATCH_SIZE, needsMigration.size()), needsMigration.size());
+                logger.info(
+                        "Token migration progress: {} / {} transactions processed",
+                        Math.min(i + BATCH_SIZE, needsMigration.size()),
+                        needsMigration.size());
             }
         }
 
-        logger.info("Token migration completed: {} processed, {} recategorized, {} skipped",
-                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount());
+        logger.info(
+                "Token migration completed: {} processed, {} recategorized, {} skipped",
+                report.getProcessedCount(),
+                report.getRecategorizedCount(),
+                report.getSkippedCount());
 
         return report;
     }
@@ -117,7 +120,8 @@ public class TokenMigrationService {
     /**
      * Migrates a single transaction by storing its tokens and optionally recategorizing.
      */
-    private void migrateTransaction(DatabaseTransaction t, CategorizedTransaction txn, MigrationReport report) throws SQLException {
+    private void migrateTransaction(DatabaseTransaction t, CategorizedTransaction txn, MigrationReport report)
+            throws SQLException {
         String description = txn.getDescription();
         Set<String> tokens = tokenNormalizer.normalize(description);
 
@@ -151,7 +155,9 @@ public class TokenMigrationService {
     /**
      * Recategorizes a transaction to a new category.
      */
-    private void recategorizeTransaction(DatabaseTransaction t, CategorizedTransaction txn, String newCategoryName, MigrationReport report) throws SQLException {
+    private void recategorizeTransaction(
+            DatabaseTransaction t, CategorizedTransaction txn, String newCategoryName, MigrationReport report)
+            throws SQLException {
         String oldCategoryName = txn.getCategory().getName();
 
         // Get or create the new category
@@ -252,8 +258,11 @@ public class TokenMigrationService {
             progressCallback.onProgress(processed, total);
         }
 
-        logger.info("Dry run completed: {} would be processed, {} would be recategorized, {} would be skipped",
-                report.getProcessedCount(), report.getRecategorizedCount(), report.getSkippedCount());
+        logger.info(
+                "Dry run completed: {} would be processed, {} would be recategorized, {} would be skipped",
+                report.getProcessedCount(),
+                report.getRecategorizedCount(),
+                report.getSkippedCount());
 
         return report;
     }

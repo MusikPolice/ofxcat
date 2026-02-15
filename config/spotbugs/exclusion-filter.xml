@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!--
+        SpotBugs exclusion filter for ofxcat.
+        Add Match elements here to suppress confirmed false positives.
+        Each exclusion should include a comment explaining why it's excluded.
+        See: https://spotbugs.readthedocs.io/en/stable/filter.html
+    -->
+
+    <!-- EI_EXPOSE_REP / EI_EXPOSE_REP2: Internal representation exposure.
+         This is a CLI application, not a library with untrusted callers.
+         The MALICIOUS_CODE category assumes callers might intentionally
+         mutate returned/stored objects, which is not a concern here. -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- VA_FORMAT_STRING_USES_NEWLINE: Format strings use \n instead of %n.
+         This is intentional. Using %n on Windows would produce \r\n, which
+         is undesirable for consistent CLI output and log formatting. -->
+    <Match>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+    </Match>
+
+    <!-- ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD: AbstractDatabaseTest sets
+         a static Flyway field from @BeforeEach. This is standard JUnit test
+         infrastructure where the field is shared for @AfterEach cleanup. -->
+    <Match>
+        <Class name="ca.jonathanfritz.ofxcat.AbstractDatabaseTest"/>
+        <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Match>
+</FindBugsFilter>

@@ -15,8 +15,10 @@ public class OfxExport {
     public OfxExport(OfxAccount account, OfxBalance balance, List<OfxTransaction> transactions) {
         this.account = account;
         this.balance = balance;
-        this.transactions = transactions.stream().collect(Collectors.toMap(OfxTransaction::getDate, Collections::singletonList,
-                (a, b) -> Stream.concat(a.stream(), b.stream()).collect(Collectors.toList())));
+        this.transactions = transactions.stream()
+                .collect(Collectors.toMap(OfxTransaction::getDate, Collections::singletonList, (a, b) -> Stream.concat(
+                                a.stream(), b.stream())
+                        .collect(Collectors.toList())));
     }
 
     public OfxAccount getAccount() {

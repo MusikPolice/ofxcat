@@ -1,5 +1,7 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import ca.jonathanfritz.ofxcat.AbstractDatabaseTest;
 import ca.jonathanfritz.ofxcat.TestUtils;
 import ca.jonathanfritz.ofxcat.datastore.AccountDao;
@@ -9,13 +11,10 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDate;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
@@ -26,7 +25,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public CategoryCombineServiceTest() {
+    CategoryCombineServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -48,16 +47,17 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn2 = insertTransaction("FEE CHARGE 2", source);
 
         // When: we combine source into target
-        CategoryCombineService.CombineResult result = categoryCombineService.combine(
-                "BANK_FEES", "BANK FEES", MigrationProgressCallback.NOOP
-        );
+        CategoryCombineService.CombineResult result =
+                categoryCombineService.combine("BANK_FEES", "BANK FEES", MigrationProgressCallback.NOOP);
 
         // Then: both transactions were moved
         assertEquals(2, result.transactionsMoved());
 
         // And: transactions now belong to the target category
-        CategorizedTransaction updated1 = categorizedTransactionDao.select(txn1.getId()).orElse(null);
-        CategorizedTransaction updated2 = categorizedTransactionDao.select(txn2.getId()).orElse(null);
+        CategorizedTransaction updated1 =
+                categorizedTransactionDao.select(txn1.getId()).orElse(null);
+        CategorizedTransaction updated2 =
+                categorizedTransactionDao.select(txn2.getId()).orElse(null);
         assertNotNull(updated1);
         assertNotNull(updated2);
         assertEquals(target.getId(), updated1.getCategory().getId());
@@ -68,7 +68,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineDeletesSourceCategory() {
         // Given: two categories
         Category source = categoryDao.insert(new Category("OLD_NAME")).orElse(null);
-        categoryDao.insert(new Category("CORRECT NAME")).orElse(null);
+        categoryDao.insert(new Category("CORRECT NAME"));
 
         // When: we combine
         categoryCombineService.combine("OLD_NAME", "CORRECT NAME", MigrationProgressCallback.NOOP);
@@ -80,13 +80,12 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineWithEmptySourceCategoryStillDeletesIt() {
         // Given: source category exists but has no transactions
-        categoryDao.insert(new Category("EMPTY_CAT")).orElse(null);
-        categoryDao.insert(new Category("TARGET_CAT")).orElse(null);
+        categoryDao.insert(new Category("EMPTY_CAT"));
+        categoryDao.insert(new Category("TARGET_CAT"));
 
         // When: we combine
-        CategoryCombineService.CombineResult result = categoryCombineService.combine(
-                "EMPTY_CAT", "TARGET_CAT", MigrationProgressCallback.NOOP
-        );
+        CategoryCombineService.CombineResult result =
+                categoryCombineService.combine("EMPTY_CAT", "TARGET_CAT", MigrationProgressCallback.NOOP);
 
         // Then: 0 transactions moved, source is deleted
         assertEquals(0, result.transactionsMoved());
@@ -96,12 +95,12 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineFailsWhenSourceDoesNotExist() {
         // Given: only target exists
-        categoryDao.insert(new Category("TARGET")).orElse(null);
+        categoryDao.insert(new Category("TARGET"));
 
         // When/Then: combining with nonexistent source throws
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                categoryCombineService.combine("NONEXISTENT", "TARGET", MigrationProgressCallback.NOOP)
-        );
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> categoryCombineService.combine("NONEXISTENT", "TARGET", MigrationProgressCallback.NOOP));
         assertTrue(ex.getMessage().contains("NONEXISTENT"));
     }
 
@@ -112,9 +111,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         CategorizedTransaction txn = insertTransaction("LITTLE LEARNERS", source);
 
         // When: we combine into a nonexistent target
-        CategoryCombineService.CombineResult result = categoryCombineService.combine(
-                "DAYCARE", "CHILD CARE", MigrationProgressCallback.NOOP
-        );
+        CategoryCombineService.CombineResult result =
+                categoryCombineService.combine("DAYCARE", "CHILD CARE", MigrationProgressCallback.NOOP);
 
         // Then: the target was created and transactions were moved
         assertEquals(1, result.transactionsMoved());
@@ -125,7 +123,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         assertTrue(categoryDao.select("CHILD CARE").isPresent());
 
         // And: the transaction belongs to the new category
-        CategorizedTransaction updated = categorizedTransactionDao.select(txn.getId()).orElse(null);
+        CategorizedTransaction updated =
+                categorizedTransactionDao.select(txn.getId()).orElse(null);
         assertNotNull(updated);
         assertEquals("CHILD CARE", updated.getCategory().getName());
     }
@@ -133,13 +132,12 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineReportsTargetNotCreatedWhenItAlreadyExists() {
         // Given: both categories exist
-        categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("SRC"));
+        categoryDao.insert(new Category("DST"));
 
         // When: we combine
-        CategoryCombineService.CombineResult result = categoryCombineService.combine(
-                "SRC", "DST", MigrationProgressCallback.NOOP
-        );
+        CategoryCombineService.CombineResult result =
+                categoryCombineService.combine("SRC", "DST", MigrationProgressCallback.NOOP);
 
         // Then: targetCreated is false
         assertFalse(result.targetCreated());
@@ -148,26 +146,25 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     @Test
     void combineFailsWhenSourceAndTargetAreTheSame() {
         // Given: a category
-        categoryDao.insert(new Category("SAME")).orElse(null);
+        categoryDao.insert(new Category("SAME"));
 
         // When/Then: combining a category with itself throws
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                categoryCombineService.combine("SAME", "SAME", MigrationProgressCallback.NOOP)
-        );
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> categoryCombineService.combine("SAME", "SAME", MigrationProgressCallback.NOOP));
         assertTrue(ex.getMessage().contains("same"));
     }
 
     @Test
     void combineReportsCorrectSourceAndTargetNames() {
         // Given: two categories
-        categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("SRC"));
+        categoryDao.insert(new Category("DST"));
         insertTransaction("SOME TXN", categoryDao.select("SRC").get());
 
         // When: we combine
-        CategoryCombineService.CombineResult result = categoryCombineService.combine(
-                "SRC", "DST", MigrationProgressCallback.NOOP
-        );
+        CategoryCombineService.CombineResult result =
+                categoryCombineService.combine("SRC", "DST", MigrationProgressCallback.NOOP);
 
         // Then: result has correct names
         assertEquals("SRC", result.sourceName());
@@ -179,7 +176,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineDoesNotAffectTransactionsInOtherCategories() {
         // Given: three categories, transactions in source and unrelated
         Category source = categoryDao.insert(new Category("SOURCE")).orElse(null);
-        Category target = categoryDao.insert(new Category("TARGET")).orElse(null);
+        categoryDao.insert(new Category("TARGET"));
         Category unrelated = categoryDao.insert(new Category("UNRELATED")).orElse(null);
         CategorizedTransaction unrelatedTxn = insertTransaction("UNRELATED TXN", unrelated);
 
@@ -189,7 +186,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         categoryCombineService.combine("SOURCE", "TARGET", MigrationProgressCallback.NOOP);
 
         // Then: unrelated transaction is unchanged
-        CategorizedTransaction unchanged = categorizedTransactionDao.select(unrelatedTxn.getId()).orElse(null);
+        CategorizedTransaction unchanged =
+                categorizedTransactionDao.select(unrelatedTxn.getId()).orElse(null);
         assertNotNull(unchanged);
         assertEquals(unrelated.getId(), unchanged.getCategory().getId());
     }
@@ -198,7 +196,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
     void combineInvokesProgressCallback() {
         // Given: source has 3 transactions
         Category source = categoryDao.insert(new Category("SRC")).orElse(null);
-        categoryDao.insert(new Category("DST")).orElse(null);
+        categoryDao.insert(new Category("DST"));
         insertTransaction("TXN 1", source);
         insertTransaction("TXN 2", source);
         insertTransaction("TXN 3", source);
@@ -223,6 +221,8 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
                 .setType(Transaction.TransactionType.DEBIT)
                 .setAmount(-25.0f)
                 .build();
-        return categorizedTransactionDao.insert(new CategorizedTransaction(transaction, category)).orElse(null);
+        return categorizedTransactionDao
+                .insert(new CategorizedTransaction(transaction, category))
+                .orElse(null);
     }
 }

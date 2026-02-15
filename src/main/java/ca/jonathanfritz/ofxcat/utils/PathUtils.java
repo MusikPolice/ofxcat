@@ -1,11 +1,9 @@
 package ca.jonathanfritz.ofxcat.utils;
 
-import ca.jonathanfritz.ofxcat.OfxCat;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.File;
 import java.nio.file.Path;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PathUtils {
 
@@ -40,7 +38,8 @@ public class PathUtils {
     }
 
     public String getDatabaseConnectionString() {
-        final String connectionString = String.format("%s%s", "jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
+        final String connectionString =
+                String.format("%s%s", "jdbc:sqlite:", join(getDataPath().toString(), "ofxcat.db"));
         logger.info("Database connection string is " + connectionString);
         return connectionString;
     }
@@ -48,7 +47,7 @@ public class PathUtils {
     /**
      * Joins multiple file path components together, ensuring that exactly one instance of {@link File#separator} is between each component
      */
-    public Path join(String ...components) {
+    public Path join(String... components) {
         final StringBuilder sb = new StringBuilder();
         for (String component : components) {
             if (sb.length() == 0) {

@@ -1,7 +1,6 @@
 package ca.jonathanfritz.ofxcat.datastore.dto;
 
 import ca.jonathanfritz.ofxcat.datastore.utils.Entity;
-
 import java.util.Objects;
 
 /**
@@ -38,10 +37,7 @@ public class CategorizedTransaction extends Transaction implements Entity {
 
     @Override
     public String toString() {
-        return "CategorizedTransaction{" +
-                "id=" + id +
-                ", category=" + category +
-                '}';
+        return "CategorizedTransaction{" + "id=" + id + ", category=" + category + '}';
     }
 
     @Override
@@ -50,8 +46,7 @@ public class CategorizedTransaction extends Transaction implements Entity {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
         CategorizedTransaction that = (CategorizedTransaction) o;
-        return Objects.equals(id, that.id) &&
-                Objects.equals(category, that.category);
+        return Objects.equals(id, that.id) && Objects.equals(category, that.category);
     }
 
     @Override

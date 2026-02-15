@@ -12,13 +12,17 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.sql.SQLException;
-import java.time.LocalDate;
-import java.util.*;
 
 class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
@@ -31,7 +35,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
 
     private Account testAccount;
 
-    public TransactionCategoryServiceTest() {
+    TransactionCategoryServiceTest() {
         categoryDao = injector.getInstance(CategoryDao.class);
         accountDao = injector.getInstance(AccountDao.class);
         categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
@@ -71,13 +75,13 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
                     .orElse(null);
             final CLI spyCli = new SpyCli(expectedCategory);
 
-            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+            final TransactionCategoryService testFixture =
+                    createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
 
             // try to categorize a transaction with a description that exactly matches that of an existing transaction
             // that was previously categorized as UNKNOWN
             Transaction transaction = createRandomTransaction(testAccount, FRONTYS_MEAT_MARKET);
-            CategorizedTransaction categorizedTransaction =
-                    testFixture.categorizeTransaction(t, transaction);
+            CategorizedTransaction categorizedTransaction = testFixture.categorizeTransaction(t, transaction);
 
             Assertions.assertNotEquals(categorizedTransaction.getCategory(), Category.UNKNOWN);
             Assertions.assertEquals(categorizedTransaction.getCategory(), expectedCategory);
@@ -99,16 +103,19 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         // create one previously categorized transaction
         final String description = "Hello World";
         final Transaction existingTransaction = createRandomTransaction(testAccount, description);
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
-        final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+        final Category existingCategory =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final CategorizedTransaction expected = categorizedTransactionDao
+                .insert(new CategorizedTransaction(existingTransaction, existingCategory))
+                .orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction with the same description
             final Transaction newTransaction = createRandomTransaction(testAccount, description);
 
             // attempt to automatically categorize it - we should get a direct match with the category created above
-            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, categorizedTransactionDao, null);
+            final TransactionCategoryService testFixture =
+                    createTransactionCategoryService(categoryDao, categorizedTransactionDao, null);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -121,18 +128,22 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     public void categorizeTransactionExactMatchDifferentAccountsTest() throws SQLException {
         // create one previously categorized transaction
         final String description = "Hello World";
-        final Account otherAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Account otherAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
         final Transaction existingTransaction = createRandomTransaction(otherAccount, description);
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
-        final CategorizedTransaction expected =
-                categorizedTransactionDao.insert(new CategorizedTransaction(existingTransaction, existingCategory)).orElse(null);
+        final Category existingCategory =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final CategorizedTransaction expected = categorizedTransactionDao
+                .insert(new CategorizedTransaction(existingTransaction, existingCategory))
+                .orElse(null);
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             // create another transaction that has the same description, but in a different account from the first
             final Transaction newTransaction = createRandomTransaction(testAccount, description);
 
             // attempt to automatically categorize it - we should get a direct match with the category created above
-            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, categorizedTransactionDao, null);
+            final TransactionCategoryService testFixture =
+                    createTransactionCategoryService(categoryDao, categorizedTransactionDao, null);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -144,12 +155,14 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     public void categorizeTransactionPartialMatchTest() throws SQLException {
         // create one previously categorized transaction with tokens stored
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Category existingCategory =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
         final Transaction existingTransaction = createRandomTransaction(testAccount, "Hello World");
         final CategorizedTransaction expected;
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            expected = categorizedTransactionDao.insert(t, new CategorizedTransaction(existingTransaction, existingCategory))
+            expected = categorizedTransactionDao
+                    .insert(t, new CategorizedTransaction(existingTransaction, existingCategory))
                     .orElseThrow(() -> new RuntimeException("Failed to insert transaction"));
             // Store tokens for token-based matching
             Set<String> tokens = tokenNormalizer.normalize(existingTransaction.getDescription());
@@ -157,12 +170,15 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         }
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            // create another transaction with a description that shares a word in common with that of an existing transaction
+            // create another transaction with a description that shares a word in common with that of an existing
+            // transaction
             final Transaction newTransaction = createRandomTransaction(testAccount, "Boy Meets World");
 
-            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
+            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the
+            // partial match
             final SpyCli spyCli = new SpyCli(existingCategory);
-            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+            final TransactionCategoryService testFixture =
+                    createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -177,13 +193,16 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     @Test
     public void categorizeTransactionPartialMatchDifferentAccountsTest() throws SQLException {
         // create one previously categorized transaction with tokens stored
-        final Account otherAccount = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
-        final Category existingCategory = categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final Account otherAccount =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category existingCategory =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
         final Transaction existingTransaction = createRandomTransaction(otherAccount, "Hello World");
         final CategorizedTransaction expected;
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            expected = categorizedTransactionDao.insert(t, new CategorizedTransaction(existingTransaction, existingCategory))
+            expected = categorizedTransactionDao
+                    .insert(t, new CategorizedTransaction(existingTransaction, existingCategory))
                     .orElseThrow(() -> new RuntimeException("Failed to insert transaction"));
             // Store tokens for token-based matching
             Set<String> tokens = tokenNormalizer.normalize(existingTransaction.getDescription());
@@ -191,12 +210,15 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         }
 
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
-            // create another transaction with a description that shares a word in common with that of an existing transaction, but is in a different account
+            // create another transaction with a description that shares a word in common with that of an existing
+            // transaction, but is in a different account
             final Transaction newTransaction = createRandomTransaction(testAccount, "Boy Meets World");
 
-            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the partial match
+            // attempt to automatically categorize it - the CLI should be prompted to choose the category based on the
+            // partial match
             final SpyCli spyCli = new SpyCli(existingCategory);
-            final TransactionCategoryService testFixture = createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+            final TransactionCategoryService testFixture =
+                    createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
             final CategorizedTransaction actual = testFixture.categorizeTransaction(t, newTransaction);
 
             // actual should have the same category as expected
@@ -209,11 +231,13 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     }
 
     // inserts a transaction, associating it with a new category
-    private void insertTransaction(DatabaseTransaction t, Account account, String description, String categoryName) throws SQLException {
+    private void insertTransaction(DatabaseTransaction t, Account account, String description, String categoryName)
+            throws SQLException {
         final Transaction transaction = createRandomTransaction(account, description);
         Category category = categoryDao.getOrCreate(t, categoryName).orElse(null);
         CategorizedTransaction ct = new CategorizedTransaction(transaction, category);
-        CategorizedTransaction inserted = categorizedTransactionDao.insert(t, ct).orElse(null);
+        CategorizedTransaction inserted =
+                categorizedTransactionDao.insert(t, ct).orElse(null);
         // Store tokens for token-based matching
         if (inserted != null && !Category.UNKNOWN.equals(category)) {
             Set<String> tokens = tokenNormalizer.normalize(description);
@@ -224,10 +248,12 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
     }
 
     // inserts a transaction, associating it with an existing category
-    private void insertTransaction(DatabaseTransaction t, Account account, String description, Category category) throws SQLException {
+    private void insertTransaction(DatabaseTransaction t, Account account, String description, Category category)
+            throws SQLException {
         final Transaction transaction = createRandomTransaction(account, description);
         CategorizedTransaction ct = new CategorizedTransaction(transaction, category);
-        CategorizedTransaction inserted = categorizedTransactionDao.insert(t, ct).orElse(null);
+        CategorizedTransaction inserted =
+                categorizedTransactionDao.insert(t, ct).orElse(null);
         // Don't store tokens for UNKNOWN category
         if (inserted != null && !Category.UNKNOWN.equals(category)) {
             Set<String> tokens = tokenNormalizer.normalize(description);
@@ -251,7 +277,7 @@ class TransactionCategoryServiceTest extends AbstractDatabaseTest {
         private final Category category;
         private final List<Category> capturedCategories = new ArrayList<>();
 
-        public SpyCli(Category category) {
+        SpyCli(Category category) {
             super(null, null);
             this.category = category;
         }

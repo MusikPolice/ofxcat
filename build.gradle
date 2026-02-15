@@ -1,6 +1,12 @@
 plugins {
     id 'java'
     id 'application'
+    id 'checkstyle'
+    id 'pmd'
+    id 'jacoco'
+    id 'com.diffplug.spotless' version '7.0.2'
+    id 'com.github.spotbugs' version '6.4.8'
+    id 'net.ltgt.errorprone' version '4.1.0'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -45,16 +51,34 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+    // static analysis: Error Prone compiler plugin
+    errorprone 'com.google.errorprone:error_prone_core:2.36.0'
+
     // tests
     testImplementation platform('org.junit:junit-bom:6.0.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.hamcrest:hamcrest:3.0'
+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
+
+    // SpotBugs needs this to analyze ArchUnit classes that reference lombok annotations
+    testCompileOnly 'org.projectlombok:lombok:1.18.36'
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Static analysis: Error Prone catches compile-time bugs via javac plugin
+// Compiler warnings treated as errors to catch deprecation, unchecked casts, etc.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:all', '-Werror']
+    options.errorprone {
+        // Start with ERROR-level checks only; warnings disabled to reduce noise
+        disableAllWarnings = true
+        allErrorsAsWarnings = false
     }
 }
 
@@ -87,25 +111,123 @@ jar {
     }
 }
 
+// Code formatting: Spotless with Palantir Java Format
+spotless {
+    java {
+        palantirJavaFormat()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+// Static analysis: Checkstyle enforces consistent code style
+checkstyle {
+    toolVersion = '10.21.4'
+    configFile = file('config/checkstyle/checkstyle.xml')
+    configDirectory = file('config/checkstyle')
+    // Fail the build on any style violation
+    maxWarnings = 0
+    maxErrors = 0
+}
+
+// Static analysis: PMD detects common code smells and potential bugs
+pmd {
+    toolVersion = '7.14.0'
+    consoleOutput = true
+    ruleSetFiles = files('config/pmd/ruleset.xml')
+    // Fail the build on any PMD violation
+    ignoreFailures = false
+}
+
+// Static analysis: SpotBugs detects bug patterns in compiled bytecode
+spotbugs {
+    effort.set(com.github.spotbugs.snom.Effort.valueOf('MAX'))
+    reportLevel.set(com.github.spotbugs.snom.Confidence.valueOf('MEDIUM'))
+    excludeFilter.set(file('config/spotbugs/exclusion-filter.xml'))
+    // Fail the build on any SpotBugs violation
+    ignoreFailures = false
+}
+
+// Generate HTML reports for human review
+spotbugsMain {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/main.html")
+        }
+    }
+}
+
+spotbugsTest {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/test.html")
+        }
+        xml {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/test.xml")
+        }
+    }
+}
+
+// Code coverage: JaCoCo measures test coverage of production code
+// Exclude untestable infrastructure classes (CLI wrappers, DI modules, logging adapters)
+def jacocoExcludes = [
+    'ca/jonathanfritz/ofxcat/cli/CLI.class',
+    'ca/jonathanfritz/ofxcat/cli/CLIModule.class',
+    'ca/jonathanfritz/ofxcat/cli/TextIOWrapper.class',
+    'ca/jonathanfritz/ofxcat/matching/MatchingModule.class',
+    'ca/jonathanfritz/ofxcat/utils/Log4jLogger.class',
+]
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+    }
+    // Only measure coverage for main source set, excluding untestable infrastructure
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, include: 'ca/jonathanfritz/ofxcat/**', exclude: jacocoExcludes)
+    }))
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                // Enforce minimum 80% line coverage across production code
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+    // Only verify coverage for main source set, excluding untestable infrastructure
+    classDirectories.setFrom(files(classDirectories.files.collect {
+        fileTree(dir: it, include: 'ca/jonathanfritz/ofxcat/**', exclude: jacocoExcludes)
+    }))
+}
+
+// Single command to verify the project is ready for review
+tasks.register('verify') {
+    dependsOn 'spotlessCheck', 'checkstyleMain', 'checkstyleTest', 'pmdMain', 'pmdTest', 'spotbugsMain', 'spotbugsTest', 'test', 'jacocoTestReport', 'jacocoTestCoverageVerification'
+    group = 'verification'
+    description = 'Runs all verification tasks: tests, spotless, checkstyle, pmd, spotbugs, coverage'
+}
+
 // Configure test task to use JUnit Platform (required for JUnit Jupiter/JUnit 5)
 test {
     useJUnitPlatform()
 
-    // Enhanced test logging for better debugging and visibility
     testLogging {
-        // Show these test events in the console
-        events "passed", "skipped", "failed", "standard_error"
-
-        // Show full exception details when tests fail
+        events "failed"
         exceptionFormat "full"
-        showStackTraces true
-        showCauses true
-        showStandardStreams false
 
-        // Show individual test results
-        showExceptions true
-
-        // Display a summary after the test suite completes
         afterSuite { desc, result ->
             if (!desc.parent) { // Only print for the top-level test suite
                 println ""
@@ -125,5 +247,31 @@ test {
                 }
             }
         }
+    }
+}
+
+// Fast test subsets for iterating on specific areas
+tasks.register('unitTest', Test) {
+    description = 'Runs only unit tests (excludes database and integration tests)'
+    group = 'verification'
+    useJUnitPlatform {
+        excludeTags 'database', 'integration'
+    }
+}
+
+tasks.register('databaseTest', Test) {
+    description = 'Runs only database tests (tests extending AbstractDatabaseTest)'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'database'
+        excludeTags 'integration'
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs only integration tests'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'integration'
     }
 }

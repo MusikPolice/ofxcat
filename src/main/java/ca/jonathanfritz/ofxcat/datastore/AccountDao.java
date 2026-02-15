@@ -5,9 +5,6 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.ResultSetDeserializer;
 import ca.jonathanfritz.ofxcat.datastore.utils.SqlFunction;
 import ca.jonathanfritz.ofxcat.datastore.utils.TransactionState;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -15,6 +12,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class AccountDao {
 
@@ -93,7 +92,8 @@ public class AccountDao {
         try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
             logger.debug("Attempting to query Account with account number {}", accountNumber);
             final String selectStatement = "SELECT * FROM Account WHERE account_number = ?";
-            final List<Account> results = t.query(selectStatement, ps -> ps.setString(1, accountNumber), accountDeserializer);
+            final List<Account> results =
+                    t.query(selectStatement, ps -> ps.setString(1, accountNumber), accountDeserializer);
             return DatabaseTransaction.getFirstResult(results);
         } catch (SQLException e) {
             logger.error("Failed to query Account with account number {}", accountNumber, e);
@@ -116,13 +116,17 @@ public class AccountDao {
     public Optional<Account> insert(DatabaseTransaction t, Account accountToInsert) {
         try {
             logger.debug("Attempting to insert Account {}", accountToInsert);
-            final String insertStatement = "INSERT INTO Account (bank_number, account_number, account_type, name) VALUES (?, ?, ?, ?);";
-            return t.insert(insertStatement, ps -> {
-                ps.setString(1, accountToInsert.getBankId());
-                ps.setString(2, accountToInsert.getAccountNumber());
-                ps.setString(3, accountToInsert.getAccountType());
-                ps.setString(4, accountToInsert.getName());
-            }, accountDeserializer);
+            final String insertStatement =
+                    "INSERT INTO Account (bank_number, account_number, account_type, name) VALUES (?, ?, ?, ?);";
+            return t.insert(
+                    insertStatement,
+                    ps -> {
+                        ps.setString(1, accountToInsert.getBankId());
+                        ps.setString(2, accountToInsert.getAccountNumber());
+                        ps.setString(3, accountToInsert.getAccountType());
+                        ps.setString(4, accountToInsert.getName());
+                    },
+                    accountDeserializer);
         } catch (SQLException e) {
             logger.error("Failed to insert Account {}", accountToInsert, e);
             return Optional.empty();

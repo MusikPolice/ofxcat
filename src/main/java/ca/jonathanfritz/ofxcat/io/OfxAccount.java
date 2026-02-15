@@ -28,11 +28,10 @@ public class OfxAccount {
 
     @Override
     public String toString() {
-        return "OfxAccount{" +
-                "bankId='" + bankId + '\'' +
-                ", accountId='" + accountId + '\'' +
-                ", accountType='" + accountType + '\'' +
-                '}';
+        return "OfxAccount{" + "bankId='"
+                + bankId + '\'' + ", accountId='"
+                + accountId + '\'' + ", accountType='"
+                + accountType + '\'' + '}';
     }
 
     @Override
@@ -40,9 +39,9 @@ public class OfxAccount {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         OfxAccount that = (OfxAccount) o;
-        return Objects.equals(bankId, that.bankId) &&
-                Objects.equals(accountId, that.accountId) &&
-                Objects.equals(accountType, that.accountType);
+        return Objects.equals(bankId, that.bankId)
+                && Objects.equals(accountId, that.accountId)
+                && Objects.equals(accountType, that.accountType);
     }
 
     @Override
@@ -62,14 +61,12 @@ public class OfxAccount {
         return builder;
     }
 
-
     public static final class Builder {
         private String bankId;
         private String accountId;
         private String accountType;
 
-        private Builder() {
-        }
+        private Builder() {}
 
         public Builder setBankId(String bankId) {
             this.bankId = bankId;

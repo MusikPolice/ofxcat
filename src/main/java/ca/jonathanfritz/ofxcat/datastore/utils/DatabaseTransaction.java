@@ -1,9 +1,5 @@
 package ca.jonathanfritz.ofxcat.datastore.utils;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +8,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class DatabaseTransaction implements Closeable {
 
@@ -34,7 +32,8 @@ public class DatabaseTransaction implements Closeable {
      * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
      * is thrown
      */
-    public <T extends Entity> List<T> query(String selectStatement, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> List<T> query(
+            String selectStatement, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
         return query(selectStatement, null, resultDeserializer);
     }
 
@@ -51,11 +50,15 @@ public class DatabaseTransaction implements Closeable {
      * @throws SQLException if something goes wrong. The current transaction will be rolled back before the exception
      * is thrown
      */
-    public <T extends Entity> List<T> query(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> List<T> query(
+            String selectStatement,
+            SqlConsumer<PreparedStatement> statementPreparer,
+            SqlFunction<TransactionState, List<T>> resultDeserializer)
+            throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax
-        if (!StringUtils.startsWith(selectStatement, "SELECT")) {
+        if (!selectStatement.startsWith("SELECT")) {
             throw rollback(new SQLException("selectStatement must start with SELECT"));
         }
 
@@ -85,11 +88,15 @@ public class DatabaseTransaction implements Closeable {
      * @return a copy of the persisted entity that has its id attribute populated with the primary key of the persisted
      * record
      */
-    public <T extends Entity> Optional<T> insert(String insertStatement, SqlConsumer<PreparedStatement> statementPreparer, SqlFunction<TransactionState, List<T>> resultDeserializer) throws SQLException {
+    public <T extends Entity> Optional<T> insert(
+            String insertStatement,
+            SqlConsumer<PreparedStatement> statementPreparer,
+            SqlFunction<TransactionState, List<T>> resultDeserializer)
+            throws SQLException {
         connection.setAutoCommit(false);
 
         // verify syntax
-        if (!StringUtils.startsWith(insertStatement, "INSERT INTO")) {
+        if (!insertStatement.startsWith("INSERT INTO")) {
             throw rollback(new SQLException("insertStatement must start with INSERT INTO"));
         }
 
@@ -164,11 +171,14 @@ public class DatabaseTransaction implements Closeable {
      * @return the result from the handler
      * @throws SQLException if something goes wrong; the transaction will be rolled back
      */
-    public <T> T queryRaw(String selectStatement, SqlConsumer<PreparedStatement> statementPreparer,
-                          SqlFunction<ResultSet, T> resultHandler) throws SQLException {
+    public <T> T queryRaw(
+            String selectStatement,
+            SqlConsumer<PreparedStatement> statementPreparer,
+            SqlFunction<ResultSet, T> resultHandler)
+            throws SQLException {
         connection.setAutoCommit(false);
 
-        if (!StringUtils.startsWith(selectStatement, "SELECT") && !StringUtils.startsWith(selectStatement, "WITH")) {
+        if (!selectStatement.startsWith("SELECT") && !selectStatement.startsWith("WITH")) {
             throw rollback(new SQLException("selectStatement must start with SELECT or WITH"));
         }
 
@@ -188,8 +198,7 @@ public class DatabaseTransaction implements Closeable {
      * Extracts tableName, assuming that insertStatement has format "INSERT INTO tableName ..."
      */
     private String getTableNameFromInsertStatement(String insertStatement) {
-        final String prefixRemoved = insertStatement.toUpperCase()
-                .replace("INSERT INTO ", "");
+        final String prefixRemoved = insertStatement.toUpperCase().replace("INSERT INTO ", "");
         return prefixRemoved.substring(0, prefixRemoved.indexOf(" ")).toLowerCase();
     }
 

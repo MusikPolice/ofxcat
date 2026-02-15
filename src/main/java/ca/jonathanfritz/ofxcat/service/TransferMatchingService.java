@@ -1,8 +1,14 @@
 package ca.jonathanfritz.ofxcat.service;
 
-import ca.jonathanfritz.ofxcat.datastore.dto.*;
-
-import java.util.*;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
+import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Category;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -21,7 +27,7 @@ public class TransferMatchingService {
         // we can attempt to identify inter-account transfers by looking for the XFER type
         final Set<Transaction> sourceTransactions = new HashSet<>();
         final Set<Transaction> sinkTransactions = new HashSet<>();
-        for (Map.Entry<Account, List<Transaction>> entry: accountTransactions.entrySet()) {
+        for (Map.Entry<Account, List<Transaction>> entry : accountTransactions.entrySet()) {
             sourceTransactions.addAll(entry.getValue().stream()
                     .filter(t -> t.getType() == Transaction.TransactionType.XFER)
                     .filter(t -> t.getAmount() < 0)
@@ -38,7 +44,7 @@ public class TransferMatchingService {
         for (Transaction source : sourceTransactions) {
             final List<Transaction> potentialSinks = sinkTransactions.stream()
                     .filter(t -> t.getDate().equals(source.getDate()))
-                    .filter(t -> t.getAmount() == source.getAmount() * -1)
+                    .filter(t -> Double.compare(t.getAmount(), -source.getAmount()) == 0)
                     .filter(t -> !t.getAccount().equals(source.getAccount()))
                     .toList();
 
@@ -47,9 +53,8 @@ public class TransferMatchingService {
             if (potentialSinks.size() == 1) {
                 final Transaction sink = potentialSinks.get(0);
                 transfers.add(new Transfer(
-                    new CategorizedTransaction(source, Category.TRANSFER),
-                    new CategorizedTransaction(sink, Category.TRANSFER)
-                ));
+                        new CategorizedTransaction(source, Category.TRANSFER),
+                        new CategorizedTransaction(sink, Category.TRANSFER)));
             }
         }
 
@@ -57,11 +62,12 @@ public class TransferMatchingService {
         final Set<CategorizedTransaction> matchedTransactions = transfers.stream()
                 .flatMap(t -> Stream.of(t.getSink(), t.getSource()))
                 .collect(Collectors.toSet());
-        for (Account account : accountTransactions.keySet()) {
-            final List<Transaction> filtered = accountTransactions.get(account).stream()
-                    .filter(t -> matchedTransactions.stream().noneMatch(ct -> ct.getFitId().equals(t.getFitId())))
+        for (Map.Entry<Account, List<Transaction>> entry : accountTransactions.entrySet()) {
+            final List<Transaction> filtered = entry.getValue().stream()
+                    .filter(t -> matchedTransactions.stream()
+                            .noneMatch(ct -> ct.getFitId().equals(t.getFitId())))
                     .toList();
-            accountTransactions.put(account, filtered);
+            entry.setValue(filtered);
         }
 
         return transfers;

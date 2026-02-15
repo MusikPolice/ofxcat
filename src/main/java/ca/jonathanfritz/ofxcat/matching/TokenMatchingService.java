@@ -4,14 +4,18 @@ import ca.jonathanfritz.ofxcat.datastore.CategoryDao;
 import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Service for finding matching categories based on normalized tokens.
@@ -33,8 +37,7 @@ public class TokenMatchingService {
             TransactionTokenDao transactionTokenDao,
             CategoryDao categoryDao,
             TokenNormalizer tokenNormalizer,
-            TokenMatchingConfig config
-    ) {
+            TokenMatchingConfig config) {
         this.connection = connection;
         this.transactionTokenDao = transactionTokenDao;
         this.categoryDao = categoryDao;
@@ -83,8 +86,7 @@ public class TokenMatchingService {
             Map<Long, CategoryMatch> aggregated = new HashMap<>();
             for (TransactionTokenDao.TokenMatchResult result : matchResults) {
                 double overlapRatio = calculateOverlapRatio(
-                        result.matchingTokenCount(), searchTokens.size(), result.totalTokenCount()
-                );
+                        result.matchingTokenCount(), searchTokens.size(), result.totalTokenCount());
 
                 if (overlapRatio < config.getOverlapThreshold()) {
                     continue;
@@ -100,15 +102,17 @@ public class TokenMatchingService {
                     }
                 } else {
                     // First time seeing this category - fetch it from DB
-                    categoryDao.select(categoryId).ifPresent(category ->
-                            aggregated.put(categoryId, new CategoryMatch(category, overlapRatio))
-                    );
+                    categoryDao
+                            .select(categoryId)
+                            .ifPresent(
+                                    category -> aggregated.put(categoryId, new CategoryMatch(category, overlapRatio)));
                 }
             }
 
             // Step 3: Sort by overlap ratio descending
             return aggregated.values().stream()
-                    .sorted(Comparator.comparingDouble(CategoryMatch::overlapRatio).reversed())
+                    .sorted(Comparator.comparingDouble(CategoryMatch::overlapRatio)
+                            .reversed())
                     .collect(Collectors.toList());
 
         } catch (SQLException e) {
