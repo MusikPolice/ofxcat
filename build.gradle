@@ -242,3 +242,29 @@ test {
         }
     }
 }
+
+// Fast test subsets for iterating on specific areas
+tasks.register('unitTest', Test) {
+    description = 'Runs only unit tests (excludes database and integration tests)'
+    group = 'verification'
+    useJUnitPlatform {
+        excludeTags 'database', 'integration'
+    }
+}
+
+tasks.register('databaseTest', Test) {
+    description = 'Runs only database tests (tests extending AbstractDatabaseTest)'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'database'
+        excludeTags 'integration'
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs only integration tests'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'integration'
+    }
+}

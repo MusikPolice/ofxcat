@@ -16,10 +16,12 @@ import java.sql.Connection;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Parent class for unit tests that require an initialized database to be present
  */
+@Tag("database")
 public abstract class AbstractDatabaseTest {
 
     protected final Injector injector;

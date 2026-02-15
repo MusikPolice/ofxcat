@@ -18,12 +18,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for reporting workflows.
  * Tests the complete flow from data setup through report generation.
  */
+@Tag("integration")
 class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
     private final AccountDao accountDao;

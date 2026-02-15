@@ -94,15 +94,7 @@ These are straightforward to implement and fill gaps in the current tooling.
 
 #### Test Tagging and Targeted Execution
 
-**Status:** Not started
-**Effort:** Small
-**Why:** Running 391 tests for every small change takes ~30 seconds. The agent should be able to run just the relevant subset during iteration, then the full suite before committing.
-
-**What to do:**
-- Tag tests with JUnit 5 `@Tag` annotations (e.g., `@Tag("unit")`, `@Tag("integration")`, `@Tag("dao")`)
-- Add Gradle tasks for subsets: `./gradlew unitTest`, `./gradlew integrationTest`
-
-**Agent benefit:** Faster iteration. DAO change → run `daoTest` in seconds → full verify before commit.
+**Status:** Done. Tagged `AbstractDatabaseTest` with `@Tag("database")` (inherited by all 19 subclasses) and 3 integration tests with `@Tag("integration")`. Added three Gradle tasks: `unitTest` (229 tests, excludes database/integration), `databaseTest` (148 tests, database tests excluding integration), `integrationTest` (14 tests). All three partition the full 391-test suite exactly.
 
 #### Database Migration Validation
 
@@ -190,7 +182,7 @@ These require more design work and may not have obvious solutions.
 |------|--------|--------|--------|
 | GitHub Actions CI | Small | High | Not started |
 | Compiler warnings as errors | Tiny | Medium | Done |
-| Test tagging | Small | Medium | Not started |
+| Test tagging | Small | Medium | Done |
 | Migration validation task | Tiny | Low | Partially addressed by existing tests |
 | Application runnability | Medium-Large | Uncertain | Needs design |
 | Structured log access | Small-Medium | Low-Medium | Needs design |

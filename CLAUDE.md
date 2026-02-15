@@ -24,6 +24,11 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 # Run a specific test method
 ./gradlew test --tests "ca.jonathanfritz.ofxcat.datastore.AccountDaoTest.testSelectById"
 
+# Run test subsets for faster iteration
+./gradlew unitTest          # Unit tests only (no database)
+./gradlew databaseTest      # Database tests only (DAO, service tests with in-memory SQLite)
+./gradlew integrationTest   # Integration tests only (end-to-end flows)
+
 # Auto-fix formatting (Spotless + Palantir Java Format)
 ./gradlew spotlessApply
 
@@ -119,6 +124,10 @@ Implement `TransactionCleaner` interface with rule-based pattern matching. Only 
 - Tests extend `AbstractDatabaseTest` for Flyway setup with in-memory SQLite
 - Test OFX files in `src/test/resources/` (creditcard.ofx, oneaccount.ofx, etc.)
 - `TestUtils` provides helper methods for creating test data
+- Tests are tagged with JUnit 5 `@Tag` for targeted execution:
+  - `@Tag("database")` — inherited by all `AbstractDatabaseTest` subclasses
+  - `@Tag("integration")` — end-to-end workflow tests in `integration/` package
+  - Untagged tests are pure unit tests (no database)
 
 ## Database
 

@@ -28,11 +28,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for multi-account scenarios including transfers between accounts.
  */
+@Tag("integration")
 class MultiAccountIntegrationTest extends AbstractDatabaseTest {
 
     private final TransactionCleanerFactory transactionCleanerFactory;

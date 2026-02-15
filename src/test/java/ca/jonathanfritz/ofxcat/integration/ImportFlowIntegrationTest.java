@@ -31,12 +31,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for end-to-end import flows.
  * These tests verify complete import scenarios with realistic transaction patterns.
  */
+@Tag("integration")
 class ImportFlowIntegrationTest extends AbstractDatabaseTest {
 
     private final TransactionCleanerFactory transactionCleanerFactory;
