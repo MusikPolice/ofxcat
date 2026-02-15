@@ -9,7 +9,7 @@ import com.webcohesion.ofx4j.domain.data.banking.AccountType;
 import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import java.time.LocalDate;
 import java.util.UUID;
-import org.apache.commons.lang3.RandomUtils;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class TestUtils {
 
@@ -69,7 +69,9 @@ public class TestUtils {
                 .setAccountNumber(UUID.randomUUID().toString())
                 .setName(name)
                 .setBankId(UUID.randomUUID().toString())
-                .setAccountType(AccountType.values()[RandomUtils.nextInt(0, AccountType.values().length)].name())
+                .setAccountType(
+                        AccountType.values()[ThreadLocalRandom.current().nextInt(0, AccountType.values().length)]
+                                .name())
                 .setId((long) UUID.randomUUID().hashCode())
                 .build();
     }
@@ -85,14 +87,16 @@ public class TestUtils {
                 .setDate(date)
                 .setAmount(amount)
                 .setType(type)
-                .setDescription(fakeStores[RandomUtils.nextInt(0, fakeStores.length)])
-                .setBalance(Math.round(RandomUtils.nextFloat(0, 10000) * 100f) / 100f)
+                .setDescription(fakeStores[ThreadLocalRandom.current().nextInt(0, fakeStores.length)])
+                .setBalance(Math.round(ThreadLocalRandom.current().nextFloat(0, 10000) * 100f) / 100f)
                 .build();
     }
 
     public static Transaction createRandomTransaction(Account account, String fitId) {
-        final LocalDate date =
-                LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
+        final LocalDate date = LocalDate.of(
+                ThreadLocalRandom.current().nextInt(2020, 2023),
+                ThreadLocalRandom.current().nextInt(1, 13),
+                ThreadLocalRandom.current().nextInt(1, 29));
         final float amount = getRandomAmount();
         final Transaction.TransactionType type =
                 amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
@@ -119,8 +123,10 @@ public class TestUtils {
 
     public static Transaction createRandomTransaction() {
         final Account account = createRandomAccount();
-        final LocalDate date =
-                LocalDate.of(RandomUtils.nextInt(2020, 2023), RandomUtils.nextInt(1, 13), RandomUtils.nextInt(1, 29));
+        final LocalDate date = LocalDate.of(
+                ThreadLocalRandom.current().nextInt(2020, 2023),
+                ThreadLocalRandom.current().nextInt(1, 13),
+                ThreadLocalRandom.current().nextInt(1, 29));
         final float amount = getRandomAmount();
         final Transaction.TransactionType type =
                 amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
@@ -132,8 +138,8 @@ public class TestUtils {
      * Returns a random float between -100 and +100 with 2 decimal places of precision
      */
     private static float getRandomAmount() {
-        final int multiplier = RandomUtils.nextBoolean() ? 1 : -1;
-        return (Math.round(RandomUtils.nextFloat(0, 200) * 100f) / 100f) * multiplier;
+        final int multiplier = ThreadLocalRandom.current().nextBoolean() ? 1 : -1;
+        return (Math.round(ThreadLocalRandom.current().nextFloat(0, 200) * 100f) / 100f) * multiplier;
     }
 
     public static OfxAccount accountToOfxAccount(Account account) {
@@ -156,6 +162,6 @@ public class TestUtils {
     }
 
     public static Category createRandomCategory() {
-        return new Category(fakeCategories[RandomUtils.nextInt(0, fakeCategories.length)]);
+        return new Category(fakeCategories[ThreadLocalRandom.current().nextInt(0, fakeCategories.length)]);
     }
 }

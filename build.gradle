@@ -69,7 +69,9 @@ java {
 }
 
 // Static analysis: Error Prone catches compile-time bugs via javac plugin
+// Compiler warnings treated as errors to catch deprecation, unchecked casts, etc.
 tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:all', '-Werror']
     options.errorprone {
         // Start with ERROR-level checks only; warnings disabled to reduce noise
         disableAllWarnings = true

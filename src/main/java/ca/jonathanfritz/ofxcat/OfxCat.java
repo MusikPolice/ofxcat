@@ -435,21 +435,21 @@ public class OfxCat {
                     .desc("Start date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("e")
                     .longOpt("end-date")
                     .desc("End date (inclusive) in format yyyy-mm-dd")
                     .hasArg(true)
                     .required(false)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("c")
                     .longOpt("category-id")
                     .desc("Unique id of the Category with which to filter results")
                     .hasArg(true)
                     .required(false)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
@@ -496,7 +496,7 @@ public class OfxCat {
                     .desc("Show what would change without making actual changes")
                     .hasArg(false)
                     .required(false)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 1, args.length));
@@ -535,14 +535,14 @@ public class OfxCat {
                     .desc("Name of the source category")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
             options.addOption(Option.builder()
                     .argName("t")
                     .longOpt("target")
                     .desc("Name of the target category")
                     .hasArg(true)
                     .required(true)
-                    .build());
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));

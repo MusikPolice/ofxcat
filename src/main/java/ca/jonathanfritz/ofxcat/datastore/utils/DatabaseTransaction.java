@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -59,7 +58,7 @@ public class DatabaseTransaction implements Closeable {
         connection.setAutoCommit(false);
 
         // verify syntax
-        if (!StringUtils.startsWith(selectStatement, "SELECT")) {
+        if (!selectStatement.startsWith("SELECT")) {
             throw rollback(new SQLException("selectStatement must start with SELECT"));
         }
 
@@ -97,7 +96,7 @@ public class DatabaseTransaction implements Closeable {
         connection.setAutoCommit(false);
 
         // verify syntax
-        if (!StringUtils.startsWith(insertStatement, "INSERT INTO")) {
+        if (!insertStatement.startsWith("INSERT INTO")) {
             throw rollback(new SQLException("insertStatement must start with INSERT INTO"));
         }
 
@@ -179,7 +178,7 @@ public class DatabaseTransaction implements Closeable {
             throws SQLException {
         connection.setAutoCommit(false);
 
-        if (!StringUtils.startsWith(selectStatement, "SELECT") && !StringUtils.startsWith(selectStatement, "WITH")) {
+        if (!selectStatement.startsWith("SELECT") && !selectStatement.startsWith("WITH")) {
             throw rollback(new SQLException("selectStatement must start with SELECT or WITH"));
         }
 

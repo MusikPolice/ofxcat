@@ -19,7 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * A transaction cleaner that tidies up data imported from RBC
  */
-public class RbcTransactionCleaner implements TransactionCleaner {
+public final class RbcTransactionCleaner implements TransactionCleaner {
 
     private static final List<TransactionMatcherRule> rules = new ArrayList<>();
 

@@ -90,14 +90,7 @@ These are straightforward to implement and fill gaps in the current tooling.
 
 #### Compiler Warnings as Errors
 
-**Status:** Not started. Error Prone catches many compile-time bugs, but `-Xlint:all -Werror` would catch additional warnings (unchecked casts, deprecation, raw types) that Error Prone doesn't cover.
-**Effort:** Tiny (one line in build.gradle, then fix any existing warnings)
-
-**What to do:**
-- Add `-Xlint:all -Werror` to `JavaCompile` options
-- Fix any existing warnings surfaced by the change
-
-**Agent benefit:** `./gradlew compileJava` becomes a strict correctness gate for compiler-level issues.
+**Status:** Done. Added `-Xlint:all -Werror` to `JavaCompile` options. Fixed 13 warnings: deprecated `StringUtils.startsWith()` → `String.startsWith()`, missing `serialVersionUID` on exceptions, deprecated `Option.builder().build()` → `.get()`, `this-escape` via `final` class, deprecated `RandomUtils` → `ThreadLocalRandom`.
 
 #### Test Tagging and Targeted Execution
 
@@ -196,7 +189,7 @@ These require more design work and may not have obvious solutions.
 | Item | Effort | Impact | Status |
 |------|--------|--------|--------|
 | GitHub Actions CI | Small | High | Not started |
-| Compiler warnings as errors | Tiny | Medium | Not started |
+| Compiler warnings as errors | Tiny | Medium | Done |
 | Test tagging | Small | Medium | Not started |
 | Migration validation task | Tiny | Low | Partially addressed by existing tests |
 | Application runnability | Medium-Large | Uncertain | Needs design |
