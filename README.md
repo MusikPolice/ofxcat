@@ -1,4 +1,7 @@
 # ofxcat
+
+[![Build](https://github.com/MusikPolice/ofxcat/actions/workflows/build.yml/badge.svg)](https://github.com/MusikPolice/ofxcat/actions/workflows/build.yml)
+
 A command line utility that imports bank transactions in the `*.ofx` format and categorizes them.
 
 ## Using the application

@@ -76,17 +76,7 @@ These are straightforward to implement and fill gaps in the current tooling.
 
 #### GitHub Actions — Automated Build and Test
 
-**Status:** Not started
-**Effort:** Small
-**Why:** Every push and PR should be automatically verified. The pre-commit hook only gates local commits — it doesn't catch platform-specific issues, forgotten files, or force-pushed branches that bypass hooks.
-
-**What to do:**
-- Create `.github/workflows/build.yml` that runs `./gradlew verify` on push and PR
-- Upload test and coverage reports as build artifacts
-- Add a JaCoCo coverage comment action on PRs (e.g., `madrapps/jacoco-report`)
-- Add status badge to README
-
-**Agent benefit:** PRs get a green/red signal independent of what the agent claims locally.
+**Status:** Done. Created `.github/workflows/build.yml` that runs `./gradlew verify` on push to master and PRs. Uploads test and coverage reports as artifacts (14-day retention). Adds JaCoCo coverage comment on PRs via `madrapps/jacoco-report`. Build status badge added to README.
 
 #### Compiler Warnings as Errors
 
@@ -180,7 +170,7 @@ These require more design work and may not have obvious solutions.
 
 | Item | Effort | Impact | Status |
 |------|--------|--------|--------|
-| GitHub Actions CI | Small | High | Not started |
+| GitHub Actions CI | Small | High | Done |
 | Compiler warnings as errors | Tiny | Medium | Done |
 | Test tagging | Small | Medium | Done |
 | Migration validation task | Tiny | Low | Partially addressed by existing tests |
