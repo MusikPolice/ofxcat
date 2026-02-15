@@ -63,17 +63,31 @@ This is a per-clone setting. After a fresh clone, run the command above to enabl
 
 Java 21 CLI application for importing and categorizing OFX bank transactions using SQLite storage.
 
-### Layer Structure
+### Layer Structure and Dependency Rules
+
+The architecture is enforced by ArchUnit tests in `LayeredArchitectureTest`. New packages must be added to the test before the build will pass.
+
 ```
-OfxCat.java (entry point, argument parsing)
+OfxCat.java (entry point) — can access all layers
     ↓
-Service Layer (TransactionImportService, TransactionCategoryService,
-               TransferMatchingService, ReportingService, CategoryCombineService)
+service / cli — business logic and user interaction
+    ↓             cli uses DTOs and IO types for display/prompts
+matching    — token matching, keyword rules (can access datastore, config)
+cleaner     — bank-specific transaction cleaning (can access datastore, io)
     ↓
-DAO Layer (AccountDao, CategoryDao, CategorizedTransactionDao, etc.)
+datastore   — DAOs, DTOs, database utilities (no upward dependencies)
+io          — OFX parsing (self-contained, no upward dependencies)
     ↓
-SQLite + Flyway migrations (~/.ofxcat/ofxcat.db)
+config / utils / exception — leaf packages, no upward dependencies
 ```
+
+**Key constraints (violations fail the build):**
+- DAOs must never import from service, cli, matching, cleaner, or io
+- DTOs must be pure data classes — no imports from other layers
+- IO classes must not depend on any other layer
+- No circular dependencies between packages
+- Services are only accessed by the entry point
+- New packages must be registered in `LayeredArchitectureTest` before use
 
 ### Key Design Patterns
 - **Google Guice** for dependency injection (`CLIModule`, `DatastoreModule`, `MatchingModule`)
