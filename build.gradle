@@ -60,6 +60,9 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.hamcrest:hamcrest:3.0'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.4.0'
+
+    // SpotBugs needs this to analyze ArchUnit classes that reference lombok annotations
+    testCompileOnly 'org.projectlombok:lombok:1.18.36'
 }
 
 java {
