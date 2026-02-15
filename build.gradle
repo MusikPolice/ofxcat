@@ -165,6 +165,10 @@ spotbugsTest {
             required = true
             outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/test.html")
         }
+        xml {
+            required = true
+            outputLocation = file("${project.layout.buildDirectory.get()}/reports/spotbugs/test.xml")
+        }
     }
 }
 
