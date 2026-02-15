@@ -470,4 +470,4 @@ If `verify` passes, the code is clean.
 
 ## Future Static Analysis Tools
 
-See `docs/AgentToolingPlan.md` for planned additions including custom architectural lint rules.
+See `docs/plans/AgentToolingPlan.md` for planned additions including custom architectural lint rules.
