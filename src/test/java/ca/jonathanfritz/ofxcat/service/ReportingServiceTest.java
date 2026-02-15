@@ -197,7 +197,6 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         // create five transactions
         // list index is month offset, map value contains total spend for each category during that month
         final List<Map<Category, Float>> expected = new ArrayList<>();
-        final Map<Category, List<Float>> monthlySpend = new HashMap<>();
         for (int month = 1; month < 7; month++) {
             final Map<Category, Float> categorySum = new HashMap<>();
             for (Category category : Arrays.asList(TRANSFER, UNKNOWN)) {
@@ -208,7 +207,6 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                     amounts.add(t.getAmount());
                 }
                 categorySum.put(category, amounts.stream().reduce(0f, Float::sum));
-                monthlySpend.put(category, amounts);
             }
             expected.add(categorySum);
         }
