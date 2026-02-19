@@ -47,7 +47,7 @@ dependencies {
     // JSON serialization
     // Note that com.fasterxml.jackson has been moved to tools.jackson, but log4j still expects the old coordinates
     // when parsing the src/main/resources/log4j2.yaml configuration file
-    implementation('com.fasterxml.jackson:jackson-bom:2.20.0')
+    implementation('com.fasterxml.jackson:jackson-bom:2.21.0')
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
