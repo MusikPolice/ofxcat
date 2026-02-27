@@ -15,7 +15,7 @@ On the website for my bank, the `*.ofx` format is referred to as "Money":
 
 Once you have exported your transactions, the `.ofx` file can be imported with the `import` command:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar import mytransactions.ofx
+java -jar ofxcat-<hash>.jar import mytransactions.ofx
 ``` 
 
 `ofxcat` attempts to automatically categorize newly imported transactions based on their description (typically the name of the vendor that debited or credited your account).
@@ -49,14 +49,14 @@ Over time, you may end up with duplicate or poorly named categories. `ofxcat` pr
 #### Combining Categories
 To merge all transactions from one category into another:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar combine categories --source=DAYCARE --target="CHILD CARE"
+java -jar ofxcat-<hash>.jar combine categories --source=DAYCARE --target="CHILD CARE"
 ```
 This moves all transactions from DAYCARE to CHILD CARE, then deletes the DAYCARE category. If the target category doesn't exist, it will be created automatically.
 
 #### Renaming a Category
 The `rename` command is an alias for `combine` — it works exactly the same way:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar rename category --source=DAYCARE --target="CHILD CARE"
+java -jar ofxcat-<hash>.jar rename category --source=DAYCARE --target="CHILD CARE"
 ```
 
 After a combine or rename, if any keyword rules in `keyword-rules.yaml` still reference the old category name, `ofxcat` will warn you and offer to update them automatically.
@@ -64,7 +64,7 @@ After a combine or rename, if any keyword rules in `keyword-rules.yaml` still re
 ### Reports
 Once you have categorized some transactions, you can find out where your money is going by looking at how much is spent per category over a given period of time:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get transactions --start-date=2022-11-01 --end-date=2022-06-30
+java -jar ofxcat-<hash>.jar get transactions --start-date=2022-11-01 --end-date=2022-06-30
 ```
 This will return a matrix with category names along the x-axis and the months between the specified start and end days on the y-axis. The total amount spent in each category during each month appears in the table:
 ```
@@ -92,7 +92,7 @@ Due to the nature of the application, both files may include sensitive informati
 ### Getting Help
 If you get stuck, check the docs:
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar help
+java -jar ofxcat-<hash>.jar help
 ```
 If that doesn't work, create an issue, and I'll do my best to help you out as soon as possible.
 
@@ -111,21 +111,21 @@ Build with gradle:
 ./gradlew clean build shadowJar
 ```
 
-A fat jar that contains the application and its dependencies will be created at `build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar`. 
+A fat jar that contains the application and its dependencies will be created at `build/libs/ofxcat-<hash>.jar`, where `<hash>` is the first seven characters of the current git commit hash (e.g. `ofxcat-b29d4f1.jar`).
 You can run the application with:
 ```bash
-java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar
+java -jar build/libs/ofxcat-$(git rev-parse --short=7 HEAD).jar
 ```
 
 ### Known Issues
 When running the application, you may see a warning about unsafe method usage:
 ```bash
 WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
-WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar)
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-<hash>.jar)
 WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$UnsafeAtomicHelper
 WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
 WARNING: A restricted method in java.lang.System has been called
-WARNING: java.lang.System::loadLibrary has been called by org.fusesource.hawtjni.runtime.Library in an unnamed module (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar)       
+WARNING: java.lang.System::loadLibrary has been called by org.fusesource.hawtjni.runtime.Library in an unnamed module (file:/C:/Users/jonfr/Documents/GitHub/ofxcat/build/libs/ofxcat-<hash>.jar)       
 WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
 WARNING: Restricted methods will be blocked in a future release unless native access is enabled
 ```
