@@ -53,6 +53,29 @@ java -jar build/libs/ofxcat-<hash>.jar <command>
 
 **Before committing, always run `./gradlew verify`** to confirm tests pass and code style is clean. A pre-commit hook enforces this automatically (see below).
 
+## Code Review Workflow
+
+Always deliver changes via a feature branch and pull request rather than committing directly to master. Use the `gh` CLI:
+
+```bash
+# Create a feature branch and push it
+git checkout -b <branch-name>
+git add <files>
+git commit -m "description"
+git push -u origin <branch-name>
+
+# Open a PR for review
+gh pr create --title "..." --body "..."
+```
+
+After the user approves, merge with:
+```bash
+gh pr merge <number> --merge --delete-branch
+git checkout master && git pull origin master
+```
+
+This gives the user a proper diff to review on GitHub rather than reviewing changes in-editor.
+
 ## Pre-commit Hook
 
 A git pre-commit hook runs `./gradlew verify` before every commit. If verification fails, the commit is rejected.
