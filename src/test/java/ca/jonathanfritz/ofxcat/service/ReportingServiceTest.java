@@ -104,44 +104,22 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         final ReportingService reportingService =
                 new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
 
-        // there are no transactions, but the category headers should still be printed along with one row for each month
+        // with no transactions, no categories appear — header is just "MONTH" and month rows have no category columns
         reportingService.reportTransactionsMonthly(start, end);
         Assertions.assertEquals(11, spyCli.getCapturedLines().size());
-        Assertions.assertEquals(
-                "MONTH" + CSV_DELIMITER + "TRANSFER" + CSV_DELIMITER + "UNKNOWN",
-                spyCli.getCapturedLines().get(0));
-        Assertions.assertEquals(
-                "January 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(1));
-        Assertions.assertEquals(
-                "February 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(2));
-        Assertions.assertEquals(
-                "March 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(3));
-        Assertions.assertEquals(
-                "April 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(4));
-        Assertions.assertEquals(
-                "May 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(5));
-        Assertions.assertEquals(
-                "June 2022" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(6));
+        Assertions.assertEquals("MONTH", spyCli.getCapturedLines().get(0));
+        Assertions.assertEquals("Jan-22", spyCli.getCapturedLines().get(1));
+        Assertions.assertEquals("Feb-22", spyCli.getCapturedLines().get(2));
+        Assertions.assertEquals("Mar-22", spyCli.getCapturedLines().get(3));
+        Assertions.assertEquals("Apr-22", spyCli.getCapturedLines().get(4));
+        Assertions.assertEquals("May-22", spyCli.getCapturedLines().get(5));
+        Assertions.assertEquals("Jun-22", spyCli.getCapturedLines().get(6));
 
-        // there will also be four stats rows
-        Assertions.assertEquals(
-                "p50" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(7));
-        Assertions.assertEquals(
-                "p90" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(8));
-        Assertions.assertEquals(
-                "avg" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(9));
-        Assertions.assertEquals(
-                "total" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00",
-                spyCli.getCapturedLines().get(10));
+        // stats rows also have no category columns
+        Assertions.assertEquals("p50", spyCli.getCapturedLines().get(7));
+        Assertions.assertEquals("p90", spyCli.getCapturedLines().get(8));
+        Assertions.assertEquals("avg", spyCli.getCapturedLines().get(9));
+        Assertions.assertEquals("total", spyCli.getCapturedLines().get(10));
     }
 
     @Test
@@ -154,6 +132,19 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         for (int i = 0; i < 3; i++) {
             categories.add(categoryDao.insert(TestUtils.createRandomCategory()).orElse(null));
         }
+
+        // insert one transaction per category so all five categories appear after empty-category filtering
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final LocalDate transactionDate = LocalDate.of(2022, 1, 15);
+        for (Category category : categories) {
+            categorizedTransactionDao.insert(new CategorizedTransaction(
+                    TestUtils.createRandomTransaction(account, transactionDate, 0.0f), category));
+        }
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, transactionDate, 0.0f), TRANSFER));
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, transactionDate, 0.0f), UNKNOWN));
 
         final SpyCli spyCli = new SpyCli();
         final ReportingService reportingService =
@@ -171,7 +162,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
 
         // there will be one row printed for january with one decimal value column for each of the five categories
         Assertions.assertEquals(
-                "January 2022, 0.00, 0.00, 0.00, 0.00, 0.00",
+                "Jan-22, 0.00, 0.00, 0.00, 0.00, 0.00",
                 spyCli.getCapturedLines().get(1));
 
         // and there will be four stats rows
@@ -225,7 +216,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "January 2022",
+                                "Jan-22",
                                 CURRENCY_FORMATTER.format(expected.get(0).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(0).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(1));
@@ -234,7 +225,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "February 2022",
+                                "Feb-22",
                                 CURRENCY_FORMATTER.format(expected.get(1).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(1).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(2));
@@ -243,7 +234,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "March 2022",
+                                "Mar-22",
                                 CURRENCY_FORMATTER.format(expected.get(2).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(2).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(3));
@@ -252,7 +243,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "April 2022",
+                                "Apr-22",
                                 CURRENCY_FORMATTER.format(expected.get(3).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(3).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(4));
@@ -261,7 +252,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "May 2022",
+                                "May-22",
                                 CURRENCY_FORMATTER.format(expected.get(4).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(4).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(5));
@@ -270,7 +261,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 String.join(
                         CSV_DELIMITER,
                         Arrays.asList(
-                                "June 2022",
+                                "Jun-22",
                                 CURRENCY_FORMATTER.format(expected.get(5).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(5).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(6));
@@ -312,25 +303,25 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
-                        Arrays.asList("January 2022", CURRENCY_FORMATTER.format(2f), CURRENCY_FORMATTER.format(-3f))),
+                        Arrays.asList("Jan-22", CURRENCY_FORMATTER.format(2f), CURRENCY_FORMATTER.format(-3f))),
                 spyCli.getCapturedLines().get(1));
 
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
-                        Arrays.asList("February 2022", CURRENCY_FORMATTER.format(4f), CURRENCY_FORMATTER.format(-6f))),
+                        Arrays.asList("Feb-22", CURRENCY_FORMATTER.format(4f), CURRENCY_FORMATTER.format(-6f))),
                 spyCli.getCapturedLines().get(2));
 
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
-                        Arrays.asList("March 2022", CURRENCY_FORMATTER.format(6f), CURRENCY_FORMATTER.format(-9f))),
+                        Arrays.asList("Mar-22", CURRENCY_FORMATTER.format(6f), CURRENCY_FORMATTER.format(-9f))),
                 spyCli.getCapturedLines().get(3));
 
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
-                        Arrays.asList("April 2022", CURRENCY_FORMATTER.format(8f), CURRENCY_FORMATTER.format(-12f))),
+                        Arrays.asList("Apr-22", CURRENCY_FORMATTER.format(8f), CURRENCY_FORMATTER.format(-12f))),
                 spyCli.getCapturedLines().get(4));
 
         // stats
@@ -357,6 +348,33 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                         CSV_DELIMITER,
                         Arrays.asList("total", CURRENCY_FORMATTER.format(20f), CURRENCY_FORMATTER.format(-30f))),
                 spyCli.getCapturedLines().get(8));
+    }
+
+    @Test
+    public void reportTransactionsMonthlyStartDateNullTest() {
+        try {
+            // the start date is null, so an exception will be thrown
+            final ReportingService reportingService =
+                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+            reportingService.reportTransactionsMonthly(null, LocalDate.of(2022, 6, 30));
+        } catch (IllegalArgumentException ex) {
+            Assertions.assertEquals("Start date must be specified", ex.getMessage());
+        }
+    }
+
+    @Test
+    public void reportTransactionsMonthlyBadDateRangeTest() {
+        final LocalDate start = LocalDate.of(2022, 6, 30);
+        final LocalDate end = LocalDate.of(2022, 1, 1);
+
+        try {
+            // end date is before start date, so an exception will be thrown
+            final ReportingService reportingService =
+                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+            reportingService.reportTransactionsMonthly(start, end);
+        } catch (IllegalArgumentException ex) {
+            Assertions.assertEquals("Start date " + start + " must be before end date " + end, ex.getMessage());
+        }
     }
 
     @Test
@@ -423,10 +441,10 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         final List<String> lines = spyCli.getCapturedLines();
         Assertions.assertEquals(5, lines.size());
         Assertions.assertEquals("DATE" + CSV_DELIMITER + "DESCRIPTION" + CSV_DELIMITER + "AMOUNT", lines.get(0));
-        Assertions.assertEquals(CSV_DELIMITER + "p50" + CSV_DELIMITER + "0.0", lines.get(1));
-        Assertions.assertEquals(CSV_DELIMITER + "p90" + CSV_DELIMITER + "0.0", lines.get(2));
-        Assertions.assertEquals(CSV_DELIMITER + "avg" + CSV_DELIMITER + "0.0", lines.get(3));
-        Assertions.assertEquals(CSV_DELIMITER + "total" + CSV_DELIMITER + "0.0", lines.get(4));
+        Assertions.assertEquals(CSV_DELIMITER + "p50" + CSV_DELIMITER + "0.00", lines.get(1));
+        Assertions.assertEquals(CSV_DELIMITER + "p90" + CSV_DELIMITER + "0.00", lines.get(2));
+        Assertions.assertEquals(CSV_DELIMITER + "avg" + CSV_DELIMITER + "0.00", lines.get(3));
+        Assertions.assertEquals(CSV_DELIMITER + "total" + CSV_DELIMITER + "0.00", lines.get(4));
     }
 
     @Test
@@ -459,15 +477,15 @@ class ReportingServiceTest extends AbstractDatabaseTest {
 
         // compute the expected stats
         final float p50Expected = amounts.stream().sorted().toList().get(4);
-        expected.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + p50Expected);
+        expected.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(p50Expected));
 
         final float p90Expected = amounts.stream().sorted().toList().get(8);
-        expected.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + p90Expected);
+        expected.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(p90Expected));
 
         final float totalExpected = amounts.stream().reduce(0f, Float::sum);
         final float avgExpected = totalExpected / 10f;
-        expected.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + avgExpected);
-        expected.add(CSV_DELIMITER + "total" + CSV_DELIMITER + totalExpected);
+        expected.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(avgExpected));
+        expected.add(CSV_DELIMITER + "total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(totalExpected));
 
         final SpyCli spyCli = new SpyCli();
         final ReportingService reportingService =

@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -45,15 +46,25 @@ public class ReportingService {
     }
 
     public void reportTransactionsMonthly(final LocalDate startDate, final LocalDate endDate) {
+        // input validation
+        if (startDate == null) {
+            throw new IllegalArgumentException("Start date must be specified");
+        }
+        final LocalDate effectiveEndDate = endDate != null ? endDate : LocalDate.now();
+        if (startDate.isAfter(effectiveEndDate)) {
+            throw new IllegalArgumentException(
+                    "Start date " + startDate + " must be before end date " + effectiveEndDate);
+        }
+
         // each list entry represents the start and end of a month within the specified date range
         LocalDate startMonth = startDate.withDayOfMonth(1);
         final List<LocalDateRange> months = new ArrayList<>();
         do {
             months.add(new LocalDateRange(startMonth, startMonth.withDayOfMonth(startMonth.lengthOfMonth())));
             startMonth = startMonth.plusMonths(1);
-        } while (startMonth.isBefore(endDate));
+        } while (!startMonth.isAfter(effectiveEndDate));
 
-        // get amount spent in each category for every 1 month long bucket
+        // get amount spent in each category for every 1 month long bucket, preserving chronological order
         final Map<LocalDate, Map<Category, Float>> dateSpend = months.stream()
                 .map(localDateRange -> {
                     final Map<Category, List<CategorizedTransaction>> categorizedTransactions =
@@ -69,31 +80,42 @@ public class ReportingService {
                                                     .reduce(0f, Float::sum)))
                                     .collect(Collectors.toMap(Pair::getKey, Pair::getValue)));
                 })
-                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+                .collect(Collectors.toMap(
+                        Pair::getKey,
+                        Pair::getValue,
+                        (a, b) -> {
+                            throw new IllegalStateException("Duplicate key");
+                        },
+                        LinkedHashMap::new));
 
-        // all categories, sorted by name
-        final List<Category> sortedCategories = categoryDao.select().stream()
+        // only include categories that have at least one transaction in the date range
+        final List<Category> sortedCategories = dateSpend.values().stream()
+                .flatMap(categoryMap -> categoryMap.keySet().stream())
+                .distinct()
                 .sorted((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()))
                 .toList();
 
         // print a matrix with categories along the x axis, months along the y axis, category spend for each month at
         // the intersection
         final List<String> lines = new ArrayList<>();
-        lines.add("MONTH" + CSV_DELIMITER
-                + sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER)));
+        final String categoryHeader =
+                sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER));
+        lines.add(categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader);
 
         final Map<Category, List<Float>> categoryTransactionAmounts = new HashMap<>();
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : dateSpend.entrySet()) {
             // first column is the month/year
             final StringBuilder sb = new StringBuilder();
-            sb.append(entry.getKey().format(DateTimeFormatter.ofPattern("MMMM yyyy")));
-            sb.append(CSV_DELIMITER);
+            sb.append(entry.getKey().format(DateTimeFormatter.ofPattern("MMM-yy")));
 
             // subsequent columns hold sum of transactions for that month and category
-            sb.append(sortedCategories.stream()
-                    .map(category -> entry.getValue().getOrDefault(category, 0f))
-                    .map(CURRENCY_FORMATTER::format)
-                    .collect(Collectors.joining(CSV_DELIMITER)));
+            if (!sortedCategories.isEmpty()) {
+                sb.append(CSV_DELIMITER);
+                sb.append(sortedCategories.stream()
+                        .map(category -> entry.getValue().getOrDefault(category, 0f))
+                        .map(CURRENCY_FORMATTER::format)
+                        .collect(Collectors.joining(CSV_DELIMITER)));
+            }
             lines.add(sb.toString());
 
             // group the monthly spend amounts for each category together
@@ -125,6 +147,9 @@ public class ReportingService {
             Function<Stats, Float> func,
             List<Category> sortedCategories,
             Map<Category, Stats> categoryStats) {
+        if (sortedCategories.isEmpty()) {
+            return name;
+        }
         return name
                 + CSV_DELIMITER
                 + sortedCategories.stream()
@@ -174,10 +199,10 @@ public class ReportingService {
                 });
 
         final Stats stats = computeStats(amounts);
-        lines.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + stats.p50);
-        lines.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + stats.p90);
-        lines.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + stats.avg);
-        lines.add(CSV_DELIMITER + "total" + CSV_DELIMITER + stats.total);
+        lines.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.p50));
+        lines.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.p90));
+        lines.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.avg));
+        lines.add(CSV_DELIMITER + "total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.total));
 
         cli.println(lines);
     }
