@@ -79,7 +79,7 @@ Why trailing averages instead of percentiles:
 
 **Trailing averages are computed relative to the report's end date**, not relative to today. A report run for 2022-01-01 to 2022-06-30 will show trailing averages using Apr/May/Jun 2022 as the most recent months, not months relative to the current date.
 
-**Fallback when fewer months than window size are available:** Fall back to the average of all available months and label it `t3m (N=2)` or similar so the user knows the window was truncated.
+**Behaviour when fewer months than window size are available:** Suppress the row entirely. The trailing 3-month average row is only emitted if the report spans at least 3 months; the trailing 6-month average row is only emitted if the report spans at least 6 months. A report with 4 months of data will show a t3m row but no t6m row. This avoids the need for any fallback label and keeps the output unambiguous — a missing row is clearer than a partial average that looks like a full one.
 
 **Cascading change:** The private `Stats` record (`record Stats(float p50, float p90, float total, float avg)`) will need its fields renamed (e.g. `trailing3m`, `trailing6m`, `total`, `avg`). The `generateStatsString` helper and all test assertions that reference `stats.p50` / `stats.p90` will need updating. This is a broader refactor than it appears.
 
@@ -89,7 +89,11 @@ The report is printed via `cli.println(lines)` to the TextIO terminal. To get da
 
 **Recommendation:** Add `--format` and `--output-file` flags to `get transactions` (see Phase 2). The terminal CSV output continues to work as the default, keeping backward compatibility.
 
-**Library decision deferred:** XLSX output requires a third-party library. Two candidates — Apache POI and fastexcel — need an in-depth investigation before a choice is made. Key comparison axes include: fat JAR size impact (currently 28MB), API ergonomics for write-only use cases, maintenance status, and formatting capabilities (bold headers, frozen rows, auto-sized columns, number types). **Do not begin Phase 2 implementation until this investigation is complete.**
+**Library decision: fastexcel** (`org.dhatim:fastexcel`). An in-depth comparison of fastexcel vs Apache POI was conducted. fastexcel wins on every axis that matters for this use case:
+- **Dependency footprint:** fastexcel adds ~400 KB (one transitive dependency: `opczip`). Apache POI adds ~23 MB (poi, poi-ooxml, poi-ooxml-lite, xmlbeans, commons-compress, and others). The fat JAR stays ~28 MB with fastexcel vs ~50 MB with POI.
+- **Formatting:** fastexcel supports everything we need — bold headers (`ws.style(r, c).bold().set()`), frozen rows (`ws.freezePane(0, 1)`), Excel number format strings (`ws.style(r, c).format("#,##0.00").set()`), and manual column widths (`ws.width(col, value)`). Column auto-sizing has a known bug ([Issue #35](https://github.com/dhatim/fastexcel/issues/35)) where it doesn't account for non-default font sizes; since we use only default font sizes, this is unlikely to affect us, and manual widths are an acceptable fallback.
+- **API:** fastexcel is a streaming write-only library with a fluent API — a natural fit for a report generator that never needs to modify previously written rows.
+- **Apache POI's extra capabilities** (charts, borders, conditional formatting) are not needed for this use case.
 
 ---
 
@@ -115,17 +119,18 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 1. **Implement trailing average computation**
    - "Trailing N months" means the N most recent months within the report's date range
    - Zero-spend months count as $0.00 (pad amounts list with zeros for months where a category had no data)
-   - Fall back to average of all available months when fewer than N months exist; label the fallback clearly (e.g. `t3m (N=2)`)
+   - Suppress the trailing average row entirely when the report spans fewer months than the window size — no fallback label, no partial average
+   - t3m row only appears when the report has ≥ 3 months; t6m row only appears when the report has ≥ 6 months
 2. **Replace p50/p90 with trailing 3-month avg and trailing 6-month avg**
 3. **Rename `Stats` record fields** from `p50`/`p90` to `trailing3m`/`trailing6m`
 4. **Update `generateStatsString` helper** and all call sites
-5. **Update tests** — all assertions referencing p50/p90 values need rewriting; add dedicated tests for trailing average edge cases (fewer than 3 months, zero-spend months, mixed positive/negative categories)
+5. **Update tests** — all assertions referencing p50/p90 values need rewriting; add dedicated tests for trailing average edge cases (exactly 3 months, exactly 6 months, fewer than 3 months, zero-spend months, mixed positive/negative categories)
 
 ### Phase 2 — File output (pending library investigation)
 
 > **Before starting:** Complete an in-depth comparison of Apache POI vs. fastexcel across: fat JAR size impact, write-only API ergonomics, formatting capabilities (bold headers, frozen rows, column auto-sizing, native number types), and maintenance status. Document the decision and rationale before writing any implementation code.
 
-1. **Add chosen library dependency** to `build.gradle`
+1. **Add `org.dhatim:fastexcel` dependency** to `build.gradle`
 2. **Implement `writeReportToFile` method** in `ReportingService`
    - Creates an XLSX workbook with one sheet
    - Header row: bold, frozen
@@ -173,10 +178,12 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 |----------|----------|
 | Zero-spend months in trailing averages | Count as $0.00; included in the denominator |
 | "Trailing" relative to what? | The report's end date, not today's date |
+| Trailing average window sizes | 3-month and 6-month |
+| Insufficient data for trailing average | Suppress the row entirely — no fallback label, no partial average |
 | CLI output flag | `--format terminal\|xlsx` (default: `terminal`) |
 | Output path control | `--output-file <path>` with default `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx` |
 | Overwrite vs. timestamp | Overwrite by default |
-| XLSX library | Deferred — requires in-depth POI vs. fastexcel investigation |
+| XLSX library | fastexcel (`org.dhatim:fastexcel`) — small footprint, streaming write-only API, covers all required formatting |
 | Category filtering | Phase 1a (not deferred) |
 | Off-by-one month loop | Phase 1a |
 
@@ -184,6 +191,4 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 
 ## Open Questions
 
-1. **Trailing average window sizes:** Is 3-month and 6-month the right split? Or would you prefer a single "recent trend" window vs. an "overall average"?
-2. **Fallback label format:** When fewer months than the window size are available, how should the label read? Options: `t3m (N=2)`, `t3m*`, `3m-avg (partial)`.
-3. **Library investigation:** Apache POI vs. fastexcel — complete a focused comparison (JAR size, API ergonomics, formatting capabilities, maintenance status) before beginning Phase 2.
+None — all decisions have been made. Implementation may proceed.
