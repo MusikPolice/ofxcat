@@ -89,9 +89,13 @@ application {
 }
 
 // Build an executable fat JAR
+def gitHash = providers.exec {
+    commandLine 'git', 'rev-parse', '--short=7', 'HEAD'
+}.standardOutput.asText.map { it.trim() }
+
 shadowJar {
     archiveBaseName.set('ofxcat')
-    archiveVersion.set('')
+    archiveVersion.set(gitHash)
     archiveClassifier.set('')
     mergeServiceFiles()
     manifest {
