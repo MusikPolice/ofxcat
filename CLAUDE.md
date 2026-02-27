@@ -48,7 +48,7 @@ See `docs/GenAIGuide.md` for all collaboration rules, coding standards, TDD proc
 ./gradlew jacocoTestReport
 
 # Run the application
-java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
+java -jar build/libs/ofxcat.jar <command>
 ```
 
 **Before committing, always run `./gradlew verify`** to confirm tests pass and code style is clean. A pre-commit hook enforces this automatically (see below).

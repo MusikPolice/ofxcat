@@ -7,7 +7,7 @@ plugins {
     id 'com.diffplug.spotless' version '7.0.2'
     id 'com.github.spotbugs' version '6.4.8'
     id 'net.ltgt.errorprone' version '4.1.0'
-    id 'com.gradleup.shadow' version '8.3.10'
+    id 'com.gradleup.shadow' version '9.3.1'
 }
 
 repositories {
@@ -88,10 +88,11 @@ application {
     applicationDefaultJvmArgs = ['--enable-native-access=ALL-UNNAMED']
 }
 
-// Build an executable fat JAR similar to Maven assembly "jar-with-dependencies"
+// Build an executable fat JAR
 shadowJar {
-    // Match the historical Maven classifier for minimal disruption
-    archiveClassifier.set('jar-with-dependencies')
+    archiveBaseName.set('ofxcat')
+    archiveVersion.set('')
+    archiveClassifier.set('')
     mergeServiceFiles()
     manifest {
         attributes(

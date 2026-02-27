@@ -71,13 +71,13 @@ Uses **Google Guice** for dependency injection with two modules:
 
 ### Entry Point
 **Class:** `ca.jonathanfritz.ofxcat.OfxCat`  
-**Build Output:** `build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar`
+**Build Output:** `build/libs/ofxcat.jar`
 
 ### Commands
 
 #### Import Transactions
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar import <filename.ofx>
+java -jar ofxcat.jar import <filename.ofx>
 ```
 - Parses OFX file
 - Prompts for account names on first encounter
@@ -88,19 +88,19 @@ java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar import <filename.ofx>
 
 #### Get Accounts
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get accounts
+java -jar ofxcat.jar get accounts
 ```
 Outputs all known accounts in CSV format.
 
 #### Get Categories
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get categories
+java -jar ofxcat.jar get categories
 ```
 Outputs all known categories in CSV format.
 
 #### Get Transactions Report
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar get transactions \
+java -jar ofxcat.jar get transactions \
   --start-date=2022-01-01 \
   --end-date=2022-12-31 \
   [--category-id=<id>]
@@ -113,7 +113,7 @@ Outputs a matrix with months as rows and categories as columns, showing total sp
 
 #### Combine Categories
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar combine categories \
+java -jar ofxcat.jar combine categories \
   --source=DAYCARE --target="CHILD CARE"
 ```
 - `--source`: Required. Name of the category to move transactions from.
@@ -123,14 +123,14 @@ Moves all transactions from the source category to the target, then deletes the 
 
 #### Rename Category
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar rename category \
+java -jar ofxcat.jar rename category \
   --source=DAYCARE --target="CHILD CARE"
 ```
 Alias for `combine categories`. Same behavior and options.
 
 #### Help
 ```bash
-java -jar ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar help
+java -jar ofxcat.jar help
 ```
 
 ### Interactive Prompts
@@ -741,7 +741,7 @@ From `OfxCat.java`:
 
 ### Running
 ```bash
-java -jar build/libs/ofxcat-1.0-SNAPSHOT-jar-with-dependencies.jar <command>
+java -jar build/libs/ofxcat.jar <command>
 ```
 
 ### Testing
