@@ -10,6 +10,9 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import com.google.common.collect.Streams;
 import jakarta.inject.Inject;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -22,10 +25,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
+import org.dhatim.fastexcel.Workbook;
+import org.dhatim.fastexcel.Worksheet;
 
 public class ReportingService {
 
     public static final DecimalFormat CURRENCY_FORMATTER = new DecimalFormat("0.00");
+    private static final String XLSX_CURRENCY_FORMAT = "$#,##0.00";
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
@@ -46,7 +52,132 @@ public class ReportingService {
     }
 
     public void reportTransactionsMonthly(final LocalDate startDate, final LocalDate endDate) {
-        // input validation
+        final LocalDate effectiveEndDate = validateAndResolveEndDate(startDate, endDate);
+        final MonthlyReportData data = collectMonthlyReportData(startDate, effectiveEndDate);
+
+        // print a matrix with categories along the x axis, months along the y axis, category spend for each month at
+        // the intersection
+        final List<String> lines = new ArrayList<>();
+        final String categoryHeader =
+                data.sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER));
+        lines.add(categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader);
+
+        final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
+        for (Map.Entry<LocalDate, Map<Category, Float>> entry : data.dateSpend.entrySet()) {
+            // first column is the month/year
+            final StringBuilder sb = new StringBuilder();
+            sb.append(entry.getKey().format(monthFormatter));
+
+            // subsequent columns hold sum of transactions for that month and category
+            if (!data.sortedCategories.isEmpty()) {
+                sb.append(CSV_DELIMITER);
+                sb.append(data.sortedCategories.stream()
+                        .map(category -> entry.getValue().getOrDefault(category, 0f))
+                        .map(CURRENCY_FORMATTER::format)
+                        .collect(Collectors.joining(CSV_DELIMITER)));
+            }
+            lines.add(sb.toString());
+        }
+
+        // trailing average rows are only emitted when the report spans at least as many months as the window size
+        if (data.months.size() >= 3) {
+            lines.add(generateStatsString("t3m", stats -> stats.trailing3m, data.sortedCategories, data.categoryStats));
+        }
+        if (data.months.size() >= 6) {
+            lines.add(generateStatsString("t6m", stats -> stats.trailing6m, data.sortedCategories, data.categoryStats));
+        }
+        lines.add(generateStatsString("avg", stats -> stats.avg, data.sortedCategories, data.categoryStats));
+        lines.add(generateStatsString("total", stats -> stats.total, data.sortedCategories, data.categoryStats));
+
+        cli.println(lines);
+    }
+
+    /**
+     * Writes the monthly transaction report to an XLSX file.
+     * Creates the parent directory if it does not exist.
+     *
+     * @param startDate  the start of the reporting period (inclusive)
+     * @param endDate    the end of the reporting period (inclusive), or null to use today
+     * @param outputFile the path at which to write the XLSX file
+     * @return the path of the written file
+     * @throws IOException if the file cannot be written
+     */
+    public Path reportTransactionsMonthlyToFile(
+            final LocalDate startDate, final LocalDate endDate, final Path outputFile) throws IOException {
+        if (outputFile == null) {
+            throw new IllegalArgumentException("Output file must be specified");
+        }
+        final LocalDate effectiveEndDate = validateAndResolveEndDate(startDate, endDate);
+        final MonthlyReportData data = collectMonthlyReportData(startDate, effectiveEndDate);
+
+        final Path parent = outputFile.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+
+        try (Workbook wb = new Workbook(Files.newOutputStream(outputFile), "ofxcat", "1.0");
+                Worksheet ws = wb.newWorksheet("Transactions")) {
+            ws.freezePane(0, 1);
+
+            // header row: bold "MONTH" + one bold column per category
+            ws.value(0, 0, "MONTH");
+            ws.style(0, 0).bold().set();
+            for (int col = 0; col < data.sortedCategories.size(); col++) {
+                ws.value(0, col + 1, data.sortedCategories.get(col).getName());
+                ws.style(0, col + 1).bold().set();
+            }
+
+            // data rows: one row per month
+            final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
+            int row = 1;
+            for (Map.Entry<LocalDate, Map<Category, Float>> entry : data.dateSpend.entrySet()) {
+                ws.value(row, 0, entry.getKey().format(monthFormatter));
+                for (int col = 0; col < data.sortedCategories.size(); col++) {
+                    final float amount = entry.getValue().getOrDefault(data.sortedCategories.get(col), 0f);
+                    ws.value(row, col + 1, amount);
+                    ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
+                }
+                row++;
+            }
+
+            // trailing average rows are only emitted when the report spans at least as many months as the window size
+            if (data.months.size() >= 3) {
+                writeXlsxStatsRow(ws, row, "t3m", stats -> stats.trailing3m, data);
+                row++;
+            }
+            if (data.months.size() >= 6) {
+                writeXlsxStatsRow(ws, row, "t6m", stats -> stats.trailing6m, data);
+                row++;
+            }
+            writeXlsxStatsRow(ws, row, "avg", stats -> stats.avg, data);
+            row++;
+            writeXlsxStatsRow(ws, row, "total", stats -> stats.total, data);
+
+            // column widths: 10 chars for MONTH, at least 12 for each category (or its name length + padding)
+            ws.width(0, 10);
+            for (int col = 0; col < data.sortedCategories.size(); col++) {
+                ws.width(
+                        col + 1,
+                        Math.max(12, data.sortedCategories.get(col).getName().length() + 2));
+            }
+        }
+
+        return outputFile;
+    }
+
+    private void writeXlsxStatsRow(
+            Worksheet ws, int row, String label, Function<Stats, Float> func, MonthlyReportData data) {
+        ws.value(row, 0, label);
+        ws.style(row, 0).bold().set();
+        for (int col = 0; col < data.sortedCategories.size(); col++) {
+            final Stats stats = data.categoryStats.get(data.sortedCategories.get(col));
+            final float value = stats == null ? 0f : func.apply(stats);
+            ws.value(row, col + 1, value);
+            ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
+        }
+    }
+
+    private LocalDate validateAndResolveEndDate(final LocalDate startDate, final LocalDate endDate) {
         if (startDate == null) {
             throw new IllegalArgumentException("Start date must be specified");
         }
@@ -55,7 +186,10 @@ public class ReportingService {
             throw new IllegalArgumentException(
                     "Start date " + startDate + " must be before end date " + effectiveEndDate);
         }
+        return effectiveEndDate;
+    }
 
+    private MonthlyReportData collectMonthlyReportData(final LocalDate startDate, final LocalDate effectiveEndDate) {
         // each list entry represents the start and end of a month within the specified date range;
         // clamp the first range's start to startDate and each range's end to effectiveEndDate so that
         // DAO queries never exceed the user-supplied inclusive date range
@@ -100,31 +234,10 @@ public class ReportingService {
                 .sorted((c1, c2) -> c1.getName().compareToIgnoreCase(c2.getName()))
                 .toList();
 
-        // print a matrix with categories along the x axis, months along the y axis, category spend for each month at
-        // the intersection
-        final List<String> lines = new ArrayList<>();
-        final String categoryHeader =
-                sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER));
-        lines.add(categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader);
-
+        // group the monthly spend amounts for each category together, including zero-spend months
+        // so that stats are consistent with the 0.00 values printed in the matrix
         final Map<Category, List<Float>> categoryTransactionAmounts = new HashMap<>();
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : dateSpend.entrySet()) {
-            // first column is the month/year
-            final StringBuilder sb = new StringBuilder();
-            sb.append(entry.getKey().format(DateTimeFormatter.ofPattern("MMM-yy")));
-
-            // subsequent columns hold sum of transactions for that month and category
-            if (!sortedCategories.isEmpty()) {
-                sb.append(CSV_DELIMITER);
-                sb.append(sortedCategories.stream()
-                        .map(category -> entry.getValue().getOrDefault(category, 0f))
-                        .map(CURRENCY_FORMATTER::format)
-                        .collect(Collectors.joining(CSV_DELIMITER)));
-            }
-            lines.add(sb.toString());
-
-            // group the monthly spend amounts for each category together, including zero-spend months
-            // so that stats are consistent with the 0.00 values printed in the matrix
             for (Category category : sortedCategories) {
                 final List<Float> monthlyAmounts = categoryTransactionAmounts.getOrDefault(category, new ArrayList<>());
                 monthlyAmounts.add(entry.getValue().getOrDefault(category, 0f));
@@ -138,17 +251,7 @@ public class ReportingService {
                         Pair.of(categorySpendEntry.getKey(), computeStats(categorySpendEntry.getValue())))
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
-        // trailing average rows are only emitted when the report spans at least as many months as the window size
-        if (months.size() >= 3) {
-            lines.add(generateStatsString("t3m", stats -> stats.trailing3m, sortedCategories, categoryStats));
-        }
-        if (months.size() >= 6) {
-            lines.add(generateStatsString("t6m", stats -> stats.trailing6m, sortedCategories, categoryStats));
-        }
-        lines.add(generateStatsString("avg", stats -> stats.avg, sortedCategories, categoryStats));
-        lines.add(generateStatsString("total", stats -> stats.total, sortedCategories, categoryStats));
-
-        cli.println(lines);
+        return new MonthlyReportData(months, dateSpend, sortedCategories, categoryStats);
     }
 
     private String generateStatsString(
@@ -253,6 +356,12 @@ public class ReportingService {
     private record Stats(float trailing3m, float trailing6m, float total, float avg) {}
 
     private record LocalDateRange(LocalDate start, LocalDate end) {}
+
+    private record MonthlyReportData(
+            List<LocalDateRange> months,
+            Map<LocalDate, Map<Category, Float>> dateSpend,
+            List<Category> sortedCategories,
+            Map<Category, Stats> categoryStats) {}
 
     /**
      * Prints out a CSV list of accounts in the database

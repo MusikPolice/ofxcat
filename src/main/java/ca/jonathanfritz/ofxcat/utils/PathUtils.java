@@ -25,6 +25,10 @@ public class PathUtils {
         return getDataPath().resolve("backups");
     }
 
+    public Path getReportsPath() {
+        return getDataPath().resolve("reports");
+    }
+
     public Path getDatabasePath() {
         return getDataPath().resolve("ofxcat.db");
     }

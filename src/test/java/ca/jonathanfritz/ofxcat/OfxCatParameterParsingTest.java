@@ -443,4 +443,92 @@ class OfxCatParameterParsingTest {
         // Execute & Verify: rename expects singular "category"
         assertThrows(CliException.class, () -> OfxCat.getRenameOptions(args));
     }
+
+    @Test
+    void getOptionsDefaultFormatIsTerminal() throws CliException {
+        // Setup: No --format flag
+        String[] args = {"get", "transactions", "--start-date=2023-01-01"};
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify: format defaults to "terminal"
+        assertEquals("terminal", options.format());
+        assertNull(options.outputFile());
+    }
+
+    @Test
+    void getOptionsWithTerminalFormat() throws CliException {
+        // Setup: Explicit --format terminal
+        String[] args = {"get", "transactions", "--start-date=2023-01-01", "--format=terminal"};
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify
+        assertEquals("terminal", options.format());
+    }
+
+    @Test
+    void getOptionsWithXlsxFormat() throws CliException {
+        // Setup: --format xlsx
+        String[] args = {"get", "transactions", "--start-date=2023-01-01", "--format=xlsx"};
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify
+        assertEquals("xlsx", options.format());
+        assertNull(options.outputFile());
+    }
+
+    @Test
+    void getOptionsWithXlsxFormatCaseInsensitive() throws CliException {
+        // Setup: --format XLSX (uppercase)
+        String[] args = {"get", "transactions", "--start-date=2023-01-01", "--format=XLSX"};
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify: format value is stored as-is (case-insensitive comparison happens at dispatch time)
+        assertEquals("XLSX", options.format());
+    }
+
+    @Test
+    void getOptionsWithInvalidFormat() {
+        // Setup: Unknown format value
+        String[] args = {"get", "transactions", "--start-date=2023-01-01", "--format=csv"};
+
+        // Execute & Verify: Should throw CliException for invalid format
+        CliException exception = assertThrows(CliException.class, () -> OfxCat.getOptions(args));
+
+        assertTrue(exception.getMessage().contains("Invalid format"), "Error should mention invalid format");
+    }
+
+    @Test
+    void getOptionsWithOutputFile() throws CliException {
+        // Setup: --format xlsx with --output-file
+        String[] args = {
+            "get", "transactions", "--start-date=2023-01-01", "--format=xlsx", "--output-file=/tmp/report.xlsx"
+        };
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify
+        assertEquals("xlsx", options.format());
+        assertEquals("/tmp/report.xlsx", options.outputFile());
+    }
+
+    @Test
+    void getOptionsOutputFileIsNullWhenNotSpecified() throws CliException {
+        // Setup: --format xlsx without --output-file
+        String[] args = {"get", "transactions", "--start-date=2023-01-01", "--format=xlsx"};
+
+        // Execute
+        OfxCat.OfxCatOptions options = OfxCat.getOptions(args);
+
+        // Verify: outputFile is null when not specified (caller computes default path)
+        assertNull(options.outputFile());
+    }
 }

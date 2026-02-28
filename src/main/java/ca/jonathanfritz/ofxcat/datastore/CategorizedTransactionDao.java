@@ -125,10 +125,12 @@ public class CategorizedTransactionDao {
                             Collections::singletonList,
                             (l1, l2) -> Streams.concat(l1.stream(), l2.stream()).collect(Collectors.toList())));
         } catch (SQLException e) {
-            throw new RuntimeException(
-                    "Failed to get CategorizedTransactions between " + startDate + " and " + endDate
-                            + " grouped by category",
+            logger.error(
+                    "Failed to get CategorizedTransactions between {} and {} grouped by category",
+                    startDate,
+                    endDate,
                     e);
+            return Collections.emptyMap();
         }
     }
 
