@@ -123,12 +123,12 @@ public class ReportingService {
             }
             lines.add(sb.toString());
 
-            // group the monthly spend amounts for each category together
-            for (Map.Entry<Category, Float> categorySpend : entry.getValue().entrySet()) {
-                final List<Float> monthlyAmounts =
-                        categoryTransactionAmounts.getOrDefault(categorySpend.getKey(), new ArrayList<>());
-                monthlyAmounts.add(categorySpend.getValue());
-                categoryTransactionAmounts.putIfAbsent(categorySpend.getKey(), monthlyAmounts);
+            // group the monthly spend amounts for each category together, including zero-spend months
+            // so that stats are consistent with the 0.00 values printed in the matrix
+            for (Category category : sortedCategories) {
+                final List<Float> monthlyAmounts = categoryTransactionAmounts.getOrDefault(category, new ArrayList<>());
+                monthlyAmounts.add(entry.getValue().getOrDefault(category, 0f));
+                categoryTransactionAmounts.putIfAbsent(category, monthlyAmounts);
             }
         }
 

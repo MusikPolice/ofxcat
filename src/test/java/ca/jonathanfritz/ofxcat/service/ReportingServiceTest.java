@@ -351,6 +351,41 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    public void reportTransactionsMonthlyStatsIncludeZeroMonthsTest() {
+        // a category with spend in months 1 and 3 but not month 2 should have its zero-spend month
+        // reflected in the stats so they are consistent with the 0.00 printed in the matrix
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 3, 31);
+
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 15), 10f), TRANSFER));
+        // no TRANSFER transaction in February
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2022, 3, 15), 20f), TRANSFER));
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        reportingService.reportTransactionsMonthly(start, end);
+
+        // matrix should show 0.00 for Feb
+        final List<String> lines = spyCli.getCapturedLines();
+        Assertions.assertEquals("Feb-22" + CSV_DELIMITER + "0.00", lines.get(2));
+
+        // stats are over [10, 0, 20] — three months including the zero
+        // p50: sorted=[0,10,20], index floor(2*0.5)=1 → 10
+        // p90: sorted=[0,10,20], index floor(2*0.9)=1 → 10
+        // avg: (10+0+20)/3 = 10
+        // total: 30
+        Assertions.assertEquals("p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f), lines.get(4));
+        Assertions.assertEquals("p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f), lines.get(5));
+        Assertions.assertEquals("avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f), lines.get(6));
+        Assertions.assertEquals("total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(30f), lines.get(7));
+    }
+
+    @Test
     public void reportTransactionsMonthlyMidMonthStartDateTest() {
         // transactions before startDate in the same month must not be included
         final LocalDate start = LocalDate.of(2022, 1, 15);
