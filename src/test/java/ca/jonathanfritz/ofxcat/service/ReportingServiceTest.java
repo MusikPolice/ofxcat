@@ -351,6 +351,86 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    public void reportTransactionsMonthlyMidMonthStartDateTest() {
+        // transactions before startDate in the same month must not be included
+        final LocalDate start = LocalDate.of(2022, 1, 15);
+        final LocalDate end = LocalDate.of(2022, 1, 31);
+
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Transaction before = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 10), 5f);
+        final Transaction after = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 20), 7f);
+        categorizedTransactionDao.insert(new CategorizedTransaction(before, TRANSFER));
+        categorizedTransactionDao.insert(new CategorizedTransaction(after, TRANSFER));
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        reportingService.reportTransactionsMonthly(start, end);
+
+        // only the Jan-20 transaction (after startDate) should appear; Jan-10 is outside the range
+        Assertions.assertEquals(
+                "Jan-22" + CSV_DELIMITER + CURRENCY_FORMATTER.format(7f),
+                spyCli.getCapturedLines().get(1));
+    }
+
+    @Test
+    public void reportTransactionsMonthlyMidMonthEndDateTest() {
+        // transactions after endDate in the same month must not be included
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 1, 15);
+
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Transaction before = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 10), 5f);
+        final Transaction after = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 20), 7f);
+        categorizedTransactionDao.insert(new CategorizedTransaction(before, TRANSFER));
+        categorizedTransactionDao.insert(new CategorizedTransaction(after, TRANSFER));
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        reportingService.reportTransactionsMonthly(start, end);
+
+        // only the Jan-10 transaction (before endDate) should appear; Jan-20 is outside the range
+        Assertions.assertEquals(
+                "Jan-22" + CSV_DELIMITER + CURRENCY_FORMATTER.format(5f),
+                spyCli.getCapturedLines().get(1));
+    }
+
+    @Test
+    public void reportTransactionsMonthlyMidMonthBothEndsTest() {
+        // when both startDate and endDate are mid-month, each bucket must be clamped on both sides
+        final LocalDate start = LocalDate.of(2022, 1, 15);
+        final LocalDate end = LocalDate.of(2022, 2, 15);
+
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        // Jan-10: before startDate – excluded
+        // Jan-20: inside range – included in Jan bucket
+        // Feb-10: inside range – included in Feb bucket
+        // Feb-20: after endDate – excluded
+        final Transaction janBefore = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 10), 1f);
+        final Transaction janInside = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 1, 20), 3f);
+        final Transaction febInside = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 2, 10), 5f);
+        final Transaction febAfter = TestUtils.createRandomTransaction(account, LocalDate.of(2022, 2, 20), 7f);
+        for (Transaction t : List.of(janBefore, janInside, febInside, febAfter)) {
+            categorizedTransactionDao.insert(new CategorizedTransaction(t, TRANSFER));
+        }
+
+        final SpyCli spyCli = new SpyCli();
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+        reportingService.reportTransactionsMonthly(start, end);
+
+        final List<String> lines = spyCli.getCapturedLines();
+        // header + Jan + Feb + 4 stats rows = 7 lines
+        Assertions.assertEquals(7, lines.size());
+        Assertions.assertEquals("Jan-22" + CSV_DELIMITER + CURRENCY_FORMATTER.format(3f), lines.get(1));
+        Assertions.assertEquals("Feb-22" + CSV_DELIMITER + CURRENCY_FORMATTER.format(5f), lines.get(2));
+    }
+
+    @Test
     public void reportTransactionsMonthlyStartDateNullTest() {
         try {
             // the start date is null, so an exception will be thrown

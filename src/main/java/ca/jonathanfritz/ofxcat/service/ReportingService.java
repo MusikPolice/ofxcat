@@ -56,11 +56,16 @@ public class ReportingService {
                     "Start date " + startDate + " must be before end date " + effectiveEndDate);
         }
 
-        // each list entry represents the start and end of a month within the specified date range
+        // each list entry represents the start and end of a month within the specified date range;
+        // clamp the first range's start to startDate and each range's end to effectiveEndDate so that
+        // DAO queries never exceed the user-supplied inclusive date range
         LocalDate startMonth = startDate.withDayOfMonth(1);
         final List<LocalDateRange> months = new ArrayList<>();
         do {
-            months.add(new LocalDateRange(startMonth, startMonth.withDayOfMonth(startMonth.lengthOfMonth())));
+            final LocalDate rangeStart = startMonth.isBefore(startDate) ? startDate : startMonth;
+            final LocalDate endOfMonth = startMonth.withDayOfMonth(startMonth.lengthOfMonth());
+            final LocalDate rangeEnd = endOfMonth.isAfter(effectiveEndDate) ? effectiveEndDate : endOfMonth;
+            months.add(new LocalDateRange(rangeStart, rangeEnd));
             startMonth = startMonth.plusMonths(1);
         } while (!startMonth.isAfter(effectiveEndDate));
 
