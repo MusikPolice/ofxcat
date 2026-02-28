@@ -138,9 +138,13 @@ public class ReportingService {
                         Pair.of(categorySpendEntry.getKey(), computeStats(categorySpendEntry.getValue())))
                 .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
 
-        // spit the stats data out for each category
-        lines.add(generateStatsString("p50", stats -> stats.p50, sortedCategories, categoryStats));
-        lines.add(generateStatsString("p90", stats -> stats.p90, sortedCategories, categoryStats));
+        // trailing average rows are only emitted when the report spans at least as many months as the window size
+        if (months.size() >= 3) {
+            lines.add(generateStatsString("t3m", stats -> stats.trailing3m, sortedCategories, categoryStats));
+        }
+        if (months.size() >= 6) {
+            lines.add(generateStatsString("t6m", stats -> stats.trailing6m, sortedCategories, categoryStats));
+        }
         lines.add(generateStatsString("avg", stats -> stats.avg, sortedCategories, categoryStats));
         lines.add(generateStatsString("total", stats -> stats.total, sortedCategories, categoryStats));
 
@@ -203,40 +207,50 @@ public class ReportingService {
                             + CURRENCY_FORMATTER.format(transaction.getAmount()));
                 });
 
-        final Stats stats = computeStats(amounts);
-        lines.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.p50));
-        lines.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.p90));
-        lines.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.avg));
-        lines.add(CSV_DELIMITER + "total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(stats.total));
+        // compute and append per-transaction stats
+        if (amounts.isEmpty()) {
+            lines.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f));
+            lines.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f));
+            lines.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f));
+            lines.add(CSV_DELIMITER + "total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f));
+        } else {
+            // if all amounts are negative, reverse sort order so p90 is the largest expense outlier
+            final List<Float> sorted = amounts.stream().allMatch(a -> a <= 0)
+                    ? amounts.stream().sorted((x, y) -> x.compareTo(y) * -1).toList()
+                    : amounts.stream().sorted().toList();
+            final float p50 = sorted.get((int) Math.floor((amounts.size() - 1) * 0.5));
+            final float p90 = sorted.get((int) Math.floor((amounts.size() - 1) * 0.9));
+            final float total = amounts.stream().reduce(0f, Float::sum);
+            lines.add(CSV_DELIMITER + "p50" + CSV_DELIMITER + CURRENCY_FORMATTER.format(p50));
+            lines.add(CSV_DELIMITER + "p90" + CSV_DELIMITER + CURRENCY_FORMATTER.format(p90));
+            lines.add(CSV_DELIMITER + "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(total / amounts.size()));
+            lines.add(CSV_DELIMITER + "total" + CSV_DELIMITER + CURRENCY_FORMATTER.format(total));
+        }
 
         cli.println(lines);
     }
 
-    private Stats computeStats(List<Float> amounts) {
-        if (amounts.isEmpty()) {
-            // no data, so all values are zero
+    private Stats computeStats(List<Float> monthlyAmounts) {
+        if (monthlyAmounts.isEmpty()) {
             return new Stats(0f, 0f, 0f, 0f);
         }
-
-        final List<Float> sorted;
-        if (amounts.stream().allMatch(amount -> amount <= 0)) {
-            // if all amounts are negative, we need to reverse the sort order of the list when finding the p90 and p50
-            // or else we'll eliminate the smallest negative values from the list instead of the largest outliers
-            sorted = amounts.stream().sorted((x, y) -> x.compareTo(y) * -1).toList();
-        } else {
-            // if all amounts are positive or if we have a mix of positive and negative values, the normal sort order
-            // will do
-            sorted = amounts.stream().sorted().toList();
-        }
-
-        final float p50 = sorted.get((int) Math.floor((amounts.size() - 1) * 0.5));
-        final float p90 = sorted.get((int) Math.floor((amounts.size() - 1) * 0.9));
-        final float total = amounts.stream().reduce(0f, Float::sum);
-        final float avg = total / (float) amounts.size();
-        return new Stats(p50, p90, total, avg);
+        final float total = monthlyAmounts.stream().reduce(0f, Float::sum);
+        final float avg = total / monthlyAmounts.size();
+        final float trailing3m = trailingAverage(monthlyAmounts, 3);
+        final float trailing6m = trailingAverage(monthlyAmounts, 6);
+        return new Stats(trailing3m, trailing6m, total, avg);
     }
 
-    private record Stats(float p50, float p90, float total, float avg) {}
+    // Returns the average of the most recent 'window' months. Zero-spend months are included in the
+    // denominator, so a month with no transactions counts as $0.00 rather than being skipped.
+    // The divisor is always 'window', even when fewer months are available; rows are suppressed at
+    // the call site when the report spans fewer months than the window (see reportTransactionsMonthly).
+    private float trailingAverage(List<Float> amounts, int window) {
+        final int fromIndex = Math.max(0, amounts.size() - window);
+        return amounts.subList(fromIndex, amounts.size()).stream().reduce(0f, Float::sum) / window;
+    }
+
+    private record Stats(float trailing3m, float trailing6m, float total, float avg) {}
 
     private record LocalDateRange(LocalDate start, LocalDate end) {}
 
