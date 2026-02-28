@@ -467,79 +467,66 @@ class ReportingServiceTest extends AbstractDatabaseTest {
 
     @Test
     public void reportTransactionsMonthlyStartDateNullTest() {
-        try {
-            // the start date is null, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsMonthly(null, LocalDate.of(2022, 6, 30));
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals("Start date must be specified", ex.getMessage());
-        }
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> reportingService.reportTransactionsMonthly(null, LocalDate.of(2022, 6, 30)));
+        Assertions.assertEquals("Start date must be specified", ex.getMessage());
     }
 
     @Test
     public void reportTransactionsMonthlyBadDateRangeTest() {
         final LocalDate start = LocalDate.of(2022, 6, 30);
         final LocalDate end = LocalDate.of(2022, 1, 1);
-
-        try {
-            // end date is before start date, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsMonthly(start, end);
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals("Start date " + start + " must be before end date " + end, ex.getMessage());
-        }
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class, () -> reportingService.reportTransactionsMonthly(start, end));
+        Assertions.assertEquals("Start date " + start + " must be before end date " + end, ex.getMessage());
     }
 
     @Test
     public void reportTransactionsBadCategoryTest() {
-        try {
-            // this category id does not exist, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsInCategory(42L, null, null);
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals("Category with id 42 does not exist", ex.getMessage());
-        }
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class, () -> reportingService.reportTransactionsInCategory(42L, null, null));
+        Assertions.assertEquals("Category with id 42 does not exist", ex.getMessage());
     }
 
     @Test
     public void reportTransactionsStartDateNullTest() {
-        try {
-            // the start date is null, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsInCategory(UNKNOWN.getId(), null, null);
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals("Start date must be specified", ex.getMessage());
-        }
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> reportingService.reportTransactionsInCategory(UNKNOWN.getId(), null, null));
+        Assertions.assertEquals("Start date must be specified", ex.getMessage());
     }
 
     @Test
     public void reportTransactionsBadDateRangeTest() {
         final LocalDate start = LocalDate.of(2022, 6, 30);
         final LocalDate end = LocalDate.of(2022, 1, 1);
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> reportingService.reportTransactionsInCategory(UNKNOWN.getId(), start, end));
+        Assertions.assertEquals("Start date " + start + " must be before end date " + end, ex.getMessage());
+    }
 
-        try {
-            // end date is before start date, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsInCategory(UNKNOWN.getId(), start, end);
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals("Start date " + start + " must be before end date " + end, ex.getMessage());
-        }
-
+    @Test
+    public void reportTransactionsBadDateRangeNullEndDateTest() {
         final LocalDate tomorrow = LocalDate.now().plusDays(1);
-        try {
-            // end date not specified, so current date is used; start is after end, so an exception will be thrown
-            final ReportingService reportingService =
-                    new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
-            reportingService.reportTransactionsInCategory(UNKNOWN.getId(), tomorrow, null);
-        } catch (IllegalArgumentException ex) {
-            Assertions.assertEquals(
-                    "Start date " + tomorrow + " must be before end date " + LocalDate.now(), ex.getMessage());
-        }
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
+        final IllegalArgumentException ex = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> reportingService.reportTransactionsInCategory(UNKNOWN.getId(), tomorrow, null));
+        Assertions.assertEquals(
+                "Start date " + tomorrow + " must be before end date " + LocalDate.now(), ex.getMessage());
     }
 
     @Test
