@@ -671,6 +671,64 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         Assertions.assertEquals(expected, actual);
     }
 
+    @Test
+    void reportTransactionsMonthlyToFileProducesValidXlsxFile() throws Exception {
+        // Setup: insert one transaction so the report has data
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        final LocalDate transactionDate = LocalDate.of(2023, 6, 15);
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, transactionDate, -100f), groceries));
+
+        final LocalDate start = LocalDate.of(2023, 1, 1);
+        final LocalDate end = LocalDate.of(2023, 12, 31);
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        // Execute
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli());
+        final java.nio.file.Path result = reportingService.reportTransactionsMonthlyToFile(start, end, outputFile);
+
+        // Verify: file exists, is non-empty, and begins with the ZIP magic bytes that identify an XLSX file
+        Assertions.assertEquals(outputFile, result);
+        Assertions.assertTrue(java.nio.file.Files.exists(result), "Output file should exist");
+        final byte[] bytes = java.nio.file.Files.readAllBytes(result);
+        Assertions.assertTrue(bytes.length > 0, "Output file should not be empty");
+        // XLSX files are ZIP archives; all ZIP archives start with the local file header signature 0x504B0304
+        Assertions.assertEquals((byte) 0x50, bytes[0], "First byte should be 0x50 (ZIP magic)");
+        Assertions.assertEquals((byte) 0x4B, bytes[1], "Second byte should be 0x4B (ZIP magic)");
+        Assertions.assertEquals((byte) 0x03, bytes[2], "Third byte should be 0x03 (ZIP magic)");
+        Assertions.assertEquals((byte) 0x04, bytes[3], "Fourth byte should be 0x04 (ZIP magic)");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileCreatesParentDirectory() throws Exception {
+        // Setup: use a path whose parent directory does not yet exist
+        final java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("ofxcat-test-");
+        final java.nio.file.Path outputFile = tempDir.resolve("subdir").resolve("report.xlsx");
+
+        final LocalDate start = LocalDate.of(2023, 1, 1);
+        final LocalDate end = LocalDate.of(2023, 3, 31);
+
+        // Execute
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli());
+        reportingService.reportTransactionsMonthlyToFile(start, end, outputFile);
+
+        // Verify: parent directory was created and file exists
+        final java.nio.file.Path subdir = outputFile.getParent();
+        Assertions.assertNotNull(subdir, "Output file must have a parent directory");
+        Assertions.assertTrue(java.nio.file.Files.isDirectory(subdir), "Parent directory should exist");
+        Assertions.assertTrue(java.nio.file.Files.exists(outputFile), "Output file should exist");
+
+        // Cleanup
+        java.nio.file.Files.deleteIfExists(outputFile);
+        java.nio.file.Files.deleteIfExists(subdir);
+        java.nio.file.Files.deleteIfExists(tempDir);
+    }
+
     private static class SpyCli extends CLI {
 
         private final List<String> capturedLines = new ArrayList<>();
