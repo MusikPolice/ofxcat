@@ -31,6 +31,7 @@ import org.dhatim.fastexcel.Worksheet;
 public class ReportingService {
 
     public static final DecimalFormat CURRENCY_FORMATTER = new DecimalFormat("0.00");
+    private static final String XLSX_CURRENCY_FORMAT = "$#,##0.00";
     private final CategorizedTransactionDao categorizedTransactionDao;
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
@@ -134,7 +135,7 @@ public class ReportingService {
                 for (int col = 0; col < data.sortedCategories.size(); col++) {
                     final float amount = entry.getValue().getOrDefault(data.sortedCategories.get(col), 0f);
                     ws.value(row, col + 1, amount);
-                    ws.style(row, col + 1).format("#,##0.00").set();
+                    ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
                 }
                 row++;
             }
@@ -172,7 +173,7 @@ public class ReportingService {
             final Stats stats = data.categoryStats.get(data.sortedCategories.get(col));
             final float value = stats == null ? 0f : func.apply(stats);
             ws.value(row, col + 1, value);
-            ws.style(row, col + 1).format("#,##0.00").set();
+            ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
         }
     }
 

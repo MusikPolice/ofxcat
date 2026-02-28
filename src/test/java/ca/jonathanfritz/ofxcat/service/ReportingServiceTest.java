@@ -717,6 +717,37 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void reportTransactionsMonthlyToFileAppliesCurrencyFormat() throws Exception {
+        // Setup: insert one transaction so the report has currency-formatted data cells
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2023, 6, 15), -100f), groceries));
+
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli());
+        reportingService.reportTransactionsMonthlyToFile(
+                LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), outputFile);
+
+        // XLSX files are ZIP archives. The xl/styles.xml entry inside the ZIP lists every number
+        // format string applied to cells. Verify that our currency format is present there.
+        final String stylesXml;
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(outputFile.toFile())) {
+            final java.util.zip.ZipEntry stylesEntry = zip.getEntry("xl/styles.xml");
+            Assertions.assertNotNull(stylesEntry, "xl/styles.xml must exist inside the XLSX archive");
+            stylesXml =
+                    new String(zip.getInputStream(stylesEntry).readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        Assertions.assertTrue(
+                stylesXml.contains("$#,##0.00"), "styles.xml should contain the currency format string $#,##0.00");
+    }
+
+    @Test
     void reportTransactionsMonthlyToFileCreatesParentDirectory() throws Exception {
         // Setup: use a path whose parent directory does not yet exist
         final java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("ofxcat-test-");
@@ -740,6 +771,146 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         java.nio.file.Files.deleteIfExists(outputFile);
         java.nio.file.Files.deleteIfExists(subdir);
         java.nio.file.Files.deleteIfExists(tempDir);
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileHeaderAndMonthLabelsTest() throws Exception {
+        // Setup: one transaction in June 2023 so there is one category column in the output
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2023, 6, 15), -120f), groceries));
+
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), outputFile);
+
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+
+        // Header row: MONTH label in A1, category name in B1
+        Assertions.assertEquals("MONTH", cells.get("A1"), "A1 should be the MONTH header");
+        Assertions.assertEquals("GROCERIES", cells.get("B1"), "B1 should contain the category name");
+
+        // 12 month rows in chronological order with MMM-yy format labels in column A
+        Assertions.assertEquals("Jan-23", cells.get("A2"));
+        Assertions.assertEquals("Feb-23", cells.get("A3"));
+        Assertions.assertEquals("Mar-23", cells.get("A4"));
+        Assertions.assertEquals("Apr-23", cells.get("A5"));
+        Assertions.assertEquals("May-23", cells.get("A6"));
+        Assertions.assertEquals("Jun-23", cells.get("A7"));
+        Assertions.assertEquals("Jul-23", cells.get("A8"));
+        Assertions.assertEquals("Aug-23", cells.get("A9"));
+        Assertions.assertEquals("Sep-23", cells.get("A10"));
+        Assertions.assertEquals("Oct-23", cells.get("A11"));
+        Assertions.assertEquals("Nov-23", cells.get("A12"));
+        Assertions.assertEquals("Dec-23", cells.get("A13"));
+
+        // 12 months → all four stats rows are present
+        Assertions.assertEquals("t3m", cells.get("A14"), "t3m row should be present for a 12-month report");
+        Assertions.assertEquals("t6m", cells.get("A15"), "t6m row should be present for a 12-month report");
+        Assertions.assertEquals("avg", cells.get("A16"), "avg row should always be present");
+        Assertions.assertEquals("total", cells.get("A17"), "total row should always be present");
+
+        // No content beyond the total row
+        Assertions.assertNull(cells.get("A18"), "No row should exist beyond the total stats row");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileTwoMonthReportSuppressesTrailingAveragesTest() throws Exception {
+        // 2 months: t3m and t6m should both be suppressed (need ≥3 months for t3m, ≥6 for t6m)
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 2, 28), outputFile);
+
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+
+        Assertions.assertEquals("Jan-23", cells.get("A2"));
+        Assertions.assertEquals("Feb-23", cells.get("A3"));
+        Assertions.assertEquals("avg", cells.get("A4"), "avg should always be present");
+        Assertions.assertEquals("total", cells.get("A5"), "total should always be present");
+        Assertions.assertFalse(cells.containsValue("t3m"), "t3m should be suppressed for a 2-month report");
+        Assertions.assertFalse(cells.containsValue("t6m"), "t6m should be suppressed for a 2-month report");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileFourMonthReportSuppressesT6mTest() throws Exception {
+        // 4 months: t3m should be present, t6m should be suppressed (need ≥6 months for t6m)
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 4, 30), outputFile);
+
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+
+        Assertions.assertEquals("Jan-23", cells.get("A2"));
+        Assertions.assertEquals("Feb-23", cells.get("A3"));
+        Assertions.assertEquals("Mar-23", cells.get("A4"));
+        Assertions.assertEquals("Apr-23", cells.get("A5"));
+        Assertions.assertEquals("t3m", cells.get("A6"), "t3m should be present for a 4-month report");
+        Assertions.assertEquals("avg", cells.get("A7"), "avg should always be present");
+        Assertions.assertEquals("total", cells.get("A8"), "total should always be present");
+        Assertions.assertFalse(cells.containsValue("t6m"), "t6m should be suppressed for a 4-month report");
+    }
+
+    /**
+     * Reads all cell values from the first worksheet of an XLSX file, returning them as a map
+     * from cell reference (e.g. "A1") to display value. String cells are resolved against the
+     * shared strings table; numeric cells are returned as their raw string representation.
+     * Empty cells (no {@code <v>} element) are not included in the returned map.
+     */
+    private static Map<String, String> readXlsxCellValues(java.nio.file.Path xlsxFile) throws Exception {
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(xlsxFile.toFile())) {
+            // XLSX stores string values in a shared strings table (xl/sharedStrings.xml).
+            // Each string cell holds an index into this table rather than the string itself.
+            final List<String> sharedStrings = new ArrayList<>();
+            final java.util.zip.ZipEntry ssEntry = zip.getEntry("xl/sharedStrings.xml");
+            if (ssEntry != null) {
+                final javax.xml.parsers.DocumentBuilderFactory ssFactory =
+                        javax.xml.parsers.DocumentBuilderFactory.newInstance();
+                ssFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+                final org.w3c.dom.Document ssDoc =
+                        ssFactory.newDocumentBuilder().parse(zip.getInputStream(ssEntry));
+                final org.w3c.dom.NodeList siNodes = ssDoc.getElementsByTagName("si");
+                for (int i = 0; i < siNodes.getLength(); i++) {
+                    final org.w3c.dom.NodeList tNodes =
+                            ((org.w3c.dom.Element) siNodes.item(i)).getElementsByTagName("t");
+                    final StringBuilder sb = new StringBuilder();
+                    for (int j = 0; j < tNodes.getLength(); j++) {
+                        sb.append(tNodes.item(j).getTextContent());
+                    }
+                    sharedStrings.add(sb.toString());
+                }
+            }
+
+            // Read cell values from the first worksheet, resolving shared string references
+            final Map<String, String> cells = new HashMap<>();
+            final java.util.zip.ZipEntry wsEntry = zip.getEntry("xl/worksheets/sheet1.xml");
+            final javax.xml.parsers.DocumentBuilderFactory wsFactory =
+                    javax.xml.parsers.DocumentBuilderFactory.newInstance();
+            wsFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            final org.w3c.dom.Document wsDoc = wsFactory.newDocumentBuilder().parse(zip.getInputStream(wsEntry));
+            final org.w3c.dom.NodeList cellNodes = wsDoc.getElementsByTagName("c");
+            for (int i = 0; i < cellNodes.getLength(); i++) {
+                final org.w3c.dom.Element cell = (org.w3c.dom.Element) cellNodes.item(i);
+                final String ref = cell.getAttribute("r");
+                final String type = cell.getAttribute("t");
+                final org.w3c.dom.NodeList vNodes = cell.getElementsByTagName("v");
+                if (vNodes.getLength() > 0) {
+                    String value = vNodes.item(0).getTextContent();
+                    if ("s".equals(type)) {
+                        value = sharedStrings.get(Integer.parseInt(value));
+                    }
+                    cells.put(ref, value);
+                }
+            }
+            return cells;
+        }
     }
 
     private static class SpyCli extends CLI {
