@@ -672,6 +672,19 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void reportTransactionsMonthlyToFileNullOutputFileTest() {
+        final ReportingService reportingService =
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli());
+        IllegalArgumentException exception = Assertions.assertThrows(
+                IllegalArgumentException.class,
+                () -> reportingService.reportTransactionsMonthlyToFile(
+                        LocalDate.of(2023, 1, 1), LocalDate.of(2023, 12, 31), null));
+        Assertions.assertTrue(
+                exception.getMessage().contains("Output file must be specified"),
+                "Exception should indicate that output file is required");
+    }
+
+    @Test
     void reportTransactionsMonthlyToFileProducesValidXlsxFile() throws Exception {
         // Setup: insert one transaction so the report has data
         final Account account =

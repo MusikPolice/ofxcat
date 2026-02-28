@@ -103,6 +103,9 @@ public class ReportingService {
      */
     public Path reportTransactionsMonthlyToFile(
             final LocalDate startDate, final LocalDate endDate, final Path outputFile) throws IOException {
+        if (outputFile == null) {
+            throw new IllegalArgumentException("Output file must be specified");
+        }
         final LocalDate effectiveEndDate = validateAndResolveEndDate(startDate, endDate);
         final MonthlyReportData data = collectMonthlyReportData(startDate, effectiveEndDate);
 
