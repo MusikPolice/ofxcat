@@ -150,10 +150,27 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 6. **Update tests** — unit tests for XLSX generation, CLI flag parsing; update README example output
 7. **Update `README.md` and `docs/CodebaseOverview.md`** with new flags and example usage
 
-### Phase 3 — Polish (optional, only if warranted)
+### Phase 3 — Polish
 
-- Per-category trend direction indicator (↑/↓ based on trailing 3m vs trailing 6m)
-- `--all-categories` flag to include UNKNOWN/TRANSFER when explicitly requested
+#### 3a — Documentation (deferred from Phase 2)
+
+Update `README.md` and `docs/CodebaseOverview.md` to reflect all changes made in Phases 1 and 2:
+
+1. **Update example output in `README.md`** — the example currently shows `p50`/`p90` summary rows, which no longer exist. Replace with `t3m`, `t6m`, `avg`, `total` rows matching the current output format.
+2. **Document new CLI flags in `README.md`** — add `--format terminal|xlsx` and `--output-file <path>` to the `get transactions` section, with descriptions and example invocations.
+3. **Update `docs/CodebaseOverview.md`** — the `get transactions` entry still describes p50/p90 stats and omits the new flags. Bring it in sync with the current behaviour.
+
+#### 3b — Monthly TOTAL column
+
+Add a `TOTAL` column as the rightmost column in the monthly report (both terminal and XLSX paths). The `TOTAL` value for each month row is the sum of all category columns for that month. The trailing stats rows (`t3m`, `t6m`, `avg`, `total`) carry the same aggregation through the `TOTAL` column.
+
+**Scope:**
+1. Compute the per-month total in `collectMonthlyReportData` (or at render time — either is acceptable).
+2. Append the `TOTAL` column header and per-month values in `reportTransactionsMonthly` (terminal) and `reportTransactionsMonthlyToFile` (XLSX).
+3. Append the `TOTAL` stats values in `generateStatsString` (terminal) and `writeXlsxStatsRow` (XLSX).
+4. Update tests — all existing assertions that check exact line content or cell values will need a `TOTAL` column appended; add dedicated tests for the `TOTAL` column values.
+
+**Column ordering note:** Category columns remain sorted alphabetically. `TOTAL` is always the last column, after all category columns, regardless of its value.
 
 ---
 
@@ -161,14 +178,14 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 
 | File | Phase | Changes |
 |------|-------|---------|
-| `ReportingService.java` | 1a, 1b, 2 | Fix bugs, replace stats, add file output |
+| `ReportingService.java` | 1a, 1b, 2, 3b | Fix bugs, replace stats, add file output, add TOTAL column |
 | `CategorizedTransactionDao.java` | 1a | Propagate exceptions instead of swallowing |
-| `ReportingServiceTest.java` | 1a, 1b, 2 | Update assertions for all changes |
+| `ReportingServiceTest.java` | 1a, 1b, 2, 3b | Update assertions for all changes |
 | `ReportingWorkflowIntegrationTest.java` | 1a | Update assertions for date format, column filtering |
 | `build.gradle` | 2 | Add XLSX library dependency |
 | `OfxCat.java` | 2 | Add `--format` and `--output-file` CLI options |
-| `README.md` | 2 | Update example output and document new flags |
-| `docs/CodebaseOverview.md` | 2 | Document new reporting features and CLI options |
+| `README.md` | 3a | Update example output and document new CLI flags |
+| `docs/CodebaseOverview.md` | 3a | Document new reporting features and CLI options |
 
 ---
 
@@ -186,6 +203,8 @@ Changes to `ReportingService.java` and tests only. No new dependencies.
 | XLSX library | fastexcel (`org.dhatim:fastexcel`) — small footprint, streaming write-only API, covers all required formatting |
 | Category filtering | Phase 1a (not deferred) |
 | Off-by-one month loop | Phase 1a |
+| Category column order | Alphabetical always; deterministic regardless of spend amounts |
+| TOTAL column position | Always last, after all category columns |
 
 ---
 
