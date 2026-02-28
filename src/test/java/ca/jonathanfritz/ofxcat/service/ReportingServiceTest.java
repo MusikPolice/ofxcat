@@ -560,6 +560,30 @@ class ReportingServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    public void reportTransactionsMonthlyNullEndDateTest() {
+        // null endDate should default to today, exercising the validateAndResolveEndDate null branch.
+        // Insert a transaction on the first of the current month so it falls in the single-month window.
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        final LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, startDate, -100f), groceries));
+
+        final SpyCli spyCli = new SpyCli();
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli)
+                .reportTransactionsMonthly(startDate, null);
+
+        // Report spans exactly the current month; header + 1 data row + avg + total = 4 lines
+        final List<String> lines = spyCli.getCapturedLines();
+        final String currentMonthLabel = startDate.format(DateTimeFormatter.ofPattern("MMM-yy"));
+        Assertions.assertEquals("MONTH" + CSV_DELIMITER + "GROCERIES", lines.get(0));
+        Assertions.assertTrue(
+                lines.get(1).startsWith(currentMonthLabel), "First data row should be labelled with the current month");
+        Assertions.assertEquals(4, lines.size(), "1-month report: header + data row + avg + total");
+    }
+
+    @Test
     public void reportTransactionsBadCategoryTest() {
         final ReportingService reportingService =
                 new ReportingService(categorizedTransactionDao, accountDao, categoryDao, null);
@@ -856,6 +880,116 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         Assertions.assertEquals("avg", cells.get("A7"), "avg should always be present");
         Assertions.assertEquals("total", cells.get("A8"), "total should always be present");
         Assertions.assertFalse(cells.containsValue("t6m"), "t6m should be suppressed for a 4-month report");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileNullEndDateTest() throws Exception {
+        // null endDate should default to today, exercising the validateAndResolveEndDate null branch on the XLSX path.
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        final LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(startDate, null, outputFile);
+
+        // The file should contain the current month label in the first data row
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+        final String currentMonthLabel = startDate.format(DateTimeFormatter.ofPattern("MMM-yy"));
+        Assertions.assertTrue(
+                cells.containsValue(currentMonthLabel),
+                "XLSX output should contain the current month label when endDate is null");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileNoDataTest() throws Exception {
+        // No transactions: the report should have a MONTH-only header, month rows with no category columns,
+        // and stats rows that also have no category columns (just the label in column A).
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        // 3-month report so t3m is present (but no categories, so no B column values)
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 3, 31), outputFile);
+
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+
+        // Header: MONTH only — no category column
+        Assertions.assertEquals("MONTH", cells.get("A1"));
+        Assertions.assertNull(cells.get("B1"), "No category column should be present when there are no transactions");
+
+        // Three month rows with labels only
+        Assertions.assertEquals("Jan-23", cells.get("A2"));
+        Assertions.assertEquals("Feb-23", cells.get("A3"));
+        Assertions.assertEquals("Mar-23", cells.get("A4"));
+
+        // Stats rows: 3 months → t3m shown, t6m suppressed
+        Assertions.assertEquals("t3m", cells.get("A5"), "t3m should be present for a 3-month report");
+        Assertions.assertEquals("avg", cells.get("A6"));
+        Assertions.assertEquals("total", cells.get("A7"));
+        Assertions.assertFalse(cells.containsValue("t6m"), "t6m should be suppressed for a 3-month report");
+        Assertions.assertNull(cells.get("A8"), "No row should exist beyond the total stats row");
+    }
+
+    @Test
+    void reportTransactionsMonthlyToFileMultipleCategoriesTest() throws Exception {
+        // Two categories with transactions in different months of a 3-month window.
+        // Verifies: alphabetical column ordering, data values land in the correct column,
+        // and stats (t3m, avg, total) are computed correctly.
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category alpha = categoryDao.insert(new Category("ALPHA")).orElse(null);
+        final Category zebra = categoryDao.insert(new Category("ZEBRA")).orElse(null);
+
+        // ALPHA: -$90 in January; ZEBRA: -$30 in March
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2023, 1, 15), -90f), alpha));
+        categorizedTransactionDao.insert(new CategorizedTransaction(
+                TestUtils.createRandomTransaction(account, LocalDate.of(2023, 3, 15), -30f), zebra));
+
+        final java.nio.file.Path outputFile = java.nio.file.Files.createTempFile("ofxcat-test-", ".xlsx");
+        outputFile.toFile().deleteOnExit();
+
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, new SpyCli())
+                .reportTransactionsMonthlyToFile(LocalDate.of(2023, 1, 1), LocalDate.of(2023, 3, 31), outputFile);
+
+        final Map<String, String> cells = readXlsxCellValues(outputFile);
+
+        // Header: categories sorted alphabetically → ALPHA in B, ZEBRA in C
+        Assertions.assertEquals("MONTH", cells.get("A1"));
+        Assertions.assertEquals("ALPHA", cells.get("B1"), "ALPHA should precede ZEBRA alphabetically");
+        Assertions.assertEquals("ZEBRA", cells.get("C1"));
+
+        // Data rows: ALPHA has spend only in Jan, ZEBRA only in Mar
+        Assertions.assertEquals("Jan-23", cells.get("A2"));
+        Assertions.assertEquals(-90f, Float.parseFloat(cells.get("B2")), 0.001f, "ALPHA Jan spend");
+        Assertions.assertEquals(0f, Float.parseFloat(cells.get("C2")), 0.001f, "ZEBRA Jan spend is 0");
+
+        Assertions.assertEquals("Feb-23", cells.get("A3"));
+        Assertions.assertEquals(0f, Float.parseFloat(cells.get("B3")), 0.001f, "ALPHA Feb spend is 0");
+        Assertions.assertEquals(0f, Float.parseFloat(cells.get("C3")), 0.001f, "ZEBRA Feb spend is 0");
+
+        Assertions.assertEquals("Mar-23", cells.get("A4"));
+        Assertions.assertEquals(0f, Float.parseFloat(cells.get("B4")), 0.001f, "ALPHA Mar spend is 0");
+        Assertions.assertEquals(-30f, Float.parseFloat(cells.get("C4")), 0.001f, "ZEBRA Mar spend");
+
+        // Stats rows — 3-month report: t3m present, t6m suppressed
+        // t3m: trailing 3 months / 3  →  ALPHA = (-90+0+0)/3 = -30,  ZEBRA = (0+0-30)/3 = -10
+        Assertions.assertEquals("t3m", cells.get("A5"));
+        Assertions.assertEquals(-30f, Float.parseFloat(cells.get("B5")), 0.001f, "ALPHA t3m");
+        Assertions.assertEquals(-10f, Float.parseFloat(cells.get("C5")), 0.001f, "ZEBRA t3m");
+
+        // avg = total / months  →  ALPHA = -90/3 = -30,  ZEBRA = -30/3 = -10
+        Assertions.assertEquals("avg", cells.get("A6"));
+        Assertions.assertEquals(-30f, Float.parseFloat(cells.get("B6")), 0.001f, "ALPHA avg");
+        Assertions.assertEquals(-10f, Float.parseFloat(cells.get("C6")), 0.001f, "ZEBRA avg");
+
+        // total  →  ALPHA = -90,  ZEBRA = -30
+        Assertions.assertEquals("total", cells.get("A7"));
+        Assertions.assertEquals(-90f, Float.parseFloat(cells.get("B7")), 0.001f, "ALPHA total");
+        Assertions.assertEquals(-30f, Float.parseFloat(cells.get("C7")), 0.001f, "ZEBRA total");
+
+        Assertions.assertFalse(cells.containsValue("t6m"), "t6m should be suppressed for a 3-month report");
+        Assertions.assertNull(cells.get("A8"), "No row should exist beyond the total stats row");
     }
 
     /**
