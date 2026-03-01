@@ -44,7 +44,7 @@ public class TransferMatchingService {
         for (Transaction source : sourceTransactions) {
             final List<Transaction> potentialSinks = sinkTransactions.stream()
                     .filter(t -> t.getDate().equals(source.getDate()))
-                    .filter(t -> Double.compare(t.getAmount(), -source.getAmount()) == 0)
+                    .filter(t -> Float.compare(t.getAmount(), -source.getAmount()) == 0)
                     .filter(t -> !t.getAccount().equals(source.getAccount()))
                     .toList();
 
