@@ -55,26 +55,17 @@ java -jar build/libs/ofxcat-<hash>.jar <command>
 
 ## Code Review Workflow
 
-Always deliver changes via a feature branch and pull request rather than committing directly to master. Use the `gh` CLI:
+After completing a set of changes, **ask the user to review the diff in their IDE** before committing. The user prefers to review locally where they have access to refactoring tools and can make adjustments.
+
+Once the user approves, commit directly to the current working branch — no feature branch or PR required:
 
 ```bash
-# Create a feature branch and push it
-git checkout -b <branch-name>
 git add <files>
 git commit -m "description"
-git push -u origin <branch-name>
-
-# Open a PR for review
-gh pr create --title "..." --body "..."
+git push
 ```
 
-After the user approves, merge with:
-```bash
-gh pr merge <number> --merge --delete-branch
-git checkout master && git pull origin master
-```
-
-This gives the user a proper diff to review on GitHub rather than reviewing changes in-editor.
+Do not open a pull request unless the user explicitly asks for one.
 
 ## Pre-commit Hook
 
