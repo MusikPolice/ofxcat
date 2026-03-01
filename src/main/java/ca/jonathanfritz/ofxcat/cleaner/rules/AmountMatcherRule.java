@@ -27,7 +27,7 @@ public class AmountMatcherRule {
 
     public boolean match(OfxTransaction ofxTransaction) {
         if (isEqualToMatcher != null) {
-            return ofxTransaction.getAmount() == isEqualToMatcher;
+            return Float.compare(ofxTransaction.getAmount(), isEqualToMatcher) == 0;
         } else if (isGreaterThanMatcher != null) {
             return ofxTransaction.getAmount() > isGreaterThanMatcher;
         } else if (isLessThanMatcher != null) {
