@@ -223,6 +223,14 @@ of day. It should not be mistaken for a real gap.
 
 ### Phase 1 — Gap detection in the DAO and a new service
 
+**Rename `MigrationProgressCallback` → `ProgressCallback`**
+
+`MigrationProgressCallback` is already the right shape (`@FunctionalInterface`, `onProgress(int
+current, int total)`, `NOOP` constant) but the name ties it to migration. Rename the interface to
+`ProgressCallback` in the `service` package and update the existing usages in
+`TokenMigrationService` and `OfxCat`. This rename is part of Phase 1 since gap detection is the
+first second consumer of the interface.
+
 **`CategorizedTransactionDao`**
 
 Add:
@@ -242,7 +250,8 @@ Query: `SELECT * FROM CategorizedTransaction WHERE account_id = ? ORDER BY date 
 public record Gap(Account account, LocalDate lastGoodDate, LocalDate firstDateAfterGap, float missingAmount) {}
 
 public List<Gap> detectGaps(Account account)
-public List<Gap> detectGaps()                              // across all accounts
+public List<Gap> detectGaps()                              // across all accounts; calls detectGaps(account) per account
+public List<Gap> detectGaps(ProgressCallback callback)    // with progress reporting
 public Map<LocalDate, Float> gapAmountsByMonth(LocalDate start, LocalDate end)
     // returns month-start → net missing amount for months where a gap starts in that month
     // used by ReportingService to populate the GAP column
@@ -251,10 +260,27 @@ public Set<LocalDate> fullyMissingMonths(LocalDate start, LocalDate end)
     // used by ReportingService to place the "GAP" string marker
 ```
 
+Progress is reported per account (one `onProgress` call after each account's scan completes),
+not per transaction. The outer loop is over accounts; each inner scan loads one account's
+transactions at a time, which provides natural memory partitioning.
+
 Core algorithm for a single account:
-1. Load all transactions sorted by `(date, id)`
+1. Load all transactions for the account sorted by `(date, id)`
 2. Walk consecutive pairs; for each pair convert balance and amount to integer cents
 3. If `expectedCents != actualCents`, emit a `Gap` record
+
+**Why no paging is needed**
+
+The algorithm only ever needs the previous transaction in memory to check the invariant — it is
+inherently a streaming one-pair-at-a-time operation. However, SQLite's JDBC driver materialises
+the entire `ResultSet` in memory regardless of fetch size, so true cursor streaming is not
+available. Loading one account at a time via `selectByAccount()` is the practical equivalent
+and provides sufficient partitioning.
+
+Explicit `LIMIT`/`OFFSET` pagination would add complexity at page boundaries (the last transaction
+on page N must be carried forward as "previous" for the first pair check on page N+1) with no
+meaningful benefit. At realistic data sizes — tens of thousands of transactions across several
+accounts — the per-account in-memory footprint is a few megabytes at most and is not a concern.
 
 **`AccountDao`** — verify or add `selectAll()` if not present (needed by `detectGaps()` to enumerate
 accounts).
@@ -268,6 +294,7 @@ accounts).
 - Multiple gaps in one account
 - Two accounts, gap in one but not the other
 - Same-day transactions, all consistent → no gaps
+- Progress callback receives one call per account
 
 ### Phase 2 — `get gaps` CLI command
 
@@ -313,9 +340,12 @@ Add a note to the terminal output footer and an XLSX cell comment or footnote ro
 
 | File | Phase | Change |
 |------|-------|--------|
+| `MigrationProgressCallback.java` | 1 | Rename to `ProgressCallback` |
+| `TokenMigrationService.java` | 1 | Update references to renamed interface |
+| `OfxCat.java` | 1 | Update references to renamed interface |
 | `CategorizedTransactionDao.java` | 1 | Add `selectByAccount(Account)` |
 | `AccountDao.java` | 1 | Verify `selectAll()` exists; add if not |
-| `GapDetectionService.java` (new) | 1 | Core gap detection logic |
+| `GapDetectionService.java` (new) | 1 | Core gap detection logic with `ProgressCallback` support |
 | `GapDetectionServiceTest.java` (new) | 1 | Unit tests for all gap scenarios |
 | `CategorizedTransactionDaoTest.java` | 1 | Tests for `selectByAccount` |
 | `OfxCat.java` | 2 | Add `get gaps` command, wire `GapDetectionService` |
