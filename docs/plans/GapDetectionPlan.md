@@ -1,6 +1,6 @@
 # Gap Detection Plan
 
-**Status:** Draft — awaiting review and decisions on open questions before implementation begins.
+**Status:** Ready for implementation — all decisions made.
 
 ---
 
@@ -241,9 +241,14 @@ Add a `get gaps` subcommand to `OfxCat`. Output format (CSV to terminal):
 ACCOUNT, GAP FROM, GAP TO, MISSING AMOUNT
 Chequing, 2022-01-15, 2022-02-01, -342.50
 Visa, 2022-03-08, 2022-03-22, -198.00
+Savings, INDETERMINATE, INDETERMINATE, INDETERMINATE
 ```
 
-If no gaps: print `"No gaps detected."` and exit cleanly.
+Accounts with fewer than two transactions cannot have gaps detected. They are listed with
+`INDETERMINATE` in all value columns and a trailing note explaining that gap detection requires at
+least two transactions. They are never silently omitted.
+
+If no gaps and no indeterminate accounts: print `"No gaps detected."` and exit cleanly.
 
 This fits the existing `get accounts` / `get categories` / `get transactions` pattern.
 
@@ -296,12 +301,9 @@ Add a note to the terminal output footer and an XLSX cell comment or footnote ro
 | Attribution for multi-month gaps | Full `missingAmount` attributed to the month of `lastGoodDate` (where the gap begins) |
 | Net vs. gross limitation | Document in README and as a report footnote; no attempt to estimate gross |
 | GAP vs. UNKNOWN column | Separate — UNKNOWN is for imported-but-uncategorized transactions; GAP is inferred data only |
+| `get gaps` date filtering | No filtering — always show all gaps. Add later if needed (YAGNI). |
+| Accounts with a single transaction | Show as "indeterminate" in `get gaps` output with a note that gap detection requires at least two transactions. Do not silently omit. |
 
 ## Open Questions
 
-These need to be settled before implementation begins.
-
-| # | Question | Options |
-|---|----------|---------|
-| 1 | **`get gaps` date filtering** | Should `get gaps` accept `--start-date` and `--end-date` to filter the output, or always show all gaps? Always-all is simpler. |
-| 2 | **Accounts with a single transaction** | These can't have gaps detected. Should `get gaps` note them as "indeterminate" or just silently omit? |
+None — all decisions have been made. Implementation may proceed.
