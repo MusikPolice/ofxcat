@@ -1,5 +1,7 @@
 # Reporting Improvement Plan
 
+**Status: Implemented** — All phases (1a, 1b, 2, 3) and the TRANSFER exclusion fix are complete and merged.
+
 ## Current State
 
 `ReportingService.reportTransactionsMonthly()` generates a CSV table printed to the terminal. Categories are columns, months are rows, with p50/p90/avg/total summary rows appended at the bottom. The output is designed to be copy-pasted into a spreadsheet.
