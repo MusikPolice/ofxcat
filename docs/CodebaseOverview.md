@@ -103,13 +103,17 @@ Outputs all known categories in CSV format.
 java -jar ofxcat-<hash>.jar get transactions \
   --start-date=2022-01-01 \
   --end-date=2022-12-31 \
-  [--category-id=<id>]
+  [--category-id=<id>] \
+  [--format=terminal|xlsx] \
+  [--output-file=<path>]
 ```
 - `--start-date`: Required, format `yyyy-MM-dd`
 - `--end-date`: Optional, defaults to today
-- `--category-id`: Optional, filters to specific category
+- `--category-id`: Optional, filters to a single category; prints one row per transaction with date, description, and amount
+- `--format`: Optional, `terminal` (default) or `xlsx`; terminal prints CSV to the console, xlsx writes an Excel file
+- `--output-file`: Optional, output path for `--format xlsx`; defaults to `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx`
 
-Outputs a matrix with months as rows and categories as columns, showing total spending per category per month. Includes p50, p90, average, and total rows.
+Without `--category-id`, outputs a matrix with months as rows and spending categories as columns, showing total spending per category per month. Categories with no transactions in the date range are excluded. A `TOTAL` column (sum of all categories) is always appended as the rightmost column. Summary rows at the bottom show trailing 3-month average (`t3m`), trailing 6-month average (`t6m`, only when the report spans ≥ 6 months), overall average (`avg`), and grand total (`total`). The `t3m` and `t6m` rows are suppressed when the report spans fewer months than the window size.
 
 #### Combine Categories
 ```bash

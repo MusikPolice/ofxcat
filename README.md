@@ -64,25 +64,32 @@ After a combine or rename, if any keyword rules in `keyword-rules.yaml` still re
 ### Reports
 Once you have categorized some transactions, you can find out where your money is going by looking at how much is spent per category over a given period of time:
 ```bash
-java -jar ofxcat-<hash>.jar get transactions --start-date=2022-11-01 --end-date=2022-06-30
+java -jar ofxcat-<hash>.jar get transactions --start-date=2021-11-01 --end-date=2022-06-30
 ```
-This will return a matrix with category names along the x-axis and the months between the specified start and end days on the y-axis. The total amount spent in each category during each month appears in the table:
+This returns a matrix with category names along the x-axis and months on the y-axis. The total amount spent in each category during each month appears in the table, followed by trailing average and summary rows:
 ```
-MONTH, DAYCARE, GROCERIES, MORTGAGE, PETS, PROPERTY TAX, RESTAURANTS, SHOPPING, UTILITIES, VEHICLES
-Nov-21,-1899,-696.87,-1557.1,0,-285.61,-464.26,-293.41,-359,-284.19
-Dec-21,-1493.58,-1263.73,-1557.1,-347.12,-285.6,-387.78,-433.53,-503.82,-421.78
-Jan-22,-1388,-1359.73,-1557.1,-121.83,-283.91,-279.55,-949.85,-689.56,-718.9
-Feb-22,-1388,-850.85,-1557.1,-95.81,-283.91,-478.64,-546,-531.98,-290.87
-Mar-22,-1388,-846.14,-1557.1,-130.82,-283.91,-257.83,-1073.06,-640.24,-400.83
-Apr-22,-1388,-994.94,-2335.65,-148.79,-283.91,-508.28,-356.43,-542.49,-319.47
-May-22,-1325,-708.81,-778.55,0,-283.91,-243.57,-609.19,-543.29,-1249.54
-Jun-22,0,0,0,0,0,0,0,0,0
-p50,-1388,-850.85,-1557.1,-130.82,-283.91,-387.78,-546,-542.49,-400.83
-p90,-1493.58,-1263.73,-1557.1,-148.79,-285.6,-478.64,-949.85,-640.24,-718.9
-avg,-1467.08,-960.15,-1557.1,-168.87,-284.39,-374.27,-608.78,-544.34,-526.51
-total,-10269.58,-6721.07,-10899.7,-844.37,-1990.76,-2619.91,-4261.47,-3810.38,-3685.58
+MONTH, DAYCARE, GROCERIES, MORTGAGE, PETS, PROPERTY TAX, RESTAURANTS, SHOPPING, UTILITIES, VEHICLES, TOTAL
+Nov-21,-1899.00,-696.87,-1557.10,0.00,-285.61,-464.26,-293.41,-359.00,-284.19,-5839.44
+Dec-21,-1493.58,-1263.73,-1557.10,-347.12,-285.60,-387.78,-433.53,-503.82,-421.78,-6694.04
+Jan-22,-1388.00,-1359.73,-1557.10,-121.83,-283.91,-279.55,-949.85,-689.56,-718.90,-7348.43
+Feb-22,-1388.00,-850.85,-1557.10,-95.81,-283.91,-478.64,-546.00,-531.98,-290.87,-6023.16
+Mar-22,-1388.00,-846.14,-1557.10,-130.82,-283.91,-257.83,-1073.06,-640.24,-400.83,-6577.93
+Apr-22,-1388.00,-994.94,-2335.65,-148.79,-283.91,-508.28,-356.43,-542.49,-319.47,-6877.96
+May-22,-1325.00,-708.81,-778.55,0.00,-283.91,-243.57,-609.19,-543.29,-1249.54,-5741.86
+Jun-22,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00
+t3m,-904.33,-567.92,-1038.07,-49.60,-189.27,-250.62,-321.87,-361.93,-523.00,-4206.61
+t6m,-1146.17,-793.41,-1297.58,-82.88,-236.59,-294.65,-589.09,-491.26,-496.60,-5428.23
+avg,-1283.70,-840.13,-1362.46,-105.55,-248.85,-327.49,-532.68,-476.30,-460.70,-5637.85
+total,-10269.58,-6721.07,-10899.70,-844.37,-1990.76,-2619.91,-4261.47,-3810.38,-3685.58,-45102.82
 ```
-The report is in csv format, and is designed to be copied into your spreadsheet application of choice.
+The report is printed as CSV to the terminal by default. To export directly to Excel, use the `--format xlsx` flag:
+```bash
+java -jar ofxcat-<hash>.jar get transactions --start-date=2021-11-01 --end-date=2022-06-30 --format=xlsx
+```
+This writes the report to `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx` and prints the path. To specify a different output location:
+```bash
+java -jar ofxcat-<hash>.jar get transactions --start-date=2021-11-01 --end-date=2022-06-30 --format=xlsx --output-file=~/Desktop/spending-report.xlsx
+```
 
 ## Storage and Logging
 `ofxcat` stores imported transactions in an SQLite3 database located in `~/.ofx/ofxcat.db`. Similarly, the log file is located at `~/.ofx/ofxcat.log`.

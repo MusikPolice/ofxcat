@@ -130,7 +130,7 @@ public class CategorizedTransactionDao {
                     startDate,
                     endDate,
                     e);
-            return new HashMap<>();
+            return Collections.emptyMap();
         }
     }
 

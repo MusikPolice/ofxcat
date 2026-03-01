@@ -178,9 +178,22 @@ public class OfxCat {
         }
     }
 
-    private void reportTransactions(OfxCatOptions options) {
+    private void reportTransactions(OfxCatOptions options) throws CliException {
         if (options.categoryId != null) {
             reportingService.reportTransactionsInCategory(options.categoryId, options.startDate, options.endDate);
+        } else if ("xlsx".equalsIgnoreCase(options.format)) {
+            final Path outputFile = options.outputFile != null
+                    ? pathUtils.expand(options.outputFile)
+                    : pathUtils
+                            .getReportsPath()
+                            .resolve("transactions-" + options.startDate + "-to-" + options.endDate + ".xlsx");
+            try {
+                final Path writtenPath = reportingService.reportTransactionsMonthlyToFile(
+                        options.startDate, options.endDate, outputFile);
+                cli.println("Report written to " + writtenPath);
+            } catch (IOException e) {
+                throw new CliException("Failed to write report to " + outputFile, e);
+            }
         } else {
             reportingService.reportTransactionsMonthly(options.startDate, options.endDate);
         }
@@ -297,6 +310,11 @@ public class OfxCat {
                 "               Defaults to today if not specified.",
                 "   --category-id: Optional. If specified, only transactions that belong",
                 "                  to the specified category will be printed.",
+                "   --format: Optional. Output format: terminal (default) or xlsx.",
+                "             terminal: prints CSV to the console.",
+                "             xlsx: writes an Excel file and prints the path.",
+                "   --output-file: Optional. Output file path (only used with --format xlsx).",
+                "                  Defaults to ~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx",
                 "ofxcat migrate [OPTIONS]",
                 "   Re-runs token migration on all transactions, applying current keyword rules.",
                 "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
@@ -450,6 +468,20 @@ public class OfxCat {
                     .hasArg(true)
                     .required(false)
                     .get());
+            options.addOption(Option.builder()
+                    .argName("f")
+                    .longOpt("format")
+                    .desc("Output format: terminal (default) or xlsx")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+            options.addOption(Option.builder()
+                    .argName("o")
+                    .longOpt("output-file")
+                    .desc("Output file path (only used with --format xlsx)")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
@@ -457,7 +489,12 @@ public class OfxCat {
             final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
             final String categoryIdOptionValue = commandLine.getOptionValue("category-id");
             final Long categoryId = categoryIdOptionValue != null ? Long.parseLong(categoryIdOptionValue) : null;
-            return new OfxCatOptions(startDate, endDate, categoryId);
+            final String format = commandLine.getOptionValue("format", "terminal");
+            if (!format.equalsIgnoreCase("terminal") && !format.equalsIgnoreCase("xlsx")) {
+                throw new CliException("Invalid format: " + format + ". Valid values are: terminal, xlsx");
+            }
+            final String outputFile = commandLine.getOptionValue("output-file");
+            return new OfxCatOptions(startDate, endDate, categoryId, format, outputFile);
         } catch (ParseException e) {
             throw new CliException("Failed to parse options", e);
         }
@@ -484,7 +521,7 @@ public class OfxCat {
     }
 
     // Package-private for testing
-    record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId) {}
+    record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId, String format, String outputFile) {}
 
     // Package-private for testing
     static MigrateOptions getMigrateOptions(String[] args) throws CliException {
