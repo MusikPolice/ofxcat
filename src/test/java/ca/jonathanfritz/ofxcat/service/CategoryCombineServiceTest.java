@@ -48,7 +48,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
         // When: we combine source into target
         CategoryCombineService.CombineResult result =
-                categoryCombineService.combine("BANK_FEES", "BANK FEES", MigrationProgressCallback.NOOP);
+                categoryCombineService.combine("BANK_FEES", "BANK FEES", ProgressCallback.NOOP);
 
         // Then: both transactions were moved
         assertEquals(2, result.transactionsMoved());
@@ -71,7 +71,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         categoryDao.insert(new Category("CORRECT NAME"));
 
         // When: we combine
-        categoryCombineService.combine("OLD_NAME", "CORRECT NAME", MigrationProgressCallback.NOOP);
+        categoryCombineService.combine("OLD_NAME", "CORRECT NAME", ProgressCallback.NOOP);
 
         // Then: the source category no longer exists
         assertFalse(categoryDao.select(source.getId()).isPresent());
@@ -85,7 +85,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
         // When: we combine
         CategoryCombineService.CombineResult result =
-                categoryCombineService.combine("EMPTY_CAT", "TARGET_CAT", MigrationProgressCallback.NOOP);
+                categoryCombineService.combine("EMPTY_CAT", "TARGET_CAT", ProgressCallback.NOOP);
 
         // Then: 0 transactions moved, source is deleted
         assertEquals(0, result.transactionsMoved());
@@ -100,7 +100,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         // When/Then: combining with nonexistent source throws
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> categoryCombineService.combine("NONEXISTENT", "TARGET", MigrationProgressCallback.NOOP));
+                () -> categoryCombineService.combine("NONEXISTENT", "TARGET", ProgressCallback.NOOP));
         assertTrue(ex.getMessage().contains("NONEXISTENT"));
     }
 
@@ -112,7 +112,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
         // When: we combine into a nonexistent target
         CategoryCombineService.CombineResult result =
-                categoryCombineService.combine("DAYCARE", "CHILD CARE", MigrationProgressCallback.NOOP);
+                categoryCombineService.combine("DAYCARE", "CHILD CARE", ProgressCallback.NOOP);
 
         // Then: the target was created and transactions were moved
         assertEquals(1, result.transactionsMoved());
@@ -137,7 +137,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
         // When: we combine
         CategoryCombineService.CombineResult result =
-                categoryCombineService.combine("SRC", "DST", MigrationProgressCallback.NOOP);
+                categoryCombineService.combine("SRC", "DST", ProgressCallback.NOOP);
 
         // Then: targetCreated is false
         assertFalse(result.targetCreated());
@@ -151,7 +151,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         // When/Then: combining a category with itself throws
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> categoryCombineService.combine("SAME", "SAME", MigrationProgressCallback.NOOP));
+                () -> categoryCombineService.combine("SAME", "SAME", ProgressCallback.NOOP));
         assertTrue(ex.getMessage().contains("same"));
     }
 
@@ -164,7 +164,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
 
         // When: we combine
         CategoryCombineService.CombineResult result =
-                categoryCombineService.combine("SRC", "DST", MigrationProgressCallback.NOOP);
+                categoryCombineService.combine("SRC", "DST", ProgressCallback.NOOP);
 
         // Then: result has correct names
         assertEquals("SRC", result.sourceName());
@@ -183,7 +183,7 @@ class CategoryCombineServiceTest extends AbstractDatabaseTest {
         insertTransaction("SOURCE TXN", source);
 
         // When: we combine source into target
-        categoryCombineService.combine("SOURCE", "TARGET", MigrationProgressCallback.NOOP);
+        categoryCombineService.combine("SOURCE", "TARGET", ProgressCallback.NOOP);
 
         // Then: unrelated transaction is unchanged
         CategorizedTransaction unchanged =

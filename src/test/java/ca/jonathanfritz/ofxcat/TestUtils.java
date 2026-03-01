@@ -135,6 +135,23 @@ public class TestUtils {
     }
 
     /**
+     * Creates a transaction with specific balance and amount values, suitable for gap detection tests.
+     */
+    public static Transaction createTransactionWithBalance(
+            Account account, LocalDate date, float amount, float balance) {
+        final Transaction.TransactionType type =
+                amount > 0 ? Transaction.TransactionType.CREDIT : Transaction.TransactionType.DEBIT;
+        return Transaction.newBuilder(UUID.randomUUID().toString())
+                .setAccount(account)
+                .setDate(date)
+                .setAmount(amount)
+                .setType(type)
+                .setDescription(fakeStores[ThreadLocalRandom.current().nextInt(0, fakeStores.length)])
+                .setBalance(balance)
+                .build();
+    }
+
+    /**
      * Returns a random float between -100 and +100 with 2 decimal places of precision
      */
     private static float getRandomAmount() {

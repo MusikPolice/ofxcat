@@ -44,7 +44,7 @@ public class CategoryCombineService {
      * @return a result describing what was done
      * @throws IllegalArgumentException if the source category doesn't exist, or source and target are the same
      */
-    public CombineResult combine(String sourceName, String targetName, MigrationProgressCallback progressCallback) {
+    public CombineResult combine(String sourceName, String targetName, ProgressCallback progressCallback) {
         final Category source = categoryDao
                 .select(sourceName)
                 .orElseThrow(() -> new IllegalArgumentException(

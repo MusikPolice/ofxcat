@@ -401,4 +401,76 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
         // Should return empty list - all transactions have tokens
         Assertions.assertTrue(categorizedTransactionDao.selectWithoutTokens().isEmpty());
     }
+
+    @Test
+    void selectByAccount_returnsEmptyForAccountWithNoTransactions() {
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final List<CategorizedTransaction> result = categorizedTransactionDao.selectByAccount(account);
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void selectByAccount_returnsSortedByDateThenId() {
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category category =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+
+        // Insert in reverse chronological order to verify date sorting
+        final LocalDate later = LocalDate.of(2023, 2, 1);
+        final LocalDate earlier = LocalDate.of(2023, 1, 1);
+        final CategorizedTransaction txnLater = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, later), category))
+                .orElse(null);
+        final CategorizedTransaction txnEarlier = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, earlier), category))
+                .orElse(null);
+
+        final List<CategorizedTransaction> result = categorizedTransactionDao.selectByAccount(account);
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals(txnEarlier.getId(), result.get(0).getId());
+        Assertions.assertEquals(txnLater.getId(), result.get(1).getId());
+    }
+
+    @Test
+    void selectByAccount_sortsSameDayTransactionsByInsertionOrder() {
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category category =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+        final LocalDate sameDay = LocalDate.of(2023, 3, 15);
+
+        final CategorizedTransaction first = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, sameDay), category))
+                .orElse(null);
+        final CategorizedTransaction second = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, sameDay), category))
+                .orElse(null);
+
+        final List<CategorizedTransaction> result = categorizedTransactionDao.selectByAccount(account);
+        Assertions.assertEquals(2, result.size());
+        Assertions.assertEquals(first.getId(), result.get(0).getId());
+        Assertions.assertEquals(second.getId(), result.get(1).getId());
+    }
+
+    @Test
+    void selectByAccount_onlyReturnsTransactionsForSpecifiedAccount() {
+        final Account accountA =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Account accountB =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category category =
+                categoryDao.insert(TestUtils.createRandomCategory()).orElse(null);
+
+        final CategorizedTransaction txnA = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(accountA), category))
+                .orElse(null);
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(accountB), category));
+
+        final List<CategorizedTransaction> result = categorizedTransactionDao.selectByAccount(accountA);
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(txnA.getId(), result.getFirst().getId());
+    }
 }

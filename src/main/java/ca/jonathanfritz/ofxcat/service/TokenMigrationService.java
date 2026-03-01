@@ -57,7 +57,7 @@ public class TokenMigrationService {
      * @return a report describing what was migrated and changed
      */
     public MigrationReport migrateExistingTransactions() {
-        return migrateExistingTransactions(MigrationProgressCallback.NOOP);
+        return migrateExistingTransactions(ProgressCallback.NOOP);
     }
 
     /**
@@ -68,7 +68,7 @@ public class TokenMigrationService {
      * @param progressCallback callback to report progress during migration
      * @return a report describing what was migrated and changed
      */
-    public MigrationReport migrateExistingTransactions(MigrationProgressCallback progressCallback) {
+    public MigrationReport migrateExistingTransactions(ProgressCallback progressCallback) {
         MigrationReport report = new MigrationReport();
 
         // Only load transactions that actually need migration (no tokens yet)
@@ -206,7 +206,7 @@ public class TokenMigrationService {
      * @return a report describing what would be (or was) migrated and changed
      */
     public MigrationReport forceMigration(boolean dryRun) {
-        return forceMigration(dryRun, MigrationProgressCallback.NOOP);
+        return forceMigration(dryRun, ProgressCallback.NOOP);
     }
 
     /**
@@ -216,7 +216,7 @@ public class TokenMigrationService {
      * @param progressCallback callback to report progress during migration
      * @return a report describing what would be (or was) migrated and changed
      */
-    public MigrationReport forceMigration(boolean dryRun, MigrationProgressCallback progressCallback) {
+    public MigrationReport forceMigration(boolean dryRun, ProgressCallback progressCallback) {
         if (dryRun) {
             return simulateMigration(progressCallback);
         }
@@ -237,7 +237,7 @@ public class TokenMigrationService {
     /**
      * Simulates migration to show what would change without making actual changes.
      */
-    private MigrationReport simulateMigration(MigrationProgressCallback progressCallback) {
+    private MigrationReport simulateMigration(ProgressCallback progressCallback) {
         MigrationReport report = new MigrationReport();
 
         // Load all transactions (regardless of token status)

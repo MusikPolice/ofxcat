@@ -369,6 +369,24 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Returns all transactions for the given account, sorted by date then insertion order.
+     * Used for gap detection.
+     *
+     * @param account the account whose transactions to return
+     * @return list of transactions sorted by date ASC, id ASC
+     */
+    public List<CategorizedTransaction> selectByAccount(Account account) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Attempting to get all CategorizedTransactions for Account {}", account);
+            final String query = "SELECT * FROM CategorizedTransaction WHERE account_id = ? ORDER BY date ASC, id ASC";
+            return t.query(query, ps -> ps.setLong(1, account.getId()), categorizedTransactionDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to get CategorizedTransactions for Account {}", account, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Inserts the specified {@link CategorizedTransaction} into the database
      * @param categorizedTransactionToInsert the CategorizedTransaction to insert
      * @return an {@link Optional<CategorizedTransaction>} containing the inserted CategorizedTransaction, or
