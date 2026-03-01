@@ -230,8 +230,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Jan-22",
                                 CURRENCY_FORMATTER.format(expected.get(0).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(0).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(0).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(0).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(1));
 
         Assertions.assertEquals(
@@ -241,8 +240,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Feb-22",
                                 CURRENCY_FORMATTER.format(expected.get(1).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(1).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(1).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(1).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(2));
 
         Assertions.assertEquals(
@@ -252,8 +250,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Mar-22",
                                 CURRENCY_FORMATTER.format(expected.get(2).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(2).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(2).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(2).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(3));
 
         Assertions.assertEquals(
@@ -263,8 +260,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Apr-22",
                                 CURRENCY_FORMATTER.format(expected.get(3).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(3).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(3).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(3).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(4));
 
         Assertions.assertEquals(
@@ -274,8 +270,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "May-22",
                                 CURRENCY_FORMATTER.format(expected.get(4).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(4).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(4).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(4).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(5));
 
         Assertions.assertEquals(
@@ -285,8 +280,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Jun-22",
                                 CURRENCY_FORMATTER.format(expected.get(5).get(TRANSFER)),
                                 CURRENCY_FORMATTER.format(expected.get(5).get(UNKNOWN)),
-                                CURRENCY_FORMATTER.format(
-                                        expected.get(5).values().stream().reduce(0f, Float::sum)))),
+                                CURRENCY_FORMATTER.format(expected.get(5).get(UNKNOWN)))),
                 spyCli.getCapturedLines().get(6));
 
         // stats are tested in a dedicated method with fixed values
@@ -321,6 +315,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         Assertions.assertEquals(
                 "MONTH, TRANSFER, UNKNOWN, TOTAL", spyCli.getCapturedLines().get(0));
 
+        // TOTAL excludes TRANSFER: each row's TOTAL = UNKNOWN amount only
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
@@ -328,7 +323,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Jan-22",
                                 CURRENCY_FORMATTER.format(2f),
                                 CURRENCY_FORMATTER.format(-3f),
-                                CURRENCY_FORMATTER.format(-1f))),
+                                CURRENCY_FORMATTER.format(-3f))),
                 spyCli.getCapturedLines().get(1));
 
         Assertions.assertEquals(
@@ -338,7 +333,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Feb-22",
                                 CURRENCY_FORMATTER.format(4f),
                                 CURRENCY_FORMATTER.format(-6f),
-                                CURRENCY_FORMATTER.format(-2f))),
+                                CURRENCY_FORMATTER.format(-6f))),
                 spyCli.getCapturedLines().get(2));
 
         Assertions.assertEquals(
@@ -348,7 +343,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Mar-22",
                                 CURRENCY_FORMATTER.format(6f),
                                 CURRENCY_FORMATTER.format(-9f),
-                                CURRENCY_FORMATTER.format(-3f))),
+                                CURRENCY_FORMATTER.format(-9f))),
                 spyCli.getCapturedLines().get(3));
 
         Assertions.assertEquals(
@@ -358,10 +353,10 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "Apr-22",
                                 CURRENCY_FORMATTER.format(8f),
                                 CURRENCY_FORMATTER.format(-12f),
-                                CURRENCY_FORMATTER.format(-4f))),
+                                CURRENCY_FORMATTER.format(-12f))),
                 spyCli.getCapturedLines().get(4));
 
-        // t3m = average of last 3 months: TRANSFER (4+6+8)/3=6, UNKNOWN (-6-9-12)/3=-9; TOTAL 6+(-9)=-3
+        // t3m = average of last 3 months: TRANSFER (4+6+8)/3=6, UNKNOWN (-6-9-12)/3=-9; TOTAL = UNKNOWN t3m = -9
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
@@ -369,11 +364,12 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "t3m",
                                 CURRENCY_FORMATTER.format(6f),
                                 CURRENCY_FORMATTER.format(-9f),
-                                CURRENCY_FORMATTER.format(-3f))),
+                                CURRENCY_FORMATTER.format(-9f))),
                 spyCli.getCapturedLines().get(5));
 
         // t6m suppressed (only 4 months in report)
 
+        // avg: TRANSFER=(2+4+6+8)/4=5, UNKNOWN=(-3-6-9-12)/4=-7.5; TOTAL = UNKNOWN avg = -7.5
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
@@ -381,9 +377,10 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "avg",
                                 CURRENCY_FORMATTER.format(5f),
                                 CURRENCY_FORMATTER.format(-7.5f),
-                                CURRENCY_FORMATTER.format(-2.5f))),
+                                CURRENCY_FORMATTER.format(-7.5f))),
                 spyCli.getCapturedLines().get(6));
 
+        // total: TRANSFER=20, UNKNOWN=-30; TOTAL = UNKNOWN total = -30
         Assertions.assertEquals(
                 String.join(
                         CSV_DELIMITER,
@@ -391,7 +388,7 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                                 "total",
                                 CURRENCY_FORMATTER.format(20f),
                                 CURRENCY_FORMATTER.format(-30f),
-                                CURRENCY_FORMATTER.format(-10f))),
+                                CURRENCY_FORMATTER.format(-30f))),
                 spyCli.getCapturedLines().get(7));
     }
 
@@ -415,26 +412,26 @@ class ReportingServiceTest extends AbstractDatabaseTest {
                 new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
         reportingService.reportTransactionsMonthly(start, end);
 
-        // matrix should show 0.00 for Feb; TOTAL column equals the single TRANSFER column
+        // matrix should show 0.00 for Feb; TOTAL excludes TRANSFER so it is always 0.00 here
         final List<String> lines = spyCli.getCapturedLines();
         Assertions.assertEquals("Feb-22" + CSV_DELIMITER + "0.00" + CSV_DELIMITER + "0.00", lines.get(2));
 
         // stats are over [10, 0, 20] — three months including the zero
         // 3 months: t3m shown (window = all 3 months), t6m suppressed → 3 stat rows (t3m, avg, total)
-        // t3m = (10+0+20)/3 = 10, avg = (10+0+20)/3 = 10, total = 30; TOTAL column mirrors TRANSFER
+        // t3m = (10+0+20)/3 = 10, avg = (10+0+20)/3 = 10, total = 30; TOTAL = 0.00 (TRANSFER excluded)
         Assertions.assertEquals(7, lines.size()); // 1 header + 3 months + 3 stats
         Assertions.assertEquals(
-                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f),
+                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(4));
         Assertions.assertEquals(
-                "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f),
+                "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(5));
         Assertions.assertEquals(
                 "total"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(30f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(30f),
+                        + CURRENCY_FORMATTER.format(0f),
                 lines.get(6));
     }
 
@@ -461,25 +458,25 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         // 1 header + 6 months + 4 stats (t3m, t6m, avg, total) = 11 lines
         Assertions.assertEquals(11, lines.size());
 
-        // t3m = average of last 3 months: (40+50+60)/3 = 50; TOTAL mirrors single TRANSFER column
+        // t3m = average of last 3 months: (40+50+60)/3 = 50; TOTAL = 0.00 (TRANSFER excluded)
         Assertions.assertEquals(
-                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(50f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(50f),
+                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(50f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(7));
-        // t6m = average of all 6 months: (10+20+30+40+50+60)/6 = 35
+        // t6m = average of all 6 months: (10+20+30+40+50+60)/6 = 35; TOTAL = 0.00
         Assertions.assertEquals(
-                "t6m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f),
+                "t6m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(8));
-        // avg = (10+20+30+40+50+60)/6 = 35
+        // avg = (10+20+30+40+50+60)/6 = 35; TOTAL = 0.00
         Assertions.assertEquals(
-                "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f),
+                "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(35f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(9));
-        // total = 210
+        // total = 210; TOTAL = 0.00
         Assertions.assertEquals(
                 "total"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(210f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(210f),
+                        + CURRENCY_FORMATTER.format(0f),
                 lines.get(10));
     }
 
@@ -504,19 +501,16 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         final List<String> lines = spyCli.getCapturedLines();
         // 1 header + 2 months + 2 stats (avg + total only) = 5 lines
         Assertions.assertEquals(5, lines.size());
+        // TOTAL = 0.00: only TRANSFER transactions, which are excluded from TOTAL
         Assertions.assertEquals(
-                "avg"
-                        + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(150f)
-                        + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(150f),
+                "avg" + CSV_DELIMITER + CURRENCY_FORMATTER.format(150f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(3));
         Assertions.assertEquals(
                 "total"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(300f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(300f),
+                        + CURRENCY_FORMATTER.format(0f),
                 lines.get(4));
     }
 
@@ -541,13 +535,13 @@ class ReportingServiceTest extends AbstractDatabaseTest {
 
         final List<String> lines = spyCli.getCapturedLines();
         // months: [60, 0, 0, 30, 0, 0]
-        // t3m = last 3 months (Apr, May, Jun) = (30+0+0)/3 = 10; TOTAL mirrors single TRANSFER column
+        // t3m = last 3 months (Apr, May, Jun) = (30+0+0)/3 = 10; TOTAL = 0.00 (TRANSFER excluded)
         Assertions.assertEquals(
-                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f),
+                "t3m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(10f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(7));
-        // t6m = all 6 months = (60+0+0+30+0+0)/6 = 15
+        // t6m = all 6 months = (60+0+0+30+0+0)/6 = 15; TOTAL = 0.00
         Assertions.assertEquals(
-                "t6m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(15f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(15f),
+                "t6m" + CSV_DELIMITER + CURRENCY_FORMATTER.format(15f) + CSV_DELIMITER + CURRENCY_FORMATTER.format(0f),
                 lines.get(8));
     }
 
@@ -570,13 +564,13 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         reportingService.reportTransactionsMonthly(start, end);
 
         // only the Jan-20 transaction (after startDate) should appear; Jan-10 is outside the range
-        // TOTAL column equals the single TRANSFER column value
+        // TOTAL = 0.00 because only TRANSFER transactions exist
         Assertions.assertEquals(
                 "Jan-22"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(7f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(7f),
+                        + CURRENCY_FORMATTER.format(0f),
                 spyCli.getCapturedLines().get(1));
     }
 
@@ -599,13 +593,13 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         reportingService.reportTransactionsMonthly(start, end);
 
         // only the Jan-10 transaction (before endDate) should appear; Jan-20 is outside the range
-        // TOTAL column equals the single TRANSFER column value
+        // TOTAL = 0.00 because only TRANSFER transactions exist
         Assertions.assertEquals(
                 "Jan-22"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(5f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(5f),
+                        + CURRENCY_FORMATTER.format(0f),
                 spyCli.getCapturedLines().get(1));
     }
 
@@ -637,21 +631,59 @@ class ReportingServiceTest extends AbstractDatabaseTest {
         final List<String> lines = spyCli.getCapturedLines();
         // 2 months: trailing rows suppressed → avg + total only → 1 header + 2 months + 2 stats = 5 lines
         Assertions.assertEquals(5, lines.size());
-        // TOTAL column equals the single TRANSFER column value for each month
+        // TOTAL = 0.00 for each month because only TRANSFER transactions exist
         Assertions.assertEquals(
                 "Jan-22"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(3f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(3f),
+                        + CURRENCY_FORMATTER.format(0f),
                 lines.get(1));
         Assertions.assertEquals(
                 "Feb-22"
                         + CSV_DELIMITER
                         + CURRENCY_FORMATTER.format(5f)
                         + CSV_DELIMITER
-                        + CURRENCY_FORMATTER.format(5f),
+                        + CURRENCY_FORMATTER.format(0f),
                 lines.get(2));
+    }
+
+    @Test
+    public void reportTransactionsMonthlyTotalExcludesTransferTest() {
+        // TOTAL should reflect only non-TRANSFER spending. A $500 TRANSFER + $100 GROCERIES month
+        // should produce TOTAL = -100.00, not -600.00.
+        final LocalDate start = LocalDate.of(2022, 1, 1);
+        final LocalDate end = LocalDate.of(2022, 1, 31);
+
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        final Category groceries = categoryDao.insert(new Category("GROCERIES")).orElse(null);
+        final LocalDate txDate = LocalDate.of(2022, 1, 15);
+
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, txDate, -500f), TRANSFER));
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, txDate, -100f), groceries));
+
+        final SpyCli spyCli = new SpyCli();
+        new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli)
+                .reportTransactionsMonthly(start, end);
+
+        final List<String> lines = spyCli.getCapturedLines();
+        // header: GROCERIES before TRANSFER alphabetically
+        Assertions.assertEquals(
+                "MONTH" + CSV_DELIMITER + "GROCERIES" + CSV_DELIMITER + "TRANSFER" + CSV_DELIMITER + "TOTAL",
+                lines.get(0));
+        // Jan-22: GROCERIES=-100, TRANSFER=-500, TOTAL=-100 (TRANSFER excluded)
+        Assertions.assertEquals(
+                "Jan-22"
+                        + CSV_DELIMITER
+                        + CURRENCY_FORMATTER.format(-100f)
+                        + CSV_DELIMITER
+                        + CURRENCY_FORMATTER.format(-500f)
+                        + CSV_DELIMITER
+                        + CURRENCY_FORMATTER.format(-100f),
+                lines.get(1));
     }
 
     @Test

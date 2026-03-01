@@ -79,8 +79,11 @@ public class ReportingService {
                         .collect(Collectors.joining(CSV_DELIMITER)));
             }
 
-            // TOTAL column: sum of all category amounts for this month
-            final float monthTotal = entry.getValue().values().stream().reduce(0f, Float::sum);
+            // TOTAL column: sum of non-TRANSFER category amounts for this month
+            final float monthTotal = entry.getValue().entrySet().stream()
+                    .filter(e -> !Category.TRANSFER.equals(e.getKey()))
+                    .map(Map.Entry::getValue)
+                    .reduce(0f, Float::sum);
             sb.append(CSV_DELIMITER).append(CURRENCY_FORMATTER.format(monthTotal));
             lines.add(sb.toString());
         }
@@ -146,7 +149,10 @@ public class ReportingService {
                     ws.value(row, col + 1, amount);
                     ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
                 }
-                final float monthTotal = entry.getValue().values().stream().reduce(0f, Float::sum);
+                final float monthTotal = entry.getValue().entrySet().stream()
+                        .filter(e -> !Category.TRANSFER.equals(e.getKey()))
+                        .map(Map.Entry::getValue)
+                        .reduce(0f, Float::sum);
                 ws.value(row, totalCol, monthTotal);
                 ws.style(row, totalCol).format(XLSX_CURRENCY_FORMAT).set();
                 row++;
@@ -185,9 +191,12 @@ public class ReportingService {
         ws.style(row, 0).bold().set();
         float rowTotal = 0f;
         for (int col = 0; col < data.sortedCategories.size(); col++) {
-            final Stats stats = data.categoryStats.get(data.sortedCategories.get(col));
+            final Category cat = data.sortedCategories.get(col);
+            final Stats stats = data.categoryStats.get(cat);
             final float value = stats == null ? 0f : func.apply(stats);
-            rowTotal += value;
+            if (!Category.TRANSFER.equals(cat)) {
+                rowTotal += value;
+            }
             ws.value(row, col + 1, value);
             ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
         }
@@ -279,6 +288,7 @@ public class ReportingService {
             List<Category> sortedCategories,
             Map<Category, Stats> categoryStats) {
         final float rowTotal = (float) sortedCategories.stream()
+                .filter(c -> !Category.TRANSFER.equals(c))
                 .map(categoryStats::get)
                 .mapToDouble(stats -> stats == null ? 0f : func.apply(stats))
                 .sum();
