@@ -170,6 +170,42 @@ calculations, consistent with how zero-spend months are handled elsewhere.
 
 ---
 
+## Gap Closure: Importing Missing Transactions
+
+Gaps are not stored in the database — they are computed dynamically each time `detectGaps()` runs
+by walking the transaction record and checking the balance invariant. This means **gap closure
+requires no special logic**: importing the OFX file that contains the missing transactions is
+sufficient. On the next call to `detectGaps()`, the invariant is satisfied and the gap does not
+appear.
+
+### Why the Math Works
+
+If the missing OFX file accurately represents the account during the gap period, its ending balance
+is consistent with the state of the surrounding imports. The balance invariant holds at every import
+boundary (see *Why the Invariant Holds Across Multiple Imports*), so the gap disappears naturally.
+
+### Out-of-Order Imports
+
+Importing a fill-in file after later files have already been imported also works correctly. The gap
+detection query sorts by `(date, id)` with date as the primary key, so fill-in transactions slot
+into their correct date position regardless of their database IDs or the order in which files were
+imported.
+
+### Known Limitation: Same-Day Transactions Across Import Boundaries
+
+If a single calendar day contains transactions from both an original import and a fill-in import,
+sorting by `(date, id)` may not reproduce the correct intra-day sequence. Fill-in transactions
+receive higher IDs and sort after the originals for the same date, even if the fill-in OFX file
+placed them earlier in the day. Because the two sets of same-day transactions were anchored to
+different OFX ending balances, the invariant check may report a spurious small gap within that day
+after the fill-in import.
+
+This does not affect month-level spending totals and will not manifest as a false gap at the month
+boundary. It is a cosmetic artefact of the limitation that OFX files carry only a date, not a time
+of day. It should not be mistaken for a real gap.
+
+---
+
 ## Edge Cases
 
 | Case | Behaviour |
