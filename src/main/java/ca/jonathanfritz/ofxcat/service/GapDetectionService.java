@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -104,6 +105,19 @@ public class GapDetectionService {
         }
 
         return allGaps;
+    }
+
+    /**
+     * Returns accounts for which gap detection cannot be performed because they have fewer than two
+     * transactions. These accounts should be listed as INDETERMINATE in the gaps report.
+     *
+     * @return list of accounts with fewer than two transactions
+     */
+    public List<Account> indeterminateAccounts() {
+        return accountDao.select().stream()
+                .filter(account ->
+                        categorizedTransactionDao.selectByAccount(account).size() < 2)
+                .collect(Collectors.toList());
     }
 
     /**

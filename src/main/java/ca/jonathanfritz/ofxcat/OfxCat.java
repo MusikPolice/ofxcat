@@ -4,6 +4,7 @@ import ca.jonathanfritz.ofxcat.cli.CLI;
 import ca.jonathanfritz.ofxcat.cli.CLIModule;
 import ca.jonathanfritz.ofxcat.config.AppConfig;
 import ca.jonathanfritz.ofxcat.config.AppConfigLoader;
+import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatastoreModule;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.exception.OfxCatException;
@@ -12,6 +13,7 @@ import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesLoader;
 import ca.jonathanfritz.ofxcat.matching.MatchingModule;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
+import ca.jonathanfritz.ofxcat.service.GapDetectionService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
@@ -50,6 +52,7 @@ public class OfxCat {
     private final ReportingService reportingService;
     private final TokenMigrationService tokenMigrationService;
     private final CategoryCombineService categoryCombineService;
+    private final GapDetectionService gapDetectionService;
     private final PathUtils pathUtils;
     private final CLI cli;
     private final KeywordRulesConfig keywordRulesConfig;
@@ -64,6 +67,7 @@ public class OfxCat {
             ReportingService reportingService,
             TokenMigrationService tokenMigrationService,
             CategoryCombineService categoryCombineService,
+            GapDetectionService gapDetectionService,
             PathUtils pathUtils,
             CLI cli,
             KeywordRulesConfig keywordRulesConfig,
@@ -73,6 +77,7 @@ public class OfxCat {
         this.reportingService = reportingService;
         this.tokenMigrationService = tokenMigrationService;
         this.categoryCombineService = categoryCombineService;
+        this.gapDetectionService = gapDetectionService;
         this.pathUtils = pathUtils;
         this.cli = cli;
         this.keywordRulesConfig = keywordRulesConfig;
@@ -199,6 +204,33 @@ public class OfxCat {
         }
     }
 
+    private void reportGaps() {
+        List<GapDetectionService.Gap> gaps =
+                gapDetectionService.detectGaps((current, total) -> cli.updateProgressBar("Scanning", current, total));
+        cli.finishProgressBar();
+
+        List<Account> indeterminate = gapDetectionService.indeterminateAccounts();
+
+        if (gaps.isEmpty() && indeterminate.isEmpty()) {
+            cli.println("No gaps detected.");
+            return;
+        }
+
+        cli.println("ACCOUNT, GAP FROM, GAP TO, MISSING AMOUNT");
+        for (GapDetectionService.Gap gap : gaps) {
+            cli.println(String.format(
+                    "%s, %s, %s, %.2f",
+                    gap.account().getName(), gap.lastGoodDate(), gap.firstDateAfterGap(), gap.missingAmount()));
+        }
+        for (Account account : indeterminate) {
+            cli.println(String.format("%s, INDETERMINATE, INDETERMINATE, INDETERMINATE", account.getName()));
+        }
+        if (!indeterminate.isEmpty()) {
+            cli.println(
+                    "Note: INDETERMINATE accounts have fewer than two transactions; gap detection requires at least two.");
+        }
+    }
+
     private void reportAccounts() {
         reportingService.reportAccounts();
     }
@@ -319,6 +351,11 @@ public class OfxCat {
                 "   Re-runs token migration on all transactions, applying current keyword rules.",
                 "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
                 "   --dry-run: Optional. Show what would change without making actual changes.",
+                "ofxcat get gaps",
+                "   Prints a list of detected gaps in the transaction record in CSV format.",
+                "   A gap exists when the balance invariant between consecutive transactions is",
+                "   violated, indicating that one or more transactions are missing from the record.",
+                "   Accounts with fewer than two transactions are listed as INDETERMINATE.",
                 "ofxcat combine categories --source=SOURCE --target=TARGET",
                 "   Moves all transactions from the source category to the target category,",
                 "   then deletes the source category. Useful for merging duplicate categories.",
@@ -367,6 +404,7 @@ public class OfxCat {
                         case CATEGORIES ->
                         // TODO: need a way to edit categories and category descriptions
                         ofxCat.reportCategories();
+                        case GAPS -> ofxCat.reportGaps();
                     }
                     break;
                 case MIGRATE:
@@ -439,7 +477,8 @@ public class OfxCat {
     enum Concern {
         TRANSACTIONS,
         ACCOUNTS,
-        CATEGORIES
+        CATEGORIES,
+        GAPS
     }
 
     // Package-private for testing

@@ -7,6 +7,7 @@ import ca.jonathanfritz.ofxcat.config.AppConfig;
 import ca.jonathanfritz.ofxcat.exception.CliException;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
+import ca.jonathanfritz.ofxcat.service.GapDetectionService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
@@ -51,6 +52,7 @@ class OfxCatImportValidationTest {
                 new StubReportingService(),
                 new StubTokenMigrationService(),
                 new StubCategoryCombineService(),
+                new StubGapDetectionService(),
                 testPathUtils,
                 new StubCLI(),
                 KeywordRulesConfig.empty(),
@@ -377,6 +379,12 @@ class OfxCatImportValidationTest {
     private static class StubCategoryCombineService extends CategoryCombineService {
         StubCategoryCombineService() {
             super(null, null, null);
+        }
+    }
+
+    private static class StubGapDetectionService extends GapDetectionService {
+        StubGapDetectionService() {
+            super(null, null);
         }
     }
 

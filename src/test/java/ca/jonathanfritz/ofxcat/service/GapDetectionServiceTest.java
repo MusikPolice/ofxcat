@@ -221,6 +221,26 @@ class GapDetectionServiceTest extends AbstractDatabaseTest {
         assertTrue(result.isEmpty());
     }
 
+    // --- indeterminateAccounts ---
+
+    @Test
+    void indeterminateAccountsReturnsAccountsWithFewerThanTwoTransactions() {
+        Account zeroTxn = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        Account oneTxn = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        Account twoTxn = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+
+        insert(oneTxn, LocalDate.of(2023, 1, 1), -50f, 950f);
+        insert(twoTxn, LocalDate.of(2023, 1, 1), -50f, 950f);
+        insert(twoTxn, LocalDate.of(2023, 2, 1), -30f, 920f);
+
+        List<Account> result = gapDetectionService.indeterminateAccounts();
+
+        assertEquals(2, result.size());
+        assertTrue(result.stream().anyMatch(a -> a.getId().equals(zeroTxn.getId())));
+        assertTrue(result.stream().anyMatch(a -> a.getId().equals(oneTxn.getId())));
+        assertFalse(result.stream().anyMatch(a -> a.getId().equals(twoTxn.getId())));
+    }
+
     @Test
     void fullyMissingMonthsReturnsEmptyWhenNoGaps() {
         Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
