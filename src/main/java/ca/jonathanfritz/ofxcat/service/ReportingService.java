@@ -60,7 +60,9 @@ public class ReportingService {
         final List<String> lines = new ArrayList<>();
         final String categoryHeader =
                 data.sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER));
-        lines.add(categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader);
+        lines.add((categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader)
+                + CSV_DELIMITER
+                + "TOTAL");
 
         final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : data.dateSpend.entrySet()) {
@@ -76,6 +78,10 @@ public class ReportingService {
                         .map(CURRENCY_FORMATTER::format)
                         .collect(Collectors.joining(CSV_DELIMITER)));
             }
+
+            // TOTAL column: sum of all category amounts for this month
+            final float monthTotal = entry.getValue().values().stream().reduce(0f, Float::sum);
+            sb.append(CSV_DELIMITER).append(CURRENCY_FORMATTER.format(monthTotal));
             lines.add(sb.toString());
         }
 
@@ -119,13 +125,16 @@ public class ReportingService {
                 Worksheet ws = wb.newWorksheet("Transactions")) {
             ws.freezePane(0, 1);
 
-            // header row: bold "MONTH" + one bold column per category
+            // header row: bold "MONTH" + one bold column per category + bold "TOTAL"
             ws.value(0, 0, "MONTH");
             ws.style(0, 0).bold().set();
             for (int col = 0; col < data.sortedCategories.size(); col++) {
                 ws.value(0, col + 1, data.sortedCategories.get(col).getName());
                 ws.style(0, col + 1).bold().set();
             }
+            final int totalCol = data.sortedCategories.size() + 1;
+            ws.value(0, totalCol, "TOTAL");
+            ws.style(0, totalCol).bold().set();
 
             // data rows: one row per month
             final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
@@ -137,6 +146,9 @@ public class ReportingService {
                     ws.value(row, col + 1, amount);
                     ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
                 }
+                final float monthTotal = entry.getValue().values().stream().reduce(0f, Float::sum);
+                ws.value(row, totalCol, monthTotal);
+                ws.style(row, totalCol).format(XLSX_CURRENCY_FORMAT).set();
                 row++;
             }
 
@@ -153,13 +165,15 @@ public class ReportingService {
             row++;
             writeXlsxStatsRow(ws, row, "total", stats -> stats.total, data);
 
-            // column widths: 10 chars for MONTH, at least 12 for each category (or its name length + padding)
+            // column widths: 10 chars for MONTH, at least 12 for each category (or its name length + padding), 10 for
+            // TOTAL
             ws.width(0, 10);
             for (int col = 0; col < data.sortedCategories.size(); col++) {
                 ws.width(
                         col + 1,
                         Math.max(12, data.sortedCategories.get(col).getName().length() + 2));
             }
+            ws.width(totalCol, 12);
         }
 
         return outputFile;
@@ -169,12 +183,17 @@ public class ReportingService {
             Worksheet ws, int row, String label, Function<Stats, Float> func, MonthlyReportData data) {
         ws.value(row, 0, label);
         ws.style(row, 0).bold().set();
+        float rowTotal = 0f;
         for (int col = 0; col < data.sortedCategories.size(); col++) {
             final Stats stats = data.categoryStats.get(data.sortedCategories.get(col));
             final float value = stats == null ? 0f : func.apply(stats);
+            rowTotal += value;
             ws.value(row, col + 1, value);
             ws.style(row, col + 1).format(XLSX_CURRENCY_FORMAT).set();
         }
+        final int totalCol = data.sortedCategories.size() + 1;
+        ws.value(row, totalCol, rowTotal);
+        ws.style(row, totalCol).format(XLSX_CURRENCY_FORMAT).set();
     }
 
     private LocalDate validateAndResolveEndDate(final LocalDate startDate, final LocalDate endDate) {
@@ -259,8 +278,12 @@ public class ReportingService {
             Function<Stats, Float> func,
             List<Category> sortedCategories,
             Map<Category, Stats> categoryStats) {
+        final float rowTotal = (float) sortedCategories.stream()
+                .map(categoryStats::get)
+                .mapToDouble(stats -> stats == null ? 0f : func.apply(stats))
+                .sum();
         if (sortedCategories.isEmpty()) {
-            return name;
+            return name + CSV_DELIMITER + CURRENCY_FORMATTER.format(rowTotal);
         }
         return name
                 + CSV_DELIMITER
@@ -272,7 +295,9 @@ public class ReportingService {
                             }
                             return CURRENCY_FORMATTER.format(func.apply(stats));
                         })
-                        .collect(Collectors.joining(CSV_DELIMITER));
+                        .collect(Collectors.joining(CSV_DELIMITER))
+                + CSV_DELIMITER
+                + CURRENCY_FORMATTER.format(rowTotal);
     }
 
     public void reportTransactionsInCategory(
