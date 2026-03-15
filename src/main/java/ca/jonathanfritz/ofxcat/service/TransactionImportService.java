@@ -131,7 +131,20 @@ public class TransactionImportService {
                     .flatMap((Function<List<OfxTransaction>, Stream<OfxTransaction>>) Collection::stream)
                     .map(OfxTransaction::getAmount)
                     .reduce(0F, Float::sum, Float::sum);
-            final Float initialBalance = ofxExport.getBalance().getAmount() - totalTransactionAmount;
+
+            // Use AVAILBAL as the balance anchor for bank accounts (CHECKING, SAVINGS) when present.
+            // AVAILBAL reflects the cleared balance without deductions for pending outgoing payments,
+            // which are committed but not yet settled and therefore absent from STMTTRN. Using
+            // LEDGERBAL for these accounts produces running balances that are too low by the pending
+            // amount, creating false gaps at subsequent import boundaries.
+            // For credit cards and credit lines, AVAILBAL means available credit (limit − owed) and
+            // must not be used as a balance anchor; LEDGERBAL is used instead.
+            final String accountType = ofxExport.getAccount().getAccountType();
+            final boolean isBankAccount = "CHECKING".equals(accountType) || "SAVINGS".equals(accountType);
+            final float anchor = ofxExport.getAvailableBalance() != null && isBankAccount
+                    ? ofxExport.getAvailableBalance().getAmount()
+                    : ofxExport.getBalance().getAmount();
+            final Float initialBalance = anchor - totalTransactionAmount;
             logger.debug("Initial balance for Account {} was {}", account.getAccountNumber(), initialBalance);
 
             // sorts transactions by date, transforms them into our internal representation, sets the resulting account

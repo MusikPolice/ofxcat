@@ -129,6 +129,18 @@ class GapDetectionServiceTest extends AbstractDatabaseTest {
         assertTrue(gapDetectionService.detectGaps(account).isEmpty());
     }
 
+    @Test
+    void sameDayTransactionsWithBalanceDiscrepancyProducesNoGap() {
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElse(null);
+        LocalDate sameDay = LocalDate.of(2023, 1, 15);
+        // expected balance[2] = 950 + (-30) = 920, but stored as 800 — simulates the import-ordering
+        // artifact that occurs when two OFX exports overlap on this date and list transactions in
+        // different sequences. Same-day pairs are excluded from the invariant check.
+        insert(account, sameDay, -50f, 950f);
+        insert(account, sameDay, -30f, 800f);
+        assertTrue(gapDetectionService.detectGaps(account).isEmpty());
+    }
+
     // --- detectGaps() / detectGaps(ProgressCallback) ---
 
     @Test

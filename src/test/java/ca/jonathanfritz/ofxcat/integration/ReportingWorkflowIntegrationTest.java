@@ -12,6 +12,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Account;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
+import ca.jonathanfritz.ofxcat.service.GapDetectionService;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,11 +32,13 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CategorizedTransactionDao categorizedTransactionDao;
+    private final GapDetectionService gapDetectionService;
 
     ReportingWorkflowIntegrationTest() {
         this.accountDao = injector.getInstance(AccountDao.class);
         this.categoryDao = injector.getInstance(CategoryDao.class);
         this.categorizedTransactionDao = injector.getInstance(CategorizedTransactionDao.class);
+        this.gapDetectionService = injector.getInstance(GapDetectionService.class);
     }
 
     /**
@@ -69,7 +72,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         // Generate report
         SpyCli spyCli = new SpyCli();
         ReportingService reportingService =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli, gapDetectionService);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
@@ -129,7 +132,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         // Generate account report
         SpyCli spyCli = new SpyCli();
         ReportingService reportingService =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli, gapDetectionService);
 
         reportingService.reportAccounts();
 
@@ -163,7 +166,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         // Generate category report
         SpyCli spyCli = new SpyCli();
         ReportingService reportingService =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli, gapDetectionService);
 
         reportingService.reportCategories();
 
@@ -201,7 +204,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         // Generate report for Feb-Mar only
         SpyCli spyCli = new SpyCli();
         ReportingService reportingService =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli, gapDetectionService);
 
         LocalDate startDate = LocalDate.of(2024, 2, 1);
         LocalDate endDate = LocalDate.of(2024, 3, 31);
@@ -226,7 +229,7 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
         // Generate report for a period with no transactions
         SpyCli spyCli = new SpyCli();
         ReportingService reportingService =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli);
+                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, spyCli, gapDetectionService);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);
@@ -261,8 +264,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 1: Generate account report
         SpyCli accountReportCli = new SpyCli();
-        ReportingService reportingService1 =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, accountReportCli);
+        ReportingService reportingService1 = new ReportingService(
+                categorizedTransactionDao, accountDao, categoryDao, accountReportCli, gapDetectionService);
         reportingService1.reportAccounts();
 
         List<String> accountReport = accountReportCli.getCapturedLines();
@@ -270,8 +273,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 2: Generate category report
         SpyCli categoryReportCli = new SpyCli();
-        ReportingService reportingService2 =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, categoryReportCli);
+        ReportingService reportingService2 = new ReportingService(
+                categorizedTransactionDao, accountDao, categoryDao, categoryReportCli, gapDetectionService);
         reportingService2.reportCategories();
 
         List<String> categoryReport = categoryReportCli.getCapturedLines();
@@ -279,8 +282,8 @@ class ReportingWorkflowIntegrationTest extends AbstractDatabaseTest {
 
         // Step 3: Generate transaction report
         SpyCli transactionReportCli = new SpyCli();
-        ReportingService reportingService3 =
-                new ReportingService(categorizedTransactionDao, accountDao, categoryDao, transactionReportCli);
+        ReportingService reportingService3 = new ReportingService(
+                categorizedTransactionDao, accountDao, categoryDao, transactionReportCli, gapDetectionService);
 
         LocalDate startDate = LocalDate.of(2024, 1, 1);
         LocalDate endDate = LocalDate.of(2024, 1, 31);

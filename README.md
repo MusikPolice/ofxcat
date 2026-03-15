@@ -82,6 +82,11 @@ t6m,-1146.17,-793.41,-1297.58,-82.88,-236.59,-294.65,-589.09,-491.26,-496.60,-54
 avg,-1283.70,-840.13,-1362.46,-105.55,-248.85,-327.49,-532.68,-476.30,-460.70,-5637.85
 total,-10269.58,-6721.07,-10899.70,-844.37,-1990.76,-2619.91,-4261.47,-3810.38,-3685.58,-45102.82
 ```
+The report includes a `GAP` column as the rightmost column (after `TOTAL`). When `ofxcat` detects that transactions are missing from the database (because an OFX export window has rolled past without being captured), it shows the net missing amount in the `GAP` column for the affected month. Months where the entire month's data is absent show the string `GAP` as a marker. A footnote is added to the report when gap data is present:
+```
+Note: GAP values are net balance differences and may understate actual missing activity if the gap includes both credits and debits.
+```
+
 The report is printed as CSV to the terminal by default. To export directly to Excel, use the `--format xlsx` flag:
 ```bash
 java -jar ofxcat-<hash>.jar get transactions --start-date=2021-11-01 --end-date=2022-06-30 --format=xlsx
@@ -90,6 +95,28 @@ This writes the report to `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx`
 ```bash
 java -jar ofxcat-<hash>.jar get transactions --start-date=2021-11-01 --end-date=2022-06-30 --format=xlsx --output-file=~/Desktop/spending-report.xlsx
 ```
+
+### Detecting Data Gaps
+
+OFX files contain only the transactions visible in your bank's online history at the time of export (typically a rolling 60–90 day window). If you forget to export before old transactions scroll out of the window, those transactions are permanently lost. `ofxcat` can detect these holes by checking a balance invariant between consecutive transactions:
+
+```bash
+java -jar ofxcat-<hash>.jar get gaps
+```
+
+Example output:
+```
+ACCOUNT, GAP FROM, GAP TO, MISSING AMOUNT
+Chequing, 2022-01-15, 2022-02-01, -342.50
+Savings, INDETERMINATE, INDETERMINATE, INDETERMINATE
+```
+
+- Each row reports the date of the last known transaction before the gap (`GAP FROM`), the date of the first transaction after it (`GAP TO`), and the net missing amount.
+- A positive `MISSING AMOUNT` means net credits were not captured; negative means net debits were missed. The value represents the **net** difference, not the gross — a gap containing a $2,000 expense and a $1,800 deposit would show `-$200`.
+- Accounts listed as `INDETERMINATE` have fewer than two transactions; gap detection requires at least two consecutive transactions to check the balance invariant.
+- To close a gap, obtain and import the OFX export that covers the missing date range. `ofxcat` will re-check the invariant automatically on the next `get gaps` run.
+
+The same gap data appears in the `GAP` column of the `get transactions` report.
 
 ## Storage and Logging
 `ofxcat` stores imported transactions in an SQLite3 database located in `~/.ofx/ofxcat.db`. Similarly, the log file is located at `~/.ofx/ofxcat.log`.

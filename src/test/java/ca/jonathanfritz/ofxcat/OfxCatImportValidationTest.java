@@ -353,8 +353,8 @@ class OfxCatImportValidationTest {
 
     private static class StubReportingService extends ReportingService {
         StubReportingService() {
-            // 4 null params: CategorizedTransactionDao, AccountDao, CategoryDao, CLI
-            super(null, null, null, null);
+            // 5 null params: CategorizedTransactionDao, AccountDao, CategoryDao, CLI, GapDetectionService
+            super(null, null, null, null, null);
         }
     }
 

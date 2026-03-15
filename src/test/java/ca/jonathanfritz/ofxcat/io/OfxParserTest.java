@@ -260,6 +260,26 @@ class OfxParserTest {
                 .allMatch("900000100"::equals));
     }
 
+    @Test
+    void availableBalanceParsedWhenPresentTest() throws IOException, OFXParseException {
+        final OfxParser ofxParser = new OfxParser();
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile(ONE_ACCOUNT_OFX));
+
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(1));
+        // oneaccount.ofx has AVAILBAL = LEDGERBAL = 15125.81 on 2019-03-19
+        MatcherAssert.assertThat(ofxExports.get(0).getAvailableBalance(), IsNull.notNullValue());
+        MatcherAssert.assertThat(ofxExports.get(0).getAvailableBalance(), IsEqual.equalTo(expectedAccount1Balance));
+    }
+
+    @Test
+    void availableBalanceNullWhenAbsentTest() throws IOException, OFXParseException {
+        final OfxParser ofxParser = new OfxParser();
+        final List<OfxExport> ofxExports = ofxParser.parse(loadOfxFile("oneaccountnoavailbal.ofx"));
+
+        MatcherAssert.assertThat(ofxExports.size(), IsEqual.equalTo(1));
+        MatcherAssert.assertThat(ofxExports.get(0).getAvailableBalance(), IsNull.nullValue());
+    }
+
     private InputStream loadOfxFile(String filename) {
         return this.getClass().getClassLoader().getResourceAsStream(filename);
     }

@@ -334,6 +334,220 @@ Add a note to the terminal output footer and an XLSX cell comment or footnote ro
 > GAP values are net balance differences and may understate actual missing activity if the gap
 > includes both credits and debits.
 
+### Phase 4 — Suppress Same-Day False Positives *(implemented)*
+
+When two OFX exports share a boundary date and list the shared transactions in different orders,
+`TransactionImportService` assigns different intermediate balances to those same-day transactions
+depending on which OFX file is processed. Because the database keeps the first import's balances
+(duplicates are skipped on re-insert), same-day transactions from the second import can have balances
+that do not satisfy the invariant with their same-day neighbours.
+
+**Fix**: skip the invariant check whenever `prev.getDate().equals(curr.getDate())`. Same-day balance
+discrepancies are always import-ordering artefacts; genuine data gaps always span at least one
+calendar day boundary.
+
+A note was added to the `detectGaps(Account)` Javadoc explaining the exclusion, and a test
+`sameDayTransactionsWithBalanceDiscrepancyProducesNoGap` was added to `GapDetectionServiceTest`.
+
+### Phase 5 — Fix Balance Computation: Eliminate Pending-Transaction False Positives
+
+**Status:** Planned — not yet implemented. Fix confirmed: use `AVAILBAL` (see empirical analysis below).
+
+#### Root Cause
+
+`TransactionImportService` computes the running account balance for each transaction using:
+
+```
+totalTransactionAmount = sum(all STMTTRN amounts in this OFX file)
+initialBalance         = LEDGERBAL − totalTransactionAmount
+balance[0]             = initialBalance + amount[0]
+balance[1]             = balance[0]     + amount[1]
+...
+balance[n]             = LEDGERBAL  ✓
+```
+
+RBC's `LEDGERBAL` (ledger balance) is a **conservative** view of the account: it deducts
+pending/authorized outgoing payments (pre-authorized debits, scheduled bill payments) that have
+been committed but not yet settled. These pending debits **reduce** `LEDGERBAL` but do **not**
+appear in the `STMTTRN` transaction list. `AVAILBAL` (available balance), by contrast, reflects
+only cleared/posted transactions and is therefore **higher** than `LEDGERBAL` whenever pending
+outgoing payments exist.
+
+Empirically confirmed from a live RBC export with pending payments:
+
+```
+LEDGERBAL: 4560.25   ← cleared balance minus $750 in pending outgoing debits
+AVAILBAL:  5310.25   ← cleared balance only (what we want for running-balance computation)
+```
+
+Because the code uses `LEDGERBAL`, `initialBalance` is computed too low by the total pending
+outgoing amount. Every transaction balance stored in that OFX file is off by that same amount.
+
+#### How This Creates False Gap Signals
+
+Suppose OFX Export 1 is imported with a pending outgoing payment of $P not in its `STMTTRN` list:
+
+- `LEDGERBAL₁` = cleared_balance₁ − P
+- `initialBalance` = (cleared_balance₁ − P) − sum(STMTTRN) → too low by P
+- All stored balances for transactions in OFX1 are P lower than the true cleared running balance.
+
+When OFX Export 2 is imported, the pending payment has cleared and now appears in `STMTTRN`:
+
+- `LEDGERBAL₂` may have a different pending amount Q (a different bill is now pending).
+- New transactions from OFX2 have balances computed from `LEDGERBAL₂`, too low by Q.
+
+At the OFX1/OFX2 import boundary:
+
+```
+gap = T_first_OFX2.balance − (T_last_OFX1.balance + T_first_OFX2.amount)
+    = (correct − Q) − ((correct − P) + amount) + amount
+    = P − Q
+```
+
+When Q > P — i.e., the export-time pending amount grows between imports — the gap is negative,
+matching the sign of the false gaps observed in production (−$213.46, −$456.48, etc.). When the
+same recurring payment is pending in every export, P ≈ Q and the gap ≈ 0; but because pending
+amounts vary export to export (different bills cycle in and out), false gaps of varying sizes
+appear at every import boundary.
+
+#### Evidence
+
+Analysis of `gaps.csv` (captured from production data before any fixes):
+
+| Observation | Count |
+|-------------|-------|
+| Total gaps detected | 2,067 |
+| Same-day gaps (Phase 4 fix) | 1,161 |
+| Cross-day gaps remaining | 907 |
+| Cross-day penny gaps (≤ $0.01, float rounding) | 25 |
+| Cross-day material gaps (> $0.01) | 882 |
+
+Most common cross-day gap amounts in the Chequing account (confirming recurring-payment pattern):
+
+| Amount | Count | Likely cause |
+|--------|-------|--------------|
+| −$213.46 | 53× | Recurring scheduled payment |
+| −$100.00 | 45× | Recurring scheduled payment |
+| −$45.00  | 40× | Recurring scheduled payment |
+| −$501.00 | 40× | Recurring scheduled payment |
+| −$456.48 | 15× | Recurring scheduled payment |
+| −$220.00 | 12× | Recurring scheduled payment |
+| −$445.00 | 10× | Recurring scheduled payment |
+
+These amounts each correspond to a real recurring outgoing payment. They are not missing data.
+
+#### Empirical Analysis of Real RBC OFX Files
+
+Analysis of 54 real RBC OFX exports (covering 2018–2026) was performed to confirm the root cause
+and select the correct fix. Key findings:
+
+| Finding | Detail |
+|---------|--------|
+| Files with `AVAILBAL` present | 54 / 54 (100%) |
+| Files with `AVAILBAL` ≠ `LEDGERBAL` | 1 / 54 |
+| Account types where difference observed | CHECKING only |
+| Amount of difference in the one case | $750.00 (`download-transactions.ofx`, Jan 2026) |
+| Single-account "Download Transactions" format files | 2 / 54 |
+| Multi-account bulk export format files | 52 / 54 |
+
+**Pattern**: `AVAILBAL` ≠ `LEDGERBAL` was observed only in the single-account "Download
+Transactions" export format, and only when pending outgoing payments existed at export time.
+All 52 multi-account bulk export files show `AVAILBAL` = `LEDGERBAL` for every account (CHECKING,
+SAVINGS, and CREDITLINE alike).
+
+**Why multi-account files show no difference**: Either the multi-account export path does not
+capture pending payment information in `AVAILBAL`, or all such exports happened to be captured
+when no payments were pending. Either way, re-importing those files with the fix produces
+identical balances (same anchor → same balances).
+
+**The "anchor from DB" alternative was rejected** because: (a) it cannot handle first-ever
+imports, (b) it would perpetuate previously incorrect balances stored from LEDGERBAL-anchored
+imports, and (c) it requires account-matching logic at import time. The AVAILBAL approach is
+simpler, correct for first imports, and directly addresses the root cause.
+
+**Implications for the 882 historical false gaps**: The 54 available OFX files are a subset of
+all historical imports. The recurring gap amounts (−$213.46 × 53, −$100.00 × 45, etc.) are
+consistent with scheduled payments that were pending at export time in many historical
+single-account format imports not preserved in this collection. However, it is also possible
+that some of those gaps represent actual missing data. The AVAILBAL fix will eliminate false
+gaps going forward. Historical false gaps can only be resolved by re-importing the original OFX
+files that caused them; since those files are no longer available, the historical false gaps will
+remain in the database. This is acceptable: the fix is preventive, not retroactive.
+
+#### Proposed Fix: Use `AVAILBAL` as the Balance Anchor
+
+**Core idea**: RBC's OFX files already include an `AVAILBAL` element immediately after
+`LEDGERBAL`. `AVAILBAL` reflects only cleared/posted transactions — exactly the right anchor for
+computing per-transaction running balances. The `OfxParser` already encounters this element but
+discards it in the `default` branch of the `onElement` switch. The fix is to parse and store it,
+then prefer it over `LEDGERBAL` in `TransactionImportService`.
+
+This is simpler than the previously proposed "anchor from DB" approach and — crucially — also
+fixes the **first-ever import** case where no DB anchor exists yet.
+
+**`AVAILBAL` vs `LEDGERBAL` semantics by account type:**
+
+| Account type | `AVAILBAL` meaning | Use for balance anchor? |
+|---|---|---|
+| Bank account (CHECKING, SAVINGS) | Cleared balance (no pending holds) | ✓ Yes — prefer over LEDGERBAL |
+| Credit card (CREDITLINE) | Available credit = limit − owed | ✗ No — semantically wrong; use LEDGERBAL |
+
+The parser already knows the account type via `ACCTTYPE` / `CCACCTFROM`, so this distinction is
+straightforward to implement.
+
+**Revised algorithm for `TransactionImportService`**:
+
+```
+anchor = AVAILBAL.amount   if AVAILBAL is present AND account is a bank account
+         LEDGERBAL.amount  otherwise (credit cards, or banks that don't provide AVAILBAL)
+
+initialBalance = anchor − sum(all STMTTRN amounts)
+balance[i]     = initialBalance + sum(amounts[0..i])
+```
+
+No other changes to the import flow are required. Duplicate detection, categorisation, and token
+storage are unaffected.
+
+**Fallback for banks other than RBC**: if `AVAILBAL` is absent from the OFX file, behaviour is
+identical to today (LEDGERBAL used). This is safe: the false-gap problem only arises when
+`AVAILBAL` ≠ `LEDGERBAL`, which only happens when there are pending outgoing payments.
+
+#### Re-Import Requirement
+
+The fix changes balance values computed at import time. Transactions already in the database carry
+balances derived from `LEDGERBAL` and will not be corrected automatically.
+
+Based on empirical analysis, 53 of the 54 available OFX files have `AVAILBAL` = `LEDGERBAL`, so
+re-importing them would produce identical balances and has no benefit. Re-import is only
+meaningful for files where `AVAILBAL` ≠ `LEDGERBAL` (i.e. exports captured while outgoing
+payments were pending). Those historical files are no longer available, so the historical false
+gaps cannot be retroactively eliminated. No re-import warning or migration is needed; the fix
+is purely preventive for future imports.
+
+If a user wants to re-import anyway (e.g. to validate consistency), the import is safe:
+- Existing categorisations and tokens are preserved — only the `balance` field changes.
+- `fitId` deduplication prevents duplicate transactions.
+
+#### Files to Change
+
+| File | Change |
+|------|--------|
+| `OfxParser.java` | Parse `AVAILBAL` block (same structure as `LEDGERBAL`); store in `OfxExport` |
+| `OfxExport.java` | Add `availableBalance` field (nullable `OfxBalance`) alongside existing `balance` |
+| `TransactionImportService.java` | Prefer `AVAILBAL` over `LEDGERBAL` for bank accounts when available |
+| `OfxParserTest.java` | Assert `AVAILBAL` is parsed when present; assert `LEDGERBAL` used when absent |
+| `TransactionImportServiceTest.java` | Test balance anchor selection (bank + AVAILBAL, bank without AVAILBAL, credit card) |
+
+#### Tests
+
+| Scenario | Expected behaviour |
+|----------|--------------------|
+| Bank account, OFX has both `LEDGERBAL` and `AVAILBAL` | `AVAILBAL` used as anchor |
+| Bank account, OFX has only `LEDGERBAL` | `LEDGERBAL` used as anchor (regression) |
+| Credit card account, OFX has both | `LEDGERBAL` used as anchor (AVAILBAL is available credit, not balance) |
+| Bank account, pending debit P in `LEDGERBAL`, not in `STMTTRN` | No false gap at subsequent import boundary |
+| Re-import of the same file | Idempotent: existing balances overwritten with the same (now-correct) values |
+
 ---
 
 ## Files to Modify
@@ -370,6 +584,10 @@ Add a note to the terminal output footer and an XLSX cell comment or footnote ro
 | `get gaps` date filtering | No filtering — always show all gaps. Add later if needed (YAGNI). |
 | Accounts with a single transaction | Show as "indeterminate" in `get gaps` output with a note that gap detection requires at least two transactions. Do not silently omit. |
 
+---
+
 ## Open Questions
 
-None — all decisions have been made. Implementation may proceed.
+None — all decisions have been made for all phases. Phase 5 fix confirmed as AVAILBAL approach
+based on empirical analysis of 54 real RBC OFX files; details in the Phase 5 section above.
+

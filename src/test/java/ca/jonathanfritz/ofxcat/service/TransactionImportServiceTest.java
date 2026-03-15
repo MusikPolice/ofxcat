@@ -18,6 +18,7 @@ import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import ca.jonathanfritz.ofxcat.io.OfxBalance;
 import ca.jonathanfritz.ofxcat.io.OfxExport;
 import ca.jonathanfritz.ofxcat.io.OfxTransaction;
+import com.webcohesion.ofx4j.domain.data.common.TransactionType;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -455,6 +456,181 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
         final CategorizedTransaction actual =
                 categorizedTransactionDao.selectByFitId(fitId).get();
         Assertions.assertEquals("BRAND_NEW_CATEGORY", actual.getCategory().getName());
+    }
+
+    @Test
+    void bankAccountUsesAvailableBalanceAsAnchorWhenPresent() {
+        // CHECKING account with both LEDGERBAL and AVAILBAL, where they differ due to pending payments
+        final Account account = accountDao
+                .insert(Account.newBuilder()
+                        .setAccountNumber(UUID.randomUUID().toString())
+                        .setName("checking")
+                        .setBankId(UUID.randomUUID().toString())
+                        .setAccountType("CHECKING")
+                        .build())
+                .get();
+        categoryDao.insert(new Category("Test"));
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(account);
+
+        final String fitId = UUID.randomUUID().toString();
+        final OfxTransaction tx = OfxTransaction.newBuilder()
+                .setFitId(fitId)
+                .setAmount(-100.00f)
+                .setType(TransactionType.DEBIT)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .setName("test")
+                .setAccount(ofxAccount)
+                .build();
+
+        // LEDGERBAL = 750.00 (cleared balance minus $250 pending), AVAILBAL = 1000.00 (cleared balance)
+        final OfxBalance ledgerBal = OfxBalance.newBuilder()
+                .setAmount(750.00f)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .build();
+        final OfxBalance availBal = OfxBalance.newBuilder()
+                .setAmount(1000.00f)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .build();
+        final OfxExport ofxExport = new OfxExport(ofxAccount, ledgerBal, availBal, List.of(tx));
+
+        final SpyCli spyCli = new SpyCli();
+        final TransactionCategoryService tcs =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService tis = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+
+        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+
+        // With AVAILBAL anchor: initialBalance = 1000.00 - (-100.00) = 1100.00; balance = 1000.00
+        // With LEDGERBAL anchor: balance would be 750.00
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(1000.00f, result.get(0).getBalance(), 0.001f);
+    }
+
+    @Test
+    void bankAccountFallsBackToLedgerBalanceWhenAvailableBalanceAbsent() {
+        final Account account = accountDao
+                .insert(Account.newBuilder()
+                        .setAccountNumber(UUID.randomUUID().toString())
+                        .setName("checking")
+                        .setBankId(UUID.randomUUID().toString())
+                        .setAccountType("CHECKING")
+                        .build())
+                .get();
+        categoryDao.insert(new Category("Test"));
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(account);
+
+        final String fitId = UUID.randomUUID().toString();
+        final OfxTransaction tx = OfxTransaction.newBuilder()
+                .setFitId(fitId)
+                .setAmount(-100.00f)
+                .setType(TransactionType.DEBIT)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .setName("test")
+                .setAccount(ofxAccount)
+                .build();
+
+        // No AVAILBAL — use 3-arg constructor
+        final OfxBalance ledgerBal = OfxBalance.newBuilder()
+                .setAmount(900.00f)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .build();
+        final OfxExport ofxExport = new OfxExport(ofxAccount, ledgerBal, List.of(tx));
+
+        final SpyCli spyCli = new SpyCli();
+        final TransactionCategoryService tcs =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService tis = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+
+        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+
+        // With LEDGERBAL anchor: initialBalance = 900.00 - (-100.00) = 1000.00; balance = 900.00
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(900.00f, result.get(0).getBalance(), 0.001f);
+    }
+
+    @Test
+    void creditCardUsesLedgerBalanceAsAnchorWhenAvailableBalancePresent() {
+        // Credit card: AVAILBAL means available credit (limit − owed), not the running balance.
+        // LEDGERBAL must be used as the anchor regardless of AVAILBAL presence.
+        final Account account = accountDao
+                .insert(Account.newBuilder()
+                        .setAccountNumber(UUID.randomUUID().toString())
+                        .setName("visa")
+                        .setBankId(UUID.randomUUID().toString())
+                        .setAccountType("CREDIT_CARD")
+                        .build())
+                .get();
+        categoryDao.insert(new Category("Test"));
+        final OfxAccount ofxAccount = TestUtils.accountToOfxAccount(account);
+
+        final String fitId = UUID.randomUUID().toString();
+        final OfxTransaction tx = OfxTransaction.newBuilder()
+                .setFitId(fitId)
+                .setAmount(-100.00f)
+                .setType(TransactionType.DEBIT)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .setName("test")
+                .setAccount(ofxAccount)
+                .build();
+
+        // LEDGERBAL = -622.69 (amount owed), AVAILBAL = 9377.31 (available credit = limit - owed)
+        final OfxBalance ledgerBal = OfxBalance.newBuilder()
+                .setAmount(-622.69f)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .build();
+        final OfxBalance availBal = OfxBalance.newBuilder()
+                .setAmount(9377.31f)
+                .setDate(LocalDate.of(2024, 1, 15))
+                .build();
+        final OfxExport ofxExport = new OfxExport(ofxAccount, ledgerBal, availBal, List.of(tx));
+
+        final SpyCli spyCli = new SpyCli();
+        final TransactionCategoryService tcs =
+                createTransactionCategoryService(categoryDao, categorizedTransactionDao, spyCli);
+        final TransactionImportService tis = new TransactionImportService(
+                spyCli,
+                null,
+                accountDao,
+                transactionCleanerFactory,
+                connection,
+                categorizedTransactionDao,
+                tcs,
+                categoryDao,
+                transferMatchingService,
+                transferDao,
+                transactionTokenDao,
+                tokenNormalizer);
+
+        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+
+        // With LEDGERBAL anchor: initialBalance = -622.69 - (-100.00) = -522.69; balance = -622.69
+        // With AVAILBAL anchor: balance would be 9377.31 (wrong)
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(-622.69f, result.get(0).getBalance(), 0.001f);
     }
 
     @Test

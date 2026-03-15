@@ -45,6 +45,7 @@ public class OfxParser {
 
     // ledgerbalance elements
     public static final String LEDGERBAL = "LEDGERBAL"; // start/end of ledger balance element for an account
+    private static final String AVAILBAL = "AVAILBAL"; // start/end of available balance element for an account
     public static final String BALAMT = "BALAMT"; // the balance of the account
     public static final String DTASOF = "DTASOF"; // the date on which the balance was recorded
 
@@ -55,6 +56,7 @@ public class OfxParser {
     public List<OfxExport> parse(final InputStream inputStream) throws IOException, OFXParseException {
         final Map<OfxAccount, List<OfxTransaction.TransactionBuilder>> transactions = new HashMap<>();
         final Map<OfxAccount, OfxBalance.Builder> accountBalances = new HashMap<>();
+        final Map<OfxAccount, OfxBalance.Builder> accountAvailableBalances = new HashMap<>();
 
         // an OFX file that is exported from an institution may contain a mix of credit cards and traditional bank
         // accounts, but the credit cards may not have a bankId associated with them. This breaks the
@@ -81,6 +83,7 @@ public class OfxParser {
             // account. We can use it to work backward and determine the account balance after each transaction took
             // place
             boolean isLedgerBalanceActive = false;
+            boolean isAvailableBalanceActive = false;
 
             // fired whenever a new ofx entity (an account or a transaction) starts
             public void startAggregate(String name) {
@@ -96,6 +99,8 @@ public class OfxParser {
                     }
                 } else if (LEDGERBAL.equalsIgnoreCase(name)) {
                     isLedgerBalanceActive = true;
+                } else if (AVAILBAL.equalsIgnoreCase(name)) {
+                    isAvailableBalanceActive = true;
                 }
             }
 
@@ -152,19 +157,30 @@ public class OfxParser {
                         transactionBuilder.setMemo(value);
                         break;
 
-                        // ledgerbalance information
+                        // ledgerbalance and availablebalance information
                     case BALAMT:
-                        if (!isLedgerBalanceActive) {
+                        if (!isLedgerBalanceActive && !isAvailableBalanceActive) {
                             break;
                         }
 
                         try {
                             final float amount = Float.parseFloat(value);
-                            if (accountBalances.containsKey(currentAccount)) {
-                                accountBalances.get(currentAccount).setAmount(amount);
+                            if (isLedgerBalanceActive) {
+                                if (accountBalances.containsKey(currentAccount)) {
+                                    accountBalances.get(currentAccount).setAmount(amount);
+                                } else {
+                                    accountBalances.put(
+                                            currentAccount,
+                                            OfxBalance.newBuilder().setAmount(amount));
+                                }
                             } else {
-                                accountBalances.put(
-                                        currentAccount, OfxBalance.newBuilder().setAmount(amount));
+                                if (accountAvailableBalances.containsKey(currentAccount)) {
+                                    accountAvailableBalances.get(currentAccount).setAmount(amount);
+                                } else {
+                                    accountAvailableBalances.put(
+                                            currentAccount,
+                                            OfxBalance.newBuilder().setAmount(amount));
+                                }
                             }
                             break;
                         } catch (NumberFormatException ex) {
@@ -172,16 +188,27 @@ public class OfxParser {
                                     String.format("Failed to parse BALAMT %s as float", value), ex);
                         }
                     case DTASOF:
-                        if (!isLedgerBalanceActive) {
+                        if (!isLedgerBalanceActive && !isAvailableBalanceActive) {
                             break;
                         }
                         try {
                             final LocalDate localDate = parseDate(value);
-                            if (accountBalances.containsKey(currentAccount)) {
-                                accountBalances.get(currentAccount).setDate(localDate);
+                            if (isLedgerBalanceActive) {
+                                if (accountBalances.containsKey(currentAccount)) {
+                                    accountBalances.get(currentAccount).setDate(localDate);
+                                } else {
+                                    accountBalances.put(
+                                            currentAccount,
+                                            OfxBalance.newBuilder().setDate(localDate));
+                                }
                             } else {
-                                accountBalances.put(
-                                        currentAccount, OfxBalance.newBuilder().setDate(localDate));
+                                if (accountAvailableBalances.containsKey(currentAccount)) {
+                                    accountAvailableBalances.get(currentAccount).setDate(localDate);
+                                } else {
+                                    accountAvailableBalances.put(
+                                            currentAccount,
+                                            OfxBalance.newBuilder().setDate(localDate));
+                                }
                             }
                             break;
                         } catch (DateTimeParseException ex) {
@@ -214,9 +241,18 @@ public class OfxParser {
                     final OfxBalance ofxBalance =
                             accountBalances.get(currentAccount).build();
                     logger.debug(
-                            "Recorded a balance of ${} on {} for account {}",
+                            "Recorded ledger balance of ${} on {} for account {}",
                             ofxBalance.getAmount(),
                             ofxBalance.getDate().toString(),
+                            currentAccount.getAccountId());
+                } else if (AVAILBAL.equalsIgnoreCase(name)) {
+                    isAvailableBalanceActive = false;
+                    final OfxBalance availableBalance =
+                            accountAvailableBalances.get(currentAccount).build();
+                    logger.debug(
+                            "Recorded available balance of ${} on {} for account {}",
+                            availableBalance.getAmount(),
+                            availableBalance.getDate().toString(),
                             currentAccount.getAccountId());
                 }
             }
@@ -252,16 +288,27 @@ public class OfxParser {
                                 final OfxBalance.Builder balance = accountBalances.remove(account);
                                 accountBalances.put(updatedAccount, balance);
 
+                                final OfxBalance.Builder availableBalance = accountAvailableBalances.remove(account);
+                                if (availableBalance != null) {
+                                    accountAvailableBalances.put(updatedAccount, availableBalance);
+                                }
+
                                 return Stream.of(Map.entry(updatedAccount, entry.getValue()));
                             }
                             return Stream.of(entry);
                         })
-                .map(entry -> new OfxExport(
-                        entry.getKey(),
-                        accountBalances.get(entry.getKey()).build(),
-                        entry.getValue().stream()
-                                .map(OfxTransaction.TransactionBuilder::build)
-                                .collect(Collectors.toList())))
+                .map(entry -> {
+                    final OfxAccount acct = entry.getKey();
+                    final OfxBalance.Builder availBuilder = accountAvailableBalances.get(acct);
+                    final OfxBalance availBal = availBuilder != null ? availBuilder.build() : null;
+                    return new OfxExport(
+                            acct,
+                            accountBalances.get(acct).build(),
+                            availBal,
+                            entry.getValue().stream()
+                                    .map(OfxTransaction.TransactionBuilder::build)
+                                    .collect(Collectors.toList()));
+                })
                 .sorted(Comparator.comparing(o -> o.getAccount().getAccountId()))
                 .collect(Collectors.toList());
     }

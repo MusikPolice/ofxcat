@@ -48,6 +48,11 @@ public class GapDetectionService {
     /**
      * Detects gaps in the transaction record for a single account.
      *
+     * <p>Same-day transaction pairs are excluded from the invariant check. When two OFX exports
+     * share a boundary date, transactions on that date may have been imported in different orders,
+     * producing balance discrepancies that are import artifacts rather than genuine data gaps. Real
+     * gaps always span at least one calendar day boundary.
+     *
      * @param account the account to check
      * @return list of gaps detected; empty if no gaps found or fewer than two transactions exist
      */
@@ -58,6 +63,12 @@ public class GapDetectionService {
         for (int i = 1; i < transactions.size(); i++) {
             CategorizedTransaction prev = transactions.get(i - 1);
             CategorizedTransaction curr = transactions.get(i);
+
+            // Same-day pairs are skipped: balance discrepancies between transactions on the same
+            // date are always import-ordering artifacts, not genuine gaps in the data.
+            if (prev.getDate().equals(curr.getDate())) {
+                continue;
+            }
 
             long prevBalanceCents = Math.round(prev.getBalance() * 100);
             long currAmountCents = Math.round(curr.getAmount() * 100);

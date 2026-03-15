@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +37,7 @@ public class ReportingService {
     private final AccountDao accountDao;
     private final CategoryDao categoryDao;
     private final CLI cli;
+    private final GapDetectionService gapDetectionService;
 
     public static final String CSV_DELIMITER = ", ";
 
@@ -44,16 +46,25 @@ public class ReportingService {
             CategorizedTransactionDao categorizedTransactionDao,
             AccountDao accountDao,
             CategoryDao categoryDao,
-            CLI cli) {
+            CLI cli,
+            GapDetectionService gapDetectionService) {
         this.categorizedTransactionDao = categorizedTransactionDao;
         this.accountDao = accountDao;
         this.categoryDao = categoryDao;
         this.cli = cli;
+        this.gapDetectionService = gapDetectionService;
     }
 
     public void reportTransactionsMonthly(final LocalDate startDate, final LocalDate endDate) {
         final LocalDate effectiveEndDate = validateAndResolveEndDate(startDate, endDate);
         final MonthlyReportData data = collectMonthlyReportData(startDate, effectiveEndDate);
+
+        // compute gap data for the GAP column
+        final Map<LocalDate, Float> gapAmounts = gapDetectionService.gapAmountsByMonth(startDate, effectiveEndDate);
+        final Set<LocalDate> fullyMissingMonths = gapDetectionService.fullyMissingMonths(startDate, effectiveEndDate);
+        final Stats gapStats = computeStats(data.dateSpend.keySet().stream()
+                .map(key -> gapAmounts.getOrDefault(key.withDayOfMonth(1), 0f))
+                .collect(Collectors.toList()));
 
         // print a matrix with categories along the x axis, months along the y axis, category spend for each month at
         // the intersection
@@ -62,7 +73,8 @@ public class ReportingService {
                 data.sortedCategories.stream().map(Category::getName).collect(Collectors.joining(CSV_DELIMITER));
         lines.add((categoryHeader.isEmpty() ? "MONTH" : "MONTH" + CSV_DELIMITER + categoryHeader)
                 + CSV_DELIMITER
-                + "TOTAL");
+                + "TOTAL"
+                + CSV_DELIMITER + "GAP");
 
         final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
         for (Map.Entry<LocalDate, Map<Category, Float>> entry : data.dateSpend.entrySet()) {
@@ -85,18 +97,42 @@ public class ReportingService {
                     .map(Map.Entry::getValue)
                     .reduce(0f, Float::sum);
             sb.append(CSV_DELIMITER).append(CURRENCY_FORMATTER.format(monthTotal));
+
+            // GAP column: net missing amount for gap-start months, "GAP" for fully-missing months, blank otherwise
+            final LocalDate monthStart = entry.getKey().withDayOfMonth(1);
+            if (fullyMissingMonths.contains(monthStart)) {
+                sb.append(CSV_DELIMITER).append("GAP");
+            } else if (gapAmounts.containsKey(monthStart)) {
+                sb.append(CSV_DELIMITER).append(CURRENCY_FORMATTER.format(gapAmounts.get(monthStart)));
+            } else {
+                sb.append(CSV_DELIMITER);
+            }
+
             lines.add(sb.toString());
         }
 
         // trailing average rows are only emitted when the report spans at least as many months as the window size
         if (data.months.size() >= 3) {
-            lines.add(generateStatsString("t3m", stats -> stats.trailing3m, data.sortedCategories, data.categoryStats));
+            lines.add(generateStatsString("t3m", stats -> stats.trailing3m, data.sortedCategories, data.categoryStats)
+                    + CSV_DELIMITER
+                    + CURRENCY_FORMATTER.format(gapStats.trailing3m()));
         }
         if (data.months.size() >= 6) {
-            lines.add(generateStatsString("t6m", stats -> stats.trailing6m, data.sortedCategories, data.categoryStats));
+            lines.add(generateStatsString("t6m", stats -> stats.trailing6m, data.sortedCategories, data.categoryStats)
+                    + CSV_DELIMITER
+                    + CURRENCY_FORMATTER.format(gapStats.trailing6m()));
         }
-        lines.add(generateStatsString("avg", stats -> stats.avg, data.sortedCategories, data.categoryStats));
-        lines.add(generateStatsString("total", stats -> stats.total, data.sortedCategories, data.categoryStats));
+        lines.add(generateStatsString("avg", stats -> stats.avg, data.sortedCategories, data.categoryStats)
+                + CSV_DELIMITER
+                + CURRENCY_FORMATTER.format(gapStats.avg()));
+        lines.add(generateStatsString("total", stats -> stats.total, data.sortedCategories, data.categoryStats)
+                + CSV_DELIMITER
+                + CURRENCY_FORMATTER.format(gapStats.total()));
+
+        if (!gapAmounts.isEmpty() || !fullyMissingMonths.isEmpty()) {
+            lines.add("Note: GAP values are net balance differences and may understate actual missing activity"
+                    + " if the gap includes both credits and debits.");
+        }
 
         cli.println(lines);
     }
@@ -119,6 +155,15 @@ public class ReportingService {
         final LocalDate effectiveEndDate = validateAndResolveEndDate(startDate, endDate);
         final MonthlyReportData data = collectMonthlyReportData(startDate, effectiveEndDate);
 
+        // compute gap data for the GAP column
+        final Map<LocalDate, Float> gapAmounts = gapDetectionService.gapAmountsByMonth(startDate, effectiveEndDate);
+        final Set<LocalDate> fullyMissingMonths = gapDetectionService.fullyMissingMonths(startDate, effectiveEndDate);
+        final Stats gapStats = computeStats(data.dateSpend.keySet().stream()
+                .map(key -> gapAmounts.getOrDefault(key.withDayOfMonth(1), 0f))
+                .collect(Collectors.toList()));
+        final int totalCol = data.sortedCategories.size() + 1;
+        final int gapCol = data.sortedCategories.size() + 2;
+
         final Path parent = outputFile.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
@@ -128,16 +173,17 @@ public class ReportingService {
                 Worksheet ws = wb.newWorksheet("Transactions")) {
             ws.freezePane(0, 1);
 
-            // header row: bold "MONTH" + one bold column per category + bold "TOTAL"
+            // header row: bold "MONTH" + one bold column per category + bold "TOTAL" + optional bold "GAP"
             ws.value(0, 0, "MONTH");
             ws.style(0, 0).bold().set();
             for (int col = 0; col < data.sortedCategories.size(); col++) {
                 ws.value(0, col + 1, data.sortedCategories.get(col).getName());
                 ws.style(0, col + 1).bold().set();
             }
-            final int totalCol = data.sortedCategories.size() + 1;
             ws.value(0, totalCol, "TOTAL");
             ws.style(0, totalCol).bold().set();
+            ws.value(0, gapCol, "GAP");
+            ws.style(0, gapCol).bold().set();
 
             // data rows: one row per month
             final DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM-yy");
@@ -155,21 +201,49 @@ public class ReportingService {
                         .reduce(0f, Float::sum);
                 ws.value(row, totalCol, monthTotal);
                 ws.style(row, totalCol).format(XLSX_CURRENCY_FORMAT).set();
+
+                // GAP column: net missing amount, "GAP" for fully-missing months, blank otherwise
+                final LocalDate monthStart = entry.getKey().withDayOfMonth(1);
+                if (fullyMissingMonths.contains(monthStart)) {
+                    ws.value(row, gapCol, "GAP");
+                } else if (gapAmounts.containsKey(monthStart)) {
+                    ws.value(row, gapCol, gapAmounts.get(monthStart));
+                    ws.style(row, gapCol).format(XLSX_CURRENCY_FORMAT).set();
+                }
+                // else: blank cell, no write needed
+
                 row++;
             }
 
             // trailing average rows are only emitted when the report spans at least as many months as the window size
             if (data.months.size() >= 3) {
                 writeXlsxStatsRow(ws, row, "t3m", stats -> stats.trailing3m, data);
+                ws.value(row, gapCol, gapStats.trailing3m());
+                ws.style(row, gapCol).format(XLSX_CURRENCY_FORMAT).set();
                 row++;
             }
             if (data.months.size() >= 6) {
                 writeXlsxStatsRow(ws, row, "t6m", stats -> stats.trailing6m, data);
+                ws.value(row, gapCol, gapStats.trailing6m());
+                ws.style(row, gapCol).format(XLSX_CURRENCY_FORMAT).set();
                 row++;
             }
             writeXlsxStatsRow(ws, row, "avg", stats -> stats.avg, data);
+            ws.value(row, gapCol, gapStats.avg());
+            ws.style(row, gapCol).format(XLSX_CURRENCY_FORMAT).set();
             row++;
             writeXlsxStatsRow(ws, row, "total", stats -> stats.total, data);
+            ws.value(row, gapCol, gapStats.total());
+            ws.style(row, gapCol).format(XLSX_CURRENCY_FORMAT).set();
+            row++;
+
+            if (!gapAmounts.isEmpty() || !fullyMissingMonths.isEmpty()) {
+                ws.value(
+                        row,
+                        0,
+                        "Note: GAP values are net balance differences and may understate actual missing activity"
+                                + " if the gap includes both credits and debits.");
+            }
 
             // column widths: 10 chars for MONTH, at least 12 for each category (or its name length + padding), 10 for
             // TOTAL
@@ -180,6 +254,7 @@ public class ReportingService {
                         Math.max(12, data.sortedCategories.get(col).getName().length() + 2));
             }
             ws.width(totalCol, 12);
+            ws.width(gapCol, 12);
         }
 
         return outputFile;

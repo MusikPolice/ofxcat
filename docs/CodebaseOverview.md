@@ -113,7 +113,19 @@ java -jar ofxcat-<hash>.jar get transactions \
 - `--format`: Optional, `terminal` (default) or `xlsx`; terminal prints CSV to the console, xlsx writes an Excel file
 - `--output-file`: Optional, output path for `--format xlsx`; defaults to `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx`
 
-Without `--category-id`, outputs a matrix with months as rows and spending categories as columns, showing total spending per category per month. Categories with no transactions in the date range are excluded. A `TOTAL` column (sum of all categories) is always appended as the rightmost column. Summary rows at the bottom show trailing 3-month average (`t3m`), trailing 6-month average (`t6m`, only when the report spans ≥ 6 months), overall average (`avg`), and grand total (`total`). The `t3m` and `t6m` rows are suppressed when the report spans fewer months than the window size.
+Without `--category-id`, outputs a matrix with months as rows and spending categories as columns, showing total spending per category per month. Categories with no transactions in the date range are excluded. A `TOTAL` column (sum of non-TRANSFER amounts) and a `GAP` column are always appended as the two rightmost columns when `GapDetectionService` is available. The `GAP` column shows the net missing amount for months where a balance-invariant violation is detected (see `get gaps` below); months entirely within a multi-month gap show the string `"GAP"`; months with no gap are blank. Summary rows at the bottom show trailing 3-month average (`t3m`), trailing 6-month average (`t6m`, only when the report spans ≥ 6 months), overall average (`avg`), and grand total (`total`). The `t3m` and `t6m` rows are suppressed when the report spans fewer months than the window size. A footnote is added to the report when gap data is present.
+
+#### Get Gaps
+```bash
+java -jar ofxcat-<hash>.jar get gaps
+```
+Scans all accounts for missing transactions by checking the balance invariant between consecutive transactions: `balance[n+1] == balance[n] + amount[n+1]`. A violation indicates that one or more transactions are missing between those two positions. Output format:
+```
+ACCOUNT, GAP FROM, GAP TO, MISSING AMOUNT
+Chequing, 2022-01-15, 2022-02-01, -342.50
+Savings, INDETERMINATE, INDETERMINATE, INDETERMINATE
+```
+Accounts with fewer than two transactions are listed as `INDETERMINATE`. Gaps are computed dynamically on each call — importing the missing OFX file closes the gap automatically without any special cleanup step.
 
 #### Combine Categories
 ```bash
