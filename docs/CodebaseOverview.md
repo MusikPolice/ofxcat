@@ -1,6 +1,6 @@
 # ofxcat Codebase Overview
 
-**Last Updated:** January 21, 2026  
+**Last Updated:** March 15, 2026
 **Purpose:** Comprehensive technical documentation for developers maintaining and extending this application.
 
 ---
@@ -29,7 +29,8 @@ ofxcat is a Java 21 command-line application that imports and categorizes financ
 - Store transactions in a local SQLite database
 - Automatically detect inter-account transfers
 - Categorize transactions using keyword rules, token-based matching, and exact matching
-- Generate CSV reports showing spending by category over time
+- Generate CSV reports showing spending by category over time, including a GAP column for missing data
+- Detect data gaps by checking a balance invariant between consecutive transactions
 - Learn from user input to improve categorization accuracy
 - Apply keyword rules for automatic categorization of common merchants
 
@@ -113,7 +114,7 @@ java -jar ofxcat-<hash>.jar get transactions \
 - `--format`: Optional, `terminal` (default) or `xlsx`; terminal prints CSV to the console, xlsx writes an Excel file
 - `--output-file`: Optional, output path for `--format xlsx`; defaults to `~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx`
 
-Without `--category-id`, outputs a matrix with months as rows and spending categories as columns, showing total spending per category per month. Categories with no transactions in the date range are excluded. A `TOTAL` column (sum of non-TRANSFER amounts) and a `GAP` column are always appended as the two rightmost columns when `GapDetectionService` is available. The `GAP` column shows the net missing amount for months where a balance-invariant violation is detected (see `get gaps` below); months entirely within a multi-month gap show the string `"GAP"`; months with no gap are blank. Summary rows at the bottom show trailing 3-month average (`t3m`), trailing 6-month average (`t6m`, only when the report spans ≥ 6 months), overall average (`avg`), and grand total (`total`). The `t3m` and `t6m` rows are suppressed when the report spans fewer months than the window size. A footnote is added to the report when gap data is present.
+Without `--category-id`, outputs a matrix with months as rows and spending categories as columns, showing total spending per category per month. Categories with no transactions in the date range are excluded. A `TOTAL` column (sum of non-TRANSFER amounts) and a `GAP` column are always appended as the two rightmost columns. The `GAP` column shows the net missing amount for months where a balance-invariant violation is detected (see `get gaps` below); months entirely within a multi-month gap show the string `"GAP"`; months with no gap are blank. Summary rows at the bottom show trailing 3-month average (`t3m`), trailing 6-month average (`t6m`, only when the report spans ≥ 6 months), overall average (`avg`), and grand total (`total`). The `t3m` and `t6m` rows are suppressed when the report spans fewer months than the window size. A footnote is added to the report when gap data is present.
 
 #### Get Gaps
 ```bash
@@ -243,6 +244,7 @@ ca.jonathanfritz.ofxcat/
 │   └── AppConfigLoader.java
 ├── service/               # Business logic
 │   ├── CategoryCombineService.java
+│   ├── GapDetectionService.java
 │   ├── TransactionImportService.java
 │   ├── TransactionCategoryService.java
 │   ├── TransferMatchingService.java
@@ -563,8 +565,11 @@ src/test/java/ca/jonathanfritz/ofxcat/
 │   └── TransferDaoTest.java
 ├── io/
 │   └── OfxParserTest.java
+├── integration/
+│   └── ReportingWorkflowIntegrationTest.java
 ├── service/
 │   ├── CategoryCombineServiceTest.java
+│   ├── GapDetectionServiceTest.java
 │   ├── ReportingServiceTest.java
 │   ├── TransactionCategoryServiceTest.java
 │   ├── TransactionImportServiceTest.java
@@ -582,6 +587,7 @@ src/test/java/ca/jonathanfritz/ofxcat/
 Sample OFX files in `src/test/resources/`:
 - `creditcard.ofx`
 - `oneaccount.ofx`
+- `oneaccountnoavailbal.ofx`
 - `twoaccounts.ofx`
 - `twoaccountsonecreditcard.ofx`
 
