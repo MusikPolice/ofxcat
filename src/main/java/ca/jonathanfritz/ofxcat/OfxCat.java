@@ -361,12 +361,12 @@ public class OfxCat {
                     // if mode is GET, determine which concern needs to be got
                     switch (getConcern(args)) {
                         case TRANSACTIONS ->
-                        // TODO: add a way to export actual transactions, not just category sums
-                        ofxCat.reportTransactions(getOptions(args));
+                            // TODO: add a way to export actual transactions, not just category sums
+                            ofxCat.reportTransactions(getOptions(args));
                         case ACCOUNTS -> ofxCat.reportAccounts();
                         case CATEGORIES ->
-                        // TODO: need a way to edit categories and category descriptions
-                        ofxCat.reportCategories();
+                            // TODO: need a way to edit categories and category descriptions
+                            ofxCat.reportCategories();
                     }
                     break;
                 case MIGRATE:

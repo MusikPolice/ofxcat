@@ -26,8 +26,7 @@ class KeywordRulesLoaderTest {
     @Test
     void loadsValidYamlFile() throws IOException {
         // Setup: Create a valid YAML file
-        String yaml =
-                """
+        String yaml = """
                 version: 1
                 settings:
                   auto_categorize: true
@@ -98,8 +97,7 @@ class KeywordRulesLoaderTest {
     @Test
     void handlesInvalidYaml() throws IOException {
         // Setup: Create a file with invalid YAML
-        String invalidYaml =
-                """
+        String invalidYaml = """
                 this is not valid yaml: [
                   broken: structure
                 """;
@@ -116,8 +114,7 @@ class KeywordRulesLoaderTest {
     @Test
     void loadFromStringWithValidYaml() {
         // Setup: Valid YAML string
-        String yaml =
-                """
+        String yaml = """
                 rules:
                   - keywords: [netflix]
                     category: ENTERTAINMENT
@@ -153,8 +150,7 @@ class KeywordRulesLoaderTest {
     @Test
     void loadsSettingsFromYaml() throws IOException {
         // Setup: YAML with auto_categorize disabled
-        String yaml =
-                """
+        String yaml = """
                 settings:
                   auto_categorize: false
                 rules:
@@ -174,8 +170,7 @@ class KeywordRulesLoaderTest {
     @Test
     void handlesYamlWithOnlyRules() throws IOException {
         // Setup: YAML with only rules (no version or settings)
-        String yaml =
-                """
+        String yaml = """
                 rules:
                   - keywords: [costco]
                     category: GROCERIES
@@ -258,8 +253,7 @@ class KeywordRulesLoaderTest {
     @Test
     void ignoresUnknownProperties() throws IOException {
         // Setup: YAML with extra properties
-        String yaml =
-                """
+        String yaml = """
                 version: 1
                 unknown_property: some_value
                 rules:
