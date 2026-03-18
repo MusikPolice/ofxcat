@@ -286,8 +286,7 @@ public class CategorizedTransactionDao {
      */
     public boolean hasTransactionsWithoutTokens(DatabaseTransaction t) throws SQLException {
         logger.debug("Checking for transactions without tokens");
-        final String checkStatement =
-                """
+        final String checkStatement = """
             SELECT EXISTS(
                 SELECT 1 FROM CategorizedTransaction ct
                 WHERE NOT EXISTS (
@@ -339,8 +338,7 @@ public class CategorizedTransactionDao {
      */
     public List<CategorizedTransaction> selectWithoutTokens(DatabaseTransaction t) throws SQLException {
         logger.debug("Selecting transactions without tokens");
-        final String selectStatement =
-                """
+        final String selectStatement = """
             SELECT * FROM CategorizedTransaction ct
             WHERE NOT EXISTS (
                 SELECT 1 FROM TransactionToken tt WHERE tt.transaction_id = ct.id
