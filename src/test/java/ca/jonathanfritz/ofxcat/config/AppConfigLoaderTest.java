@@ -39,8 +39,7 @@ class AppConfigLoaderTest {
     @Test
     void loadsExistingConfig() throws IOException {
         // Setup: Create a config file
-        String yaml =
-                """
+        String yaml = """
                 keyword_rules_path: custom-rules.yaml
                 token_matching:
                   overlap_threshold: 0.75
@@ -92,8 +91,7 @@ class AppConfigLoaderTest {
     @Test
     void handlesInvalidYaml() throws IOException {
         // Setup: Create an invalid YAML file
-        String invalidYaml =
-                """
+        String invalidYaml = """
                 this is not valid: [
                   broken: yaml
                 """;
@@ -111,8 +109,7 @@ class AppConfigLoaderTest {
     @Test
     void ignoresUnknownProperties() throws IOException {
         // Setup: Create a config with unknown properties
-        String yaml =
-                """
+        String yaml = """
                 keyword_rules_path: rules.yaml
                 unknown_property: some_value
                 token_matching:

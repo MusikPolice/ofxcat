@@ -133,8 +133,7 @@ public class TransactionTokenDao {
         }
 
         // Use a CTE to compute total token counts, avoiding N+1 queries
-        final String selectStatement =
-                """
+        final String selectStatement = """
             WITH TokenCounts AS (
                 SELECT transaction_id, COUNT(*) as total_tokens
                 FROM TransactionToken
@@ -152,8 +151,7 @@ public class TransactionTokenDao {
               AND ct.category_id != ?
             GROUP BY ct.id, ct.category_id, tc.total_tokens
             ORDER BY matching_tokens DESC
-            """
-                        .formatted(placeholders);
+            """.formatted(placeholders);
 
         // Convert tokens to list for indexed access
         List<String> tokenList = new ArrayList<>(tokens);

@@ -4,10 +4,10 @@ plugins {
     id 'checkstyle'
     id 'pmd'
     id 'jacoco'
-    id 'com.diffplug.spotless' version '7.0.2'
+    id 'com.diffplug.spotless' version '8.3.0'
     id 'com.github.spotbugs' version '6.4.8'
     id 'net.ltgt.errorprone' version '4.1.0'
-    id 'com.gradleup.shadow' version '9.3.1'
+    id 'com.gradleup.shadow' version '9.3.2'
 }
 
 repositories {
@@ -37,7 +37,7 @@ dependencies {
     implementation 'org.xerial:sqlite-jdbc:3.51.2.0'
 
     // XLSX file generation
-    implementation 'org.dhatim:fastexcel:0.18.4'
+    implementation 'org.dhatim:fastexcel:0.20.0'
 
     // Commons
     implementation 'org.apache.commons:commons-lang3:3.19.0'
@@ -50,7 +50,7 @@ dependencies {
     // JSON serialization
     // Note that com.fasterxml.jackson has been moved to tools.jackson, but log4j still expects the old coordinates
     // when parsing the src/main/resources/log4j2.yaml configuration file
-    implementation('com.fasterxml.jackson:jackson-bom:2.21.0')
+    implementation('com.fasterxml.jackson:jackson-bom:2.21.1')
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
@@ -58,7 +58,7 @@ dependencies {
     errorprone 'com.google.errorprone:error_prone_core:2.36.0'
 
     // tests
-    testImplementation platform('org.junit:junit-bom:6.0.0')
+    testImplementation platform('org.junit:junit-bom:6.0.3')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'org.hamcrest:hamcrest:3.0'

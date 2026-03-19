@@ -107,7 +107,7 @@ public class OfxParser {
             // fired for each attribute of the ofx entity
             public void onElement(String name, String value) throws OFXSyntaxException {
                 switch (name.toUpperCase()) {
-                        // account information
+                    // account information
                     case BANKID:
                         // save the first bankId that we find in the file
                         if (StringUtils.isBlank(bankId[0])) {
@@ -123,7 +123,7 @@ public class OfxParser {
                         accountBuilder.setAccountType(value);
                         break;
 
-                        // transaction information
+                    // transaction information
                     case TRNTYPE:
                         transactionBuilder.setType(TransactionType.valueOf(value));
                         break;
@@ -157,7 +157,7 @@ public class OfxParser {
                         transactionBuilder.setMemo(value);
                         break;
 
-                        // ledgerbalance and availablebalance information
+                    // ledgerbalance and availablebalance information
                     case BALAMT:
                         if (!isLedgerBalanceActive && !isAvailableBalanceActive) {
                             break;
@@ -217,7 +217,7 @@ public class OfxParser {
                         }
 
                     default:
-                        // unhandled - there are lots of OFX elements that we don't use
+                    // unhandled - there are lots of OFX elements that we don't use
                 }
             }
 
