@@ -16,6 +16,8 @@ import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.GapDetectionService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
+import ca.jonathanfritz.ofxcat.service.Subscription;
+import ca.jonathanfritz.ofxcat.service.SubscriptionDetectionService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.service.VendorGroup;
@@ -56,6 +58,7 @@ public class OfxCat {
     private final CategoryCombineService categoryCombineService;
     private final GapDetectionService gapDetectionService;
     private final VendorSpendingService vendorSpendingService;
+    private final SubscriptionDetectionService subscriptionDetectionService;
     private final PathUtils pathUtils;
     private final CLI cli;
     private final KeywordRulesConfig keywordRulesConfig;
@@ -72,6 +75,7 @@ public class OfxCat {
             CategoryCombineService categoryCombineService,
             GapDetectionService gapDetectionService,
             VendorSpendingService vendorSpendingService,
+            SubscriptionDetectionService subscriptionDetectionService,
             PathUtils pathUtils,
             CLI cli,
             KeywordRulesConfig keywordRulesConfig,
@@ -83,6 +87,7 @@ public class OfxCat {
         this.categoryCombineService = categoryCombineService;
         this.gapDetectionService = gapDetectionService;
         this.vendorSpendingService = vendorSpendingService;
+        this.subscriptionDetectionService = subscriptionDetectionService;
         this.pathUtils = pathUtils;
         this.cli = cli;
         this.keywordRulesConfig = keywordRulesConfig;
@@ -267,6 +272,27 @@ public class OfxCat {
         }
     }
 
+    private void reportSubscriptions(SubscriptionOptions options) {
+        List<Subscription> subscriptions =
+                subscriptionDetectionService.detectSubscriptions(options.startDate(), options.endDate());
+
+        if (subscriptions.isEmpty()) {
+            cli.println("No subscriptions detected for the specified date range.");
+            return;
+        }
+
+        cli.println("VENDOR, FREQUENCY, TYPICAL AMOUNT, LAST CHARGE, NEXT EXPECTED");
+        for (Subscription s : subscriptions) {
+            cli.println(String.format(
+                    "%s, %s, %s, %s, %s",
+                    s.vendorName(),
+                    s.frequency(),
+                    ReportingService.CURRENCY_FORMATTER.format(s.typicalAmount()),
+                    s.lastCharge(),
+                    s.nextExpected()));
+        }
+    }
+
     private void reportAccounts() {
         reportingService.reportAccounts();
     }
@@ -399,6 +425,12 @@ public class OfxCat {
                 "             in Excel or LibreOffice and insert a chart from the VENDOR/TOTAL columns.",
                 "   --output-file: Optional. Output file path (only used with --format xlsx).",
                 "                  Defaults to ~/.ofxcat/reports/vendors-<start>-to-<end>.xlsx",
+                "ofxcat get subscriptions [OPTIONS]",
+                "   Detects recurring charges and prints them in CSV format.",
+                "   --start-date: Optional. Start date inclusive in format yyyy-mm-dd.",
+                "                 Defaults to 13 months before --end-date.",
+                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd.",
+                "               Defaults to today.",
                 "ofxcat get gaps",
                 "   Prints a list of detected gaps in the transaction record in CSV format.",
                 "   A gap exists when the balance invariant between consecutive transactions is",
@@ -454,6 +486,7 @@ public class OfxCat {
                             ofxCat.reportCategories();
                         case GAPS -> ofxCat.reportGaps();
                         case VENDORS -> ofxCat.reportVendors(getVendorOptions(args));
+                        case SUBSCRIPTIONS -> ofxCat.reportSubscriptions(getSubscriptionOptions(args));
                     }
                     break;
                 case MIGRATE:
@@ -528,7 +561,8 @@ public class OfxCat {
         ACCOUNTS,
         CATEGORIES,
         GAPS,
-        VENDORS
+        VENDORS,
+        SUBSCRIPTIONS
     }
 
     // Package-private for testing
@@ -662,6 +696,38 @@ public class OfxCat {
 
     // Package-private for testing
     record VendorOptions(LocalDate startDate, LocalDate endDate, String format, String outputFile) {}
+
+    // Package-private for testing
+    static SubscriptionOptions getSubscriptionOptions(String[] args) throws CliException {
+        try {
+            final Options options = new Options();
+            options.addOption(Option.builder()
+                    .argName("s")
+                    .longOpt("start-date")
+                    .desc("Start date (inclusive) in format yyyy-mm-dd")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+            options.addOption(Option.builder()
+                    .argName("e")
+                    .longOpt("end-date")
+                    .desc("End date (inclusive) in format yyyy-mm-dd")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+
+            final CommandLineParser commandLineParser = new DefaultParser();
+            final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
+            final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
+            final LocalDate startDate = toLocalDate(commandLine.getOptionValue("start-date"), endDate.minusMonths(13));
+            return new SubscriptionOptions(startDate, endDate);
+        } catch (ParseException e) {
+            throw new CliException("Failed to parse options", e);
+        }
+    }
+
+    // Package-private for testing
+    record SubscriptionOptions(LocalDate startDate, LocalDate endDate) {}
 
     // Package-private for testing
     static MigrateOptions getMigrateOptions(String[] args) throws CliException {

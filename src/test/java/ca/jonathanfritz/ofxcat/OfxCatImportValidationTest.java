@@ -10,6 +10,7 @@ import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.GapDetectionService;
 import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
+import ca.jonathanfritz.ofxcat.service.SubscriptionDetectionService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
 import ca.jonathanfritz.ofxcat.service.VendorSpendingService;
@@ -55,6 +56,7 @@ class OfxCatImportValidationTest {
                 new StubCategoryCombineService(),
                 new StubGapDetectionService(),
                 new StubVendorSpendingService(),
+                new StubSubscriptionDetectionService(),
                 testPathUtils,
                 new StubCLI(),
                 KeywordRulesConfig.empty(),
@@ -393,6 +395,12 @@ class OfxCatImportValidationTest {
     private static class StubVendorSpendingService extends VendorSpendingService {
         StubVendorSpendingService() {
             super(null);
+        }
+    }
+
+    private static class StubSubscriptionDetectionService extends SubscriptionDetectionService {
+        StubSubscriptionDetectionService() {
+            super(null, new AppConfig());
         }
     }
 
