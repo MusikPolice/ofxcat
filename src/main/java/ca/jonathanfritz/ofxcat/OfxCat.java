@@ -18,6 +18,8 @@ import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
+import ca.jonathanfritz.ofxcat.service.VendorGroup;
+import ca.jonathanfritz.ofxcat.service.VendorSpendingService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -53,6 +55,7 @@ public class OfxCat {
     private final TokenMigrationService tokenMigrationService;
     private final CategoryCombineService categoryCombineService;
     private final GapDetectionService gapDetectionService;
+    private final VendorSpendingService vendorSpendingService;
     private final PathUtils pathUtils;
     private final CLI cli;
     private final KeywordRulesConfig keywordRulesConfig;
@@ -68,6 +71,7 @@ public class OfxCat {
             TokenMigrationService tokenMigrationService,
             CategoryCombineService categoryCombineService,
             GapDetectionService gapDetectionService,
+            VendorSpendingService vendorSpendingService,
             PathUtils pathUtils,
             CLI cli,
             KeywordRulesConfig keywordRulesConfig,
@@ -78,6 +82,7 @@ public class OfxCat {
         this.tokenMigrationService = tokenMigrationService;
         this.categoryCombineService = categoryCombineService;
         this.gapDetectionService = gapDetectionService;
+        this.vendorSpendingService = vendorSpendingService;
         this.pathUtils = pathUtils;
         this.cli = cli;
         this.keywordRulesConfig = keywordRulesConfig;
@@ -231,6 +236,37 @@ public class OfxCat {
         }
     }
 
+    private void reportVendors(VendorOptions options) throws CliException {
+        List<VendorGroup> groups = vendorSpendingService.getVendorSpend(options.startDate(), options.endDate());
+
+        if ("xlsx".equalsIgnoreCase(options.format())) {
+            final Path outputFile = options.outputFile() != null
+                    ? pathUtils.expand(options.outputFile())
+                    : pathUtils
+                            .getReportsPath()
+                            .resolve("vendors-" + options.startDate() + "-to-" + options.endDate() + ".xlsx");
+            try {
+                final Path writtenPath = vendorSpendingService.writeToFile(groups, outputFile);
+                cli.println("Report written to " + writtenPath);
+            } catch (IOException e) {
+                throw new CliException("Failed to write vendor report to " + outputFile, e);
+            }
+        } else {
+            if (groups.isEmpty()) {
+                cli.println("No vendor data found for the specified date range.");
+                return;
+            }
+            cli.println("VENDOR, TRANSACTIONS, TOTAL");
+            for (VendorGroup group : groups) {
+                cli.println(String.format(
+                        "%s, %d, %s",
+                        group.displayName(),
+                        group.transactionCount(),
+                        ReportingService.CURRENCY_FORMATTER.format(group.totalAmount())));
+            }
+        }
+    }
+
     private void reportAccounts() {
         reportingService.reportAccounts();
     }
@@ -351,6 +387,18 @@ public class OfxCat {
                 "   Re-runs token migration on all transactions, applying current keyword rules.",
                 "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
                 "   --dry-run: Optional. Show what would change without making actual changes.",
+                "ofxcat get vendors --start-date=START [OPTIONS]",
+                "   Prints total spending per vendor for the specified date range.",
+                "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
+                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
+                "               Defaults to today if not specified.",
+                "   --format: Optional. Output format: terminal (default) or xlsx.",
+                "             terminal: prints CSV to the console.",
+                "             xlsx: writes an Excel file and prints the path.",
+                "             Note: XLSX does not include a pie chart. To add one, open the file",
+                "             in Excel or LibreOffice and insert a chart from the VENDOR/TOTAL columns.",
+                "   --output-file: Optional. Output file path (only used with --format xlsx).",
+                "                  Defaults to ~/.ofxcat/reports/vendors-<start>-to-<end>.xlsx",
                 "ofxcat get gaps",
                 "   Prints a list of detected gaps in the transaction record in CSV format.",
                 "   A gap exists when the balance invariant between consecutive transactions is",
@@ -405,6 +453,7 @@ public class OfxCat {
                             // TODO: need a way to edit categories and category descriptions
                             ofxCat.reportCategories();
                         case GAPS -> ofxCat.reportGaps();
+                        case VENDORS -> ofxCat.reportVendors(getVendorOptions(args));
                     }
                     break;
                 case MIGRATE:
@@ -478,7 +527,8 @@ public class OfxCat {
         TRANSACTIONS,
         ACCOUNTS,
         CATEGORIES,
-        GAPS
+        GAPS,
+        VENDORS
     }
 
     // Package-private for testing
@@ -561,6 +611,57 @@ public class OfxCat {
 
     // Package-private for testing
     record OfxCatOptions(LocalDate startDate, LocalDate endDate, Long categoryId, String format, String outputFile) {}
+
+    // Package-private for testing
+    static VendorOptions getVendorOptions(String[] args) throws CliException {
+        try {
+            final Options options = new Options();
+            options.addOption(Option.builder()
+                    .argName("s")
+                    .longOpt("start-date")
+                    .desc("Start date (inclusive) in format yyyy-mm-dd")
+                    .hasArg(true)
+                    .required(true)
+                    .get());
+            options.addOption(Option.builder()
+                    .argName("e")
+                    .longOpt("end-date")
+                    .desc("End date (inclusive) in format yyyy-mm-dd")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+            options.addOption(Option.builder()
+                    .argName("f")
+                    .longOpt("format")
+                    .desc("Output format: terminal (default) or xlsx")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+            options.addOption(Option.builder()
+                    .argName("o")
+                    .longOpt("output-file")
+                    .desc("Output file path (only used with --format xlsx)")
+                    .hasArg(true)
+                    .required(false)
+                    .get());
+
+            final CommandLineParser commandLineParser = new DefaultParser();
+            final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
+            final LocalDate startDate = toLocalDate(commandLine.getOptionValue("start-date"));
+            final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
+            final String format = commandLine.getOptionValue("format", "terminal");
+            if (!format.equalsIgnoreCase("terminal") && !format.equalsIgnoreCase("xlsx")) {
+                throw new CliException("Invalid format: " + format + ". Valid values are: terminal, xlsx");
+            }
+            final String outputFile = commandLine.getOptionValue("output-file");
+            return new VendorOptions(startDate, endDate, format, outputFile);
+        } catch (ParseException e) {
+            throw new CliException("Failed to parse options", e);
+        }
+    }
+
+    // Package-private for testing
+    record VendorOptions(LocalDate startDate, LocalDate endDate, String format, String outputFile) {}
 
     // Package-private for testing
     static MigrateOptions getMigrateOptions(String[] args) throws CliException {
