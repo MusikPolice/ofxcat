@@ -12,11 +12,15 @@ public class AppConfig {
 
     private String keywordRulesPath;
     private TokenMatchingSettings tokenMatching;
+    private VendorGroupingSettings vendorGrouping;
+    private SubscriptionDetectionSettings subscriptionDetection;
 
     public AppConfig() {
         // Default values
         this.keywordRulesPath = "keyword-rules.yaml";
         this.tokenMatching = new TokenMatchingSettings();
+        this.vendorGrouping = new VendorGroupingSettings();
+        this.subscriptionDetection = new SubscriptionDetectionSettings();
     }
 
     /**
@@ -40,6 +44,22 @@ public class AppConfig {
 
     public void setTokenMatching(TokenMatchingSettings tokenMatching) {
         this.tokenMatching = tokenMatching;
+    }
+
+    public VendorGroupingSettings getVendorGrouping() {
+        return vendorGrouping;
+    }
+
+    public void setVendorGrouping(VendorGroupingSettings vendorGrouping) {
+        this.vendorGrouping = vendorGrouping;
+    }
+
+    public SubscriptionDetectionSettings getSubscriptionDetection() {
+        return subscriptionDetection;
+    }
+
+    public void setSubscriptionDetection(SubscriptionDetectionSettings subscriptionDetection) {
+        this.subscriptionDetection = subscriptionDetection;
     }
 
     /**
@@ -76,6 +96,68 @@ public class AppConfig {
 
         public void setOverlapThreshold(double overlapThreshold) {
             this.overlapThreshold = overlapThreshold;
+        }
+    }
+
+    /**
+     * Settings for vendor grouping, which clusters transactions by token overlap.
+     */
+    public static class VendorGroupingSettings {
+        private double overlapThreshold;
+
+        public VendorGroupingSettings() {
+            // Default: 60% overlap required to assign two transactions to the same vendor
+            this.overlapThreshold = 0.6;
+        }
+
+        public double getOverlapThreshold() {
+            return overlapThreshold;
+        }
+
+        public void setOverlapThreshold(double overlapThreshold) {
+            this.overlapThreshold = overlapThreshold;
+        }
+    }
+
+    /**
+     * Settings for subscription detection.
+     */
+    public static class SubscriptionDetectionSettings {
+        private int minOccurrences;
+        private double amountTolerance;
+        private int intervalToleranceDays;
+
+        public SubscriptionDetectionSettings() {
+            // Default: at least 3 transactions needed to establish a recurring pattern
+            this.minOccurrences = 3;
+            // Default: amount may vary by up to 5% and still be considered the same subscription
+            this.amountTolerance = 0.05;
+            // Default: interval may vary by up to 3 days from a canonical billing period
+            this.intervalToleranceDays = 3;
+        }
+
+        public int getMinOccurrences() {
+            return minOccurrences;
+        }
+
+        public void setMinOccurrences(int minOccurrences) {
+            this.minOccurrences = minOccurrences;
+        }
+
+        public double getAmountTolerance() {
+            return amountTolerance;
+        }
+
+        public void setAmountTolerance(double amountTolerance) {
+            this.amountTolerance = amountTolerance;
+        }
+
+        public int getIntervalToleranceDays() {
+            return intervalToleranceDays;
+        }
+
+        public void setIntervalToleranceDays(int intervalToleranceDays) {
+            this.intervalToleranceDays = intervalToleranceDays;
         }
     }
 }

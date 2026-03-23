@@ -455,6 +455,118 @@ class CategorizedTransactionDaoTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void selectByDateRangeForVendorGrouping_returnsTransactionsInRange() {
+        final Category grocery = categoryDao.insert(new Category("GROCERY")).orElseThrow();
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        final LocalDate jan01 = LocalDate.of(2024, 1, 1);
+        final LocalDate jan15 = LocalDate.of(2024, 1, 15);
+        final LocalDate jan31 = LocalDate.of(2024, 1, 31);
+
+        final CategorizedTransaction txn1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), grocery))
+                .orElseThrow();
+        final CategorizedTransaction txn2 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan15), grocery))
+                .orElseThrow();
+        final CategorizedTransaction txn3 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan31), grocery))
+                .orElseThrow();
+
+        final List<CategorizedTransaction> result =
+                categorizedTransactionDao.selectByDateRangeForVendorGrouping(jan01, jan31);
+
+        Assertions.assertEquals(3, result.size());
+        final List<Long> ids =
+                result.stream().map(CategorizedTransaction::getId).toList();
+        Assertions.assertTrue(ids.contains(txn1.getId()));
+        Assertions.assertTrue(ids.contains(txn2.getId()));
+        Assertions.assertTrue(ids.contains(txn3.getId()));
+    }
+
+    @Test
+    void selectByDateRangeForVendorGrouping_excludesTransactionsOutsideRange() {
+        final Category grocery = categoryDao.insert(new Category("GROCERY")).orElseThrow();
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        final LocalDate jan01 = LocalDate.of(2024, 1, 1);
+        final LocalDate jan31 = LocalDate.of(2024, 1, 31);
+        final LocalDate dec31 = LocalDate.of(2023, 12, 31);
+        final LocalDate feb01 = LocalDate.of(2024, 2, 1);
+
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, dec31), grocery));
+        final CategorizedTransaction inRange = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), grocery))
+                .orElseThrow();
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, feb01), grocery));
+
+        final List<CategorizedTransaction> result =
+                categorizedTransactionDao.selectByDateRangeForVendorGrouping(jan01, jan31);
+
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(inRange.getId(), result.getFirst().getId());
+    }
+
+    @Test
+    void selectByDateRangeForVendorGrouping_excludesTransferCategory() {
+        final Category grocery = categoryDao.insert(new Category("GROCERY")).orElseThrow();
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        final LocalDate jan01 = LocalDate.of(2024, 1, 1);
+        final LocalDate jan31 = LocalDate.of(2024, 1, 31);
+
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), Category.TRANSFER));
+        final CategorizedTransaction grocery1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), grocery))
+                .orElseThrow();
+
+        final List<CategorizedTransaction> result =
+                categorizedTransactionDao.selectByDateRangeForVendorGrouping(jan01, jan31);
+
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(grocery1.getId(), result.getFirst().getId());
+    }
+
+    @Test
+    void selectByDateRangeForVendorGrouping_excludesUnknownCategory() {
+        final Category grocery = categoryDao.insert(new Category("GROCERY")).orElseThrow();
+        final Account account =
+                accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        final LocalDate jan01 = LocalDate.of(2024, 1, 1);
+        final LocalDate jan31 = LocalDate.of(2024, 1, 31);
+
+        categorizedTransactionDao.insert(
+                new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), Category.UNKNOWN));
+        final CategorizedTransaction grocery1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account, jan01), grocery))
+                .orElseThrow();
+
+        final List<CategorizedTransaction> result =
+                categorizedTransactionDao.selectByDateRangeForVendorGrouping(jan01, jan31);
+
+        Assertions.assertEquals(1, result.size());
+        Assertions.assertEquals(grocery1.getId(), result.getFirst().getId());
+    }
+
+    @Test
+    void selectByDateRangeForVendorGrouping_returnsEmptyWhenNoTransactions() {
+        final LocalDate jan01 = LocalDate.of(2024, 1, 1);
+        final LocalDate jan31 = LocalDate.of(2024, 1, 31);
+
+        final List<CategorizedTransaction> result =
+                categorizedTransactionDao.selectByDateRangeForVendorGrouping(jan01, jan31);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
     void selectByAccount_onlyReturnsTransactionsForSpecifiedAccount() {
         final Account accountA =
                 accountDao.insert(TestUtils.createRandomAccount()).orElse(null);

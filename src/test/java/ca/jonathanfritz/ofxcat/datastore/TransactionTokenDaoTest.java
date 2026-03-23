@@ -10,6 +10,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -208,6 +209,92 @@ class TransactionTokenDaoTest extends AbstractDatabaseTest {
 
             // Execute & Verify
             assertEquals(3, transactionTokenDao.getTokenCount(t, transaction.getId()));
+        }
+    }
+
+    @Test
+    void getTokensForTransactions_returnsTokensForMultipleTransactions() throws SQLException {
+        Category category = categoryDao.insert(new Category("GROCERIES")).orElseThrow();
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        CategorizedTransaction txn1 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
+        CategorizedTransaction txn2 = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
+
+        Set<String> tokens1 = Set.of("shoppers", "drug", "mart");
+        Set<String> tokens2 = Set.of("netflix", "com");
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, txn1.getId(), tokens1);
+            transactionTokenDao.insertTokens(t, txn2.getId(), tokens2);
+        }
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            Map<Long, Set<String>> result =
+                    transactionTokenDao.getTokensForTransactions(t, Set.of(txn1.getId(), txn2.getId()));
+
+            assertEquals(2, result.size());
+            assertEquals(tokens1, result.get(txn1.getId()));
+            assertEquals(tokens2, result.get(txn2.getId()));
+        }
+    }
+
+    @Test
+    void getTokensForTransactions_returnsEmptyMapForEmptyInput() throws SQLException {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            Map<Long, Set<String>> result = transactionTokenDao.getTokensForTransactions(t, Set.of());
+            assertTrue(result.isEmpty());
+        }
+    }
+
+    @Test
+    void getTokensForTransactions_omitsTransactionsWithNoTokens() throws SQLException {
+        Category category = categoryDao.insert(new Category("GROCERIES")).orElseThrow();
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        CategorizedTransaction withTokens = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
+        CategorizedTransaction withoutTokens = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, withTokens.getId(), Set.of("shoppers", "drug"));
+        }
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            Map<Long, Set<String>> result =
+                    transactionTokenDao.getTokensForTransactions(t, Set.of(withTokens.getId(), withoutTokens.getId()));
+
+            assertEquals(1, result.size());
+            assertTrue(result.containsKey(withTokens.getId()));
+            assertFalse(result.containsKey(withoutTokens.getId()));
+        }
+    }
+
+    @Test
+    void getTokensForTransactions_handlesSingleTransaction() throws SQLException {
+        Category category = categoryDao.insert(new Category("GROCERIES")).orElseThrow();
+        Account account = accountDao.insert(TestUtils.createRandomAccount()).orElseThrow();
+
+        CategorizedTransaction txn = categorizedTransactionDao
+                .insert(new CategorizedTransaction(TestUtils.createRandomTransaction(account), category))
+                .orElseThrow();
+
+        Set<String> tokens = Set.of("home", "depot");
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            transactionTokenDao.insertTokens(t, txn.getId(), tokens);
+        }
+
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            Map<Long, Set<String>> result = transactionTokenDao.getTokensForTransactions(t, Set.of(txn.getId()));
+
+            assertEquals(1, result.size());
+            assertEquals(tokens, result.get(txn.getId()));
         }
     }
 

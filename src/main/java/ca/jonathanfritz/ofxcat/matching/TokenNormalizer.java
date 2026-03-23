@@ -1,5 +1,8 @@
 package ca.jonathanfritz.ofxcat.matching;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -64,6 +67,36 @@ public class TokenNormalizer {
         }
 
         return tokens;
+    }
+
+    /**
+     * Normalizes a transaction description into an ordered list of tokens, preserving left-to-right
+     * positional order. Applies the same filtering rules as {@link #normalize(String)} but returns a
+     * {@link List} instead of a {@link Set} so that token order can be used to reconstruct a
+     * human-readable vendor display name.
+     *
+     * @param description the transaction description (already cleaned by TransactionCleaner)
+     * @return an ordered list of normalized tokens
+     */
+    public List<String> normalizeOrdered(String description) {
+        if (description == null || description.isBlank()) {
+            return List.of();
+        }
+
+        String decoded = decodeXmlEntities(description);
+        String lowercased = decoded.toLowerCase();
+        String initialsmerged = lowercased.replaceAll("([a-z])\\s*&\\s*([a-z])", "$1$2");
+        String merged = initialsmerged.replaceAll("[-'&]", "");
+        String[] parts = merged.split("[^a-z0-9]+");
+
+        List<String> tokens = new ArrayList<>();
+        for (String part : parts) {
+            if (isValidToken(part)) {
+                tokens.add(part);
+            }
+        }
+
+        return Collections.unmodifiableList(tokens);
     }
 
     private boolean isValidToken(String token) {

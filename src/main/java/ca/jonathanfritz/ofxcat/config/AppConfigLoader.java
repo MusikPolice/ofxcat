@@ -123,7 +123,29 @@ public class AppConfigLoader {
                 + "  # Higher values require more tokens to match\n"
                 + "  # Default: 0.6 (60% of tokens must match)\n"
                 + "  overlap_threshold: "
-                + config.getTokenMatching().getOverlapThreshold() + "\n";
+                + config.getTokenMatching().getOverlapThreshold() + "\n"
+                + "\n"
+                + "# Vendor grouping settings\n"
+                + "vendor_grouping:\n"
+                + "  # Minimum token overlap ratio (0.0-1.0) to assign two transactions to the same vendor\n"
+                + "  # Default: 0.6 (60% of tokens must match)\n"
+                + "  overlap_threshold: "
+                + config.getVendorGrouping().getOverlapThreshold() + "\n"
+                + "\n"
+                + "# Subscription detection settings\n"
+                + "subscription_detection:\n"
+                + "  # Minimum number of transactions required to establish a recurring pattern\n"
+                + "  # Default: 3\n"
+                + "  min_occurrences: "
+                + config.getSubscriptionDetection().getMinOccurrences() + "\n"
+                + "  # Maximum fractional difference allowed between a transaction amount and the median\n"
+                + "  # Default: 0.05 (5%)\n"
+                + "  amount_tolerance: "
+                + config.getSubscriptionDetection().getAmountTolerance() + "\n"
+                + "  # Maximum number of days an interval may deviate from a canonical billing period\n"
+                + "  # Default: 3\n"
+                + "  interval_tolerance_days: "
+                + config.getSubscriptionDetection().getIntervalToleranceDays() + "\n";
     }
 
     /**

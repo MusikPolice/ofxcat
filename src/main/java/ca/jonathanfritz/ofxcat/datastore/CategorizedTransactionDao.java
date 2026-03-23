@@ -367,6 +367,35 @@ public class CategorizedTransactionDao {
     }
 
     /**
+     * Returns all transactions in [startDate, endDate] suitable for vendor grouping.
+     * Excludes TRANSFER and UNKNOWN categories, which are not meaningful vendor spend.
+     *
+     * @param startDate start of the date range, inclusive
+     * @param endDate end of the date range, inclusive
+     * @return list of transactions in the date range, excluding TRANSFER and UNKNOWN
+     */
+    public List<CategorizedTransaction> selectByDateRangeForVendorGrouping(LocalDate startDate, LocalDate endDate) {
+        try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
+            logger.debug("Selecting transactions for vendor grouping between {} and {}", startDate, endDate);
+            final String query = "SELECT * FROM CategorizedTransaction "
+                    + "WHERE date >= ? AND date <= ? "
+                    + "AND category_id != ? AND category_id != ?";
+            return t.query(
+                    query,
+                    ps -> {
+                        ps.setDate(1, Date.valueOf(startDate));
+                        ps.setDate(2, Date.valueOf(endDate));
+                        ps.setLong(3, Category.UNKNOWN.getId());
+                        ps.setLong(4, Category.TRANSFER.getId());
+                    },
+                    categorizedTransactionDeserializer);
+        } catch (SQLException e) {
+            logger.error("Failed to select transactions for vendor grouping between {} and {}", startDate, endDate, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Returns all transactions for the given account, sorted by date then insertion order.
      * Used for gap detection.
      *

@@ -5,8 +5,10 @@ import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -104,6 +106,53 @@ public class TransactionTokenDao {
 
         return t.queryRaw(
                 selectStatement, ps -> ps.setLong(1, transactionId), rs -> rs.next() ? rs.getInt("count") : 0);
+    }
+
+    /**
+     * Retrieves tokens for a set of transactions in a single query, avoiding N+1 queries.
+     *
+     * @param t the database transaction to participate in
+     * @param transactionIds the IDs of the CategorizedTransactions to fetch tokens for
+     * @return a map from transaction ID to the set of tokens for that transaction;
+     *         transactions with no tokens are absent from the map
+     */
+    public Map<Long, Set<String>> getTokensForTransactions(DatabaseTransaction t, Set<Long> transactionIds)
+            throws SQLException {
+        if (transactionIds == null || transactionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        logger.debug("Retrieving tokens for {} transactions", transactionIds.size());
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < transactionIds.size(); i++) {
+            if (i > 0) {
+                placeholders.append(", ");
+            }
+            placeholders.append("?");
+        }
+
+        final String selectStatement = "SELECT transaction_id, token FROM TransactionToken WHERE transaction_id IN (%s)"
+                .formatted(placeholders);
+
+        List<Long> idList = new ArrayList<>(transactionIds);
+
+        return t.queryRaw(
+                selectStatement,
+                ps -> {
+                    for (int i = 0; i < idList.size(); i++) {
+                        ps.setLong(i + 1, idList.get(i));
+                    }
+                },
+                rs -> {
+                    Map<Long, Set<String>> result = new HashMap<>();
+                    while (rs.next()) {
+                        long txId = rs.getLong("transaction_id");
+                        String token = rs.getString("token");
+                        result.computeIfAbsent(txId, k -> new HashSet<>()).add(token);
+                    }
+                    return result;
+                });
     }
 
     /**

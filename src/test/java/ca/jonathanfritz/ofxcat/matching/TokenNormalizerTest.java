@@ -2,6 +2,7 @@ package ca.jonathanfritz.ofxcat.matching;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -261,6 +262,68 @@ class TokenNormalizerTest {
         // Verify: Custom stop word "coffee" is filtered
         assertEquals(1, tokens.size());
         assertTrue(tokens.contains("starbucks"));
+    }
+
+    // -- normalizeOrdered tests --
+
+    @Test
+    void normalizeOrderedPreservesTokenOrder() {
+        // Setup: multi-word vendor name
+        String input = "SHOPPERS DRUG MART #123";
+
+        // Execute
+        List<String> tokens = tokenNormalizer.normalizeOrdered(input);
+
+        // Verify: tokens appear in left-to-right order; store number is stripped
+        assertEquals(List.of("shoppers", "drug", "mart"), tokens);
+    }
+
+    @Test
+    void normalizeOrderedAppliesSameFiltersAsNormalize() {
+        // Setup: description with stop words, numbers, and short tokens
+        String input = "THE HOME DEPOT #4201";
+
+        // Execute
+        List<String> ordered = tokenNormalizer.normalizeOrdered(input);
+        Set<String> unordered = tokenNormalizer.normalize(input);
+
+        // Verify: same tokens produced; stop word "the" and number "4201" excluded
+        assertEquals(List.of("home", "depot"), ordered);
+        assertEquals(unordered, new java.util.HashSet<>(ordered));
+    }
+
+    @Test
+    void normalizeOrderedReturnsSingleTokenForSingleWordVendor() {
+        // Setup: single-token vendor (noise stripped)
+        String input = "NETFLIX.COM";
+
+        // Execute
+        List<String> tokens = tokenNormalizer.normalizeOrdered(input);
+
+        // Verify: "netflix" and "com" survive; both present in order
+        assertEquals(List.of("netflix", "com"), tokens);
+    }
+
+    @Test
+    void normalizeOrderedReturnsEmptyListForNull() {
+        assertTrue(tokenNormalizer.normalizeOrdered(null).isEmpty());
+    }
+
+    @Test
+    void normalizeOrderedReturnsEmptyListForBlank() {
+        assertTrue(tokenNormalizer.normalizeOrdered("   ").isEmpty());
+    }
+
+    @Test
+    void normalizeOrderedHandlesMergedInitials() {
+        // Setup: ampersand between single letters should be merged
+        String input = "A & W RESTAURANT";
+
+        // Execute
+        List<String> tokens = tokenNormalizer.normalizeOrdered(input);
+
+        // Verify: "aw" appears before "restaurant"
+        assertEquals(List.of("aw", "restaurant"), tokens);
     }
 
     @Test
