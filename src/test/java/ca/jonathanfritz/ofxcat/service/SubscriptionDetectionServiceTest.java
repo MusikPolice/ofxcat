@@ -14,6 +14,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
+import ca.jonathanfritz.ofxcat.model.Subscription;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;

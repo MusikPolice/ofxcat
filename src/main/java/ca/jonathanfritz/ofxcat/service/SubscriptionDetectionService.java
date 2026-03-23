@@ -2,6 +2,8 @@ package ca.jonathanfritz.ofxcat.service;
 
 import ca.jonathanfritz.ofxcat.config.AppConfig;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
+import ca.jonathanfritz.ofxcat.model.Subscription;
+import ca.jonathanfritz.ofxcat.model.VendorGroup;
 import jakarta.inject.Inject;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;

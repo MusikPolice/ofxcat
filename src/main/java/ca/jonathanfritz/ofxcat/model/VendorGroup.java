@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.service;
+package ca.jonathanfritz.ofxcat.model;
 
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import java.util.List;

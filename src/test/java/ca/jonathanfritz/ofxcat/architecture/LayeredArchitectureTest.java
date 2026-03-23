@@ -47,6 +47,8 @@ class LayeredArchitectureTest {
             .definedBy("ca.jonathanfritz.ofxcat.io..")
             .layer("Config")
             .definedBy("ca.jonathanfritz.ofxcat.config..")
+            .layer("Model")
+            .definedBy("ca.jonathanfritz.ofxcat.model..")
             .layer("Utils")
             .definedBy("ca.jonathanfritz.ofxcat.utils..")
             .layer("Exception")
@@ -64,13 +66,17 @@ class LayeredArchitectureTest {
             .whereLayer("IO")
             .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Cleaner", "CLI")
             .whereLayer("Datastore")
-            .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Matching", "Cleaner", "CLI")
+            .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Matching", "Cleaner", "CLI", "Model")
             .whereLayer("Config")
             .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Matching")
+            .whereLayer("Model")
+            .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "CLI")
             .whereLayer("Utils")
-            .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Matching", "Cleaner", "CLI", "IO", "Datastore")
+            .mayOnlyBeAccessedByLayers(
+                    "EntryPoint", "Service", "Matching", "Cleaner", "CLI", "IO", "Datastore", "Model")
             .whereLayer("Exception")
-            .mayOnlyBeAccessedByLayers("EntryPoint", "Service", "Matching", "Cleaner", "CLI", "IO", "Datastore");
+            .mayOnlyBeAccessedByLayers(
+                    "EntryPoint", "Service", "Matching", "Cleaner", "CLI", "IO", "Datastore", "Model");
 
     // -- Leaf package isolation --
 
@@ -144,6 +150,7 @@ class LayeredArchitectureTest {
                     "ca.jonathanfritz.ofxcat.exception..",
                     "ca.jonathanfritz.ofxcat.io..",
                     "ca.jonathanfritz.ofxcat.matching..",
+                    "ca.jonathanfritz.ofxcat.model..",
                     "ca.jonathanfritz.ofxcat.service..",
                     "ca.jonathanfritz.ofxcat.utils..")
             .as("All classes must belong to a known package — add new packages to the layer definitions above");

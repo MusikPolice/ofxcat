@@ -1,5 +1,6 @@
 package ca.jonathanfritz.ofxcat.service;
 
+import ca.jonathanfritz.ofxcat.model.VendorGroup;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;

@@ -6,6 +6,7 @@ import ca.jonathanfritz.ofxcat.datastore.TransactionTokenDao;
 import ca.jonathanfritz.ofxcat.datastore.dto.CategorizedTransaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
+import ca.jonathanfritz.ofxcat.model.VendorGroup;
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;

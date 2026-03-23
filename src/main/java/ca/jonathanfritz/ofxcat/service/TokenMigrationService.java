@@ -8,6 +8,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Category;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.matching.TokenNormalizer;
+import ca.jonathanfritz.ofxcat.model.MigrationReport;
 import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.SQLException;

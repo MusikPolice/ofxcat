@@ -15,6 +15,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.utils.DatabaseTransaction;
 import ca.jonathanfritz.ofxcat.matching.KeywordRule;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
+import ca.jonathanfritz.ofxcat.model.MigrationReport;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;

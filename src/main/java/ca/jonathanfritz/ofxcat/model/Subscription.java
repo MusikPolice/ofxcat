@@ -1,4 +1,4 @@
-package ca.jonathanfritz.ofxcat.service;
+package ca.jonathanfritz.ofxcat.model;
 
 import java.time.LocalDate;
 
