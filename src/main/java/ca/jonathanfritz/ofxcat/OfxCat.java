@@ -12,15 +12,15 @@ import ca.jonathanfritz.ofxcat.matching.KeywordRule;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.matching.KeywordRulesLoader;
 import ca.jonathanfritz.ofxcat.matching.MatchingModule;
+import ca.jonathanfritz.ofxcat.model.MigrationReport;
+import ca.jonathanfritz.ofxcat.model.Subscription;
+import ca.jonathanfritz.ofxcat.model.VendorGroup;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.GapDetectionService;
-import ca.jonathanfritz.ofxcat.service.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
-import ca.jonathanfritz.ofxcat.service.Subscription;
 import ca.jonathanfritz.ofxcat.service.SubscriptionDetectionService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
 import ca.jonathanfritz.ofxcat.service.TransactionImportService;
-import ca.jonathanfritz.ofxcat.service.VendorGroup;
 import ca.jonathanfritz.ofxcat.service.VendorSpendingService;
 import ca.jonathanfritz.ofxcat.utils.PathUtils;
 import com.google.inject.Guice;
@@ -273,6 +273,14 @@ public class OfxCat {
     }
 
     private void reportSubscriptions(SubscriptionOptions options) {
+        if (options.explain()) {
+            reportSubscriptionsExplain(options);
+        } else {
+            reportSubscriptionsNormal(options);
+        }
+    }
+
+    private void reportSubscriptionsNormal(SubscriptionOptions options) {
         List<Subscription> subscriptions =
                 subscriptionDetectionService.detectSubscriptions(options.startDate(), options.endDate());
 
@@ -290,6 +298,58 @@ public class OfxCat {
                     ReportingService.CURRENCY_FORMATTER.format(s.typicalAmount()),
                     s.lastCharge(),
                     s.nextExpected()));
+        }
+    }
+
+    private void reportSubscriptionsExplain(SubscriptionOptions options) {
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(options.startDate(), options.endDate());
+
+        if (results.isEmpty()) {
+            cli.println("No vendor groups found for the specified date range.");
+            return;
+        }
+
+        List<SubscriptionDetectionService.ExplainResult> detected = results.stream()
+                .filter(SubscriptionDetectionService.ExplainResult::isDetected)
+                .toList();
+        List<SubscriptionDetectionService.ExplainResult> rejected =
+                results.stream().filter(r -> !r.isDetected()).toList();
+
+        cli.println("DETECTED:");
+        if (detected.isEmpty()) {
+            cli.println("  (none)");
+        } else {
+            for (SubscriptionDetectionService.ExplainResult r : detected) {
+                Subscription s = r.subscription();
+                cli.println(String.format(
+                        "  %s, %s, %s, %s, %s",
+                        s.vendorName(),
+                        s.frequency(),
+                        ReportingService.CURRENCY_FORMATTER.format(s.typicalAmount()),
+                        s.lastCharge(),
+                        s.nextExpected()));
+            }
+        }
+
+        cli.println("");
+        cli.println("REJECTED:");
+        if (rejected.isEmpty()) {
+            cli.println("  (none)");
+        } else {
+            for (SubscriptionDetectionService.ExplainResult r : rejected) {
+                String intervals = r.intervals().isEmpty()
+                        ? ""
+                        : String.format(
+                                "  intervals: %s days",
+                                r.intervals().stream()
+                                        .map(Object::toString)
+                                        .reduce((a, b) -> a + "," + b)
+                                        .orElse(""));
+                cli.println(String.format(
+                        "  %-35s %3d txns  reason: %s (%s)%s",
+                        r.vendorName(), r.transactionCount(), r.rejectionReason(), r.rejectionDetail(), intervals));
+            }
         }
     }
 
@@ -431,6 +491,8 @@ public class OfxCat {
                 "                 Defaults to 13 months before --end-date.",
                 "   --end-date: Optional. End date inclusive in format yyyy-mm-dd.",
                 "               Defaults to today.",
+                "   --explain: Optional. Show every vendor group with the reason it was",
+                "              detected as a subscription or rejected.",
                 "ofxcat get gaps",
                 "   Prints a list of detected gaps in the transaction record in CSV format.",
                 "   A gap exists when the balance invariant between consecutive transactions is",
@@ -715,19 +777,26 @@ public class OfxCat {
                     .hasArg(true)
                     .required(false)
                     .get());
+            options.addOption(Option.builder()
+                    .longOpt("explain")
+                    .desc("Show all vendor groups with the reason each was detected or rejected")
+                    .hasArg(false)
+                    .required(false)
+                    .get());
 
             final CommandLineParser commandLineParser = new DefaultParser();
             final CommandLine commandLine = commandLineParser.parse(options, Arrays.copyOfRange(args, 2, args.length));
             final LocalDate endDate = toLocalDate(commandLine.getOptionValue("end-date"), LocalDate.now());
             final LocalDate startDate = toLocalDate(commandLine.getOptionValue("start-date"), endDate.minusMonths(13));
-            return new SubscriptionOptions(startDate, endDate);
+            final boolean explain = commandLine.hasOption("explain");
+            return new SubscriptionOptions(startDate, endDate, explain);
         } catch (ParseException e) {
             throw new CliException("Failed to parse options", e);
         }
     }
 
     // Package-private for testing
-    record SubscriptionOptions(LocalDate startDate, LocalDate endDate) {}
+    record SubscriptionOptions(LocalDate startDate, LocalDate endDate, boolean explain) {}
 
     // Package-private for testing
     static MigrateOptions getMigrateOptions(String[] args) throws CliException {

@@ -327,6 +327,18 @@ class TokenNormalizerTest {
     }
 
     @Test
+    void filtersBankBillPaymentPrefixes() {
+        // Bank descriptions like "BILL PAYMENT KOODO MOBILE" should drop "bill" and "payment"
+        // so the vendor tokens match transactions labelled as "KOODO MOBILE PAC EDMONTON"
+        Set<String> tokens = tokenNormalizer.normalize("BILL PAYMENT KOODO MOBILE");
+
+        assertFalse(tokens.contains("bill"), "bill should be a stop word");
+        assertFalse(tokens.contains("payment"), "payment should be a stop word");
+        assertTrue(tokens.contains("koodo"));
+        assertTrue(tokens.contains("mobile"));
+    }
+
+    @Test
     void respectsCustomMinTokenLength() {
         // Setup: Create config with minimum token length of 3
         NormalizationConfig config =

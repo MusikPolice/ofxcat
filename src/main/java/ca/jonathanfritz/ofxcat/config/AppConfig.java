@@ -124,16 +124,19 @@ public class AppConfig {
      */
     public static class SubscriptionDetectionSettings {
         private int minOccurrences;
+        private int annualMinOccurrences;
         private double amountTolerance;
         private int intervalToleranceDays;
 
         public SubscriptionDetectionSettings() {
             // Default: at least 3 transactions needed to establish a recurring pattern
             this.minOccurrences = 3;
-            // Default: amount may vary by up to 5% and still be considered the same subscription
-            this.amountTolerance = 0.05;
-            // Default: interval may vary by up to 3 days from a canonical billing period
-            this.intervalToleranceDays = 3;
+            // Default: annual subscriptions only need 2 occurrences (2 years of data is common)
+            this.annualMinOccurrences = 2;
+            // Default: amount may vary by up to 20% (covers FX fluctuation and price increases)
+            this.amountTolerance = 0.20;
+            // Default: interval may vary by up to 5 days from a canonical billing period
+            this.intervalToleranceDays = 5;
         }
 
         public int getMinOccurrences() {
@@ -142,6 +145,14 @@ public class AppConfig {
 
         public void setMinOccurrences(int minOccurrences) {
             this.minOccurrences = minOccurrences;
+        }
+
+        public int getAnnualMinOccurrences() {
+            return annualMinOccurrences;
+        }
+
+        public void setAnnualMinOccurrences(int annualMinOccurrences) {
+            this.annualMinOccurrences = annualMinOccurrences;
         }
 
         public double getAmountTolerance() {

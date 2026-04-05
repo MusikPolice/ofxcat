@@ -8,8 +8,22 @@ import java.util.Set;
  */
 public class NormalizationConfig {
 
-    private static final Set<String> DEFAULT_STOP_WORDS =
-            Set.of("the", "and", "or", "of", "for", "at", "to", "from", "in", "on", "by", "with");
+    private static final Set<String> DEFAULT_STOP_WORDS = Set.of(
+            "the",
+            "and",
+            "or",
+            "of",
+            "for",
+            "at",
+            "to",
+            "from",
+            "in",
+            "on",
+            "by",
+            "with",
+            // Bank statement prefixes that obscure vendor identity
+            "bill",
+            "payment");
 
     private static final int DEFAULT_MIN_TOKEN_LENGTH = 2;
 

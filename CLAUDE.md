@@ -126,6 +126,12 @@ Four-tier matching strategy:
 ### Configuration (`~/.ofxcat/config.yaml`)
 - `keyword_rules_path`: Path to keyword rules file (default: `keyword-rules.yaml`)
 - `token_matching.overlap_threshold`: Minimum token overlap for matching (default: 0.6)
+- `subscription_detection.min_occurrences`: Minimum transactions to detect a subscription (default: 3)
+- `subscription_detection.annual_min_occurrences`: Minimum transactions for annual billing (default: 2)
+- `subscription_detection.amount_tolerance`: Max fractional deviation from median amount (default: 0.20)
+- `subscription_detection.interval_tolerance_days`: Max days of drift per billing cycle (default: 5)
+
+Subscription detection allows gaps that are exact multiples of the billing period (e.g. a 60-day gap in a monthly subscription means one skipped month). Weekly and biweekly periods do not allow skips; monthly allows up to 3× skips.
 
 ### Transfer Detection (TransferMatchingService)
 Matches XFER-type transactions across accounts by: same date + opposite amounts + different accounts

@@ -118,6 +118,51 @@ Savings, INDETERMINATE, INDETERMINATE, INDETERMINATE
 
 The same gap data appears in the `GAP` column of the `get transactions` report.
 
+### Vendor Spending
+
+To see a ranked breakdown of spending by vendor (rather than by category), use `get vendors`:
+```bash
+java -jar ofxcat-<hash>.jar get vendors --start-date=2024-01-01 --end-date=2024-12-31
+```
+
+Example output:
+```
+VENDOR, TOTAL, TRANSACTIONS, TYPICAL
+Cressman Meats, -2843.00, 41, -69.34
+Fore Quarters, -1654.00, 42, -39.38
+Netflix Com, -215.64, 12, -17.97
+```
+
+Vendors are ranked by total spend (largest absolute spend first). The `TYPICAL` column shows the median transaction amount for that vendor.
+
+### Subscriptions
+
+To detect recurring charges — services billed on a regular schedule at a consistent amount — use `get subscriptions`:
+```bash
+java -jar ofxcat-<hash>.jar get subscriptions --start-date=2024-01-01 --end-date=2024-12-31
+```
+
+Example output:
+```
+VENDOR, FREQUENCY, AMOUNT, LAST CHARGE, NEXT EXPECTED
+Netflix Com, MONTHLY, -17.97, 2024-12-01, 2024-12-31
+Dropbox Annual, ANNUAL, -119.99, 2024-03-15, 2025-03-15
+```
+
+A vendor group qualifies as a subscription when:
+- It has at least 3 transactions (2 for annual billing)
+- All amounts are within 20% of the median (covers FX fluctuation and price increases)
+- All inter-transaction intervals are consistent with a canonical billing period (weekly / biweekly / monthly / quarterly / annual), within ±5 days per cycle
+
+Gaps that are exact multiples of the billing period are permitted — for example, a 60-day gap in an otherwise monthly subscription is treated as one skipped month rather than a mismatch.
+
+To understand why a particular vendor was or was not detected, use `--explain`:
+```bash
+java -jar ofxcat-<hash>.jar get subscriptions --start-date=2024-01-01 --end-date=2024-12-31 --explain
+```
+
+This prints every vendor group with either `DETECTED` or `REJECTED`, including the rejection reason (too few transactions, amount variance, or interval mismatch) and the observed inter-transaction intervals.
+
 ## Storage and Logging
 `ofxcat` stores imported transactions in an SQLite3 database located in `~/.ofx/ofxcat.db`. Similarly, the log file is located at `~/.ofx/ofxcat.log`.
 

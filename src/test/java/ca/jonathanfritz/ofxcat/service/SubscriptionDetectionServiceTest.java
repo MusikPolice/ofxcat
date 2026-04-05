@@ -77,9 +77,9 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
 
     @Test
     void amountVarianceExceedingToleranceIsNotDetected() {
-        // default tolerance = 5%; vary by ~15% which exceeds it
+        // default tolerance = 20%; vary by ~27% which exceeds it
         insertWithTokens("NETFLIX.COM", -15.00f, Set.of("netflix", "com"), JAN_01_2024);
-        insertWithTokens("NETFLIX.COM", -17.25f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
+        insertWithTokens("NETFLIX.COM", -19.00f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
         insertWithTokens("NETFLIX.COM", -15.00f, Set.of("netflix", "com"), JAN_01_2024.plusDays(60));
 
         List<Subscription> result = subscriptionDetectionService.detectSubscriptions(JAN_01_2024, DEC_31_2024);
@@ -129,6 +129,21 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void monthlySubscriptionWithSkippedMonthIsDetected() {
+        // Intervals: 30, 30, 60, 30 — the 60-day gap is two billing cycles (skipped one month)
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024);
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(30));
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(60));
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(120));
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(150));
+
+        List<Subscription> result = subscriptionDetectionService.detectSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(1, result.size());
+        assertEquals("MONTHLY", result.get(0).frequency());
+    }
+
+    @Test
     void annualSubscriptionIsDetected() {
         // Two years' worth of annual charges, 365-day interval
         insertWithTokens("DROPBOX ANNUAL", -120f, Set.of("dropbox", "annual"), LocalDate.of(2023, 1, 1));
@@ -156,10 +171,10 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
 
     @Test
     void irregularIntervalsAreNotDetected() {
-        // Intervals: 15, 45 days — not consistent with any billing period
+        // Intervals: 15, 50 days — not close to any multiple of a canonical billing period (±5)
         insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
         insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(15));
-        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(60));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(65));
 
         List<Subscription> result = subscriptionDetectionService.detectSubscriptions(JAN_01_2024, DEC_31_2024);
         assertTrue(result.isEmpty());
@@ -205,6 +220,31 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
         assertEquals("Spotify Premium", result.get(1).vendorName());
     }
 
+    // -- annual min_occurrences --
+
+    @Test
+    void annualSubscriptionDetectedWithTwoOccurrences() {
+        // Only 2 occurrences, which is below the default min_occurrences=3 but meets annualMinOccurrences=2
+        insertWithTokens("DROPBOX ANNUAL", -120f, Set.of("dropbox", "annual"), LocalDate.of(2024, 1, 1));
+        insertWithTokens("DROPBOX ANNUAL", -120f, Set.of("dropbox", "annual"), LocalDate.of(2025, 1, 1));
+
+        List<Subscription> result =
+                subscriptionDetectionService.detectSubscriptions(LocalDate.of(2024, 1, 1), LocalDate.of(2025, 12, 31));
+
+        assertEquals(1, result.size());
+        assertEquals("ANNUAL", result.get(0).frequency());
+    }
+
+    @Test
+    void monthlySubscriptionRequiresFullMinOccurrences() {
+        // 2 transactions with monthly interval — below min_occurrences=3, should not be detected
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
+
+        List<Subscription> result = subscriptionDetectionService.detectSubscriptions(JAN_01_2024, DEC_31_2024);
+        assertTrue(result.isEmpty());
+    }
+
     // -- configurable thresholds --
 
     @Test
@@ -225,18 +265,18 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
 
     @Test
     void customIntervalToleranceIsRespected() {
-        // Intervals of 34 days — outside default 3-day tolerance for MONTHLY (30±3=27-33), but within ±5
+        // Intervals of 36 days — outside default 5-day tolerance for MONTHLY (30±5=25-35), but within ±7
         insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
-        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(34));
-        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(68));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(36));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(72));
 
         // Default tolerance: not detected
         List<Subscription> defaultResult = subscriptionDetectionService.detectSubscriptions(JAN_01_2024, DEC_31_2024);
         assertTrue(defaultResult.isEmpty());
 
-        // Relaxed tolerance of 5: detected
+        // Relaxed tolerance of 7: detected
         AppConfig config = new AppConfig();
-        config.getSubscriptionDetection().setIntervalToleranceDays(5);
+        config.getSubscriptionDetection().setIntervalToleranceDays(7);
         VendorGroupingService groupingService = new VendorGroupingService(
                 categorizedTransactionDao, transactionTokenDao, connection, tokenNormalizer, config);
         SubscriptionDetectionService service = new SubscriptionDetectionService(groupingService, config);
@@ -244,6 +284,102 @@ class SubscriptionDetectionServiceTest extends AbstractDatabaseTest {
         List<Subscription> relaxedResult = service.detectSubscriptions(JAN_01_2024, DEC_31_2024);
         assertEquals(1, relaxedResult.size());
         assertEquals("MONTHLY", relaxedResult.get(0).frequency());
+    }
+
+    // -- explainSubscriptions --
+
+    @Test
+    void explainEmptyDateRangeReturnsNoResults() {
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void explainDetectedSubscription() {
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(60));
+
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(1, results.size());
+        SubscriptionDetectionService.ExplainResult r = results.get(0);
+        assertTrue(r.isDetected());
+        assertNotNull(r.subscription());
+        assertEquals("Netflix Com", r.vendorName());
+        assertEquals("MONTHLY", r.subscription().frequency());
+        assertNull(r.rejectionReason());
+        assertNull(r.rejectionDetail());
+    }
+
+    @Test
+    void explainRejectedTooFewTransactions() {
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
+
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(1, results.size());
+        SubscriptionDetectionService.ExplainResult r = results.get(0);
+        assertFalse(r.isDetected());
+        assertEquals(SubscriptionDetectionService.RejectionReason.TOO_FEW_TRANSACTIONS, r.rejectionReason());
+        assertNotNull(r.rejectionDetail());
+        assertEquals(1, r.transactionCount());
+        assertTrue(r.intervals().isEmpty());
+    }
+
+    @Test
+    void explainRejectedAmountVariance() {
+        // 27% variance, exceeds 20% tolerance
+        insertWithTokens("NETFLIX.COM", -15.00f, Set.of("netflix", "com"), JAN_01_2024);
+        insertWithTokens("NETFLIX.COM", -19.00f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
+        insertWithTokens("NETFLIX.COM", -15.00f, Set.of("netflix", "com"), JAN_01_2024.plusDays(60));
+
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(1, results.size());
+        SubscriptionDetectionService.ExplainResult r = results.get(0);
+        assertFalse(r.isDetected());
+        assertEquals(SubscriptionDetectionService.RejectionReason.AMOUNT_VARIANCE, r.rejectionReason());
+        assertTrue(r.rejectionDetail().contains("%"));
+    }
+
+    @Test
+    void explainRejectedIntervalMismatch() {
+        // Irregular intervals: 15, 50 days — not close to any multiple of a canonical billing period
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(15));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(65));
+
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(1, results.size());
+        SubscriptionDetectionService.ExplainResult r = results.get(0);
+        assertFalse(r.isDetected());
+        assertEquals(SubscriptionDetectionService.RejectionReason.INTERVAL_MISMATCH, r.rejectionReason());
+        assertFalse(r.intervals().isEmpty());
+    }
+
+    @Test
+    void explainResultsSortedAlphabetically() {
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024);
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(30));
+        insertWithTokens("SPOTIFY PREMIUM", -10f, Set.of("spotify", "premium"), JAN_01_2024.plusDays(60));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024);
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(30));
+        insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"), JAN_01_2024.plusDays(60));
+
+        List<SubscriptionDetectionService.ExplainResult> results =
+                subscriptionDetectionService.explainSubscriptions(JAN_01_2024, DEC_31_2024);
+
+        assertEquals(2, results.size());
+        // Alphabetical: "Netflix Com" < "Spotify Premium"
+        assertEquals("Netflix Com", results.get(0).vendorName());
+        assertEquals("Spotify Premium", results.get(1).vendorName());
     }
 
     // -- helpers --

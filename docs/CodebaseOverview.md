@@ -1,6 +1,6 @@
 # ofxcat Codebase Overview
 
-**Last Updated:** March 15, 2026
+**Last Updated:** April 5, 2026
 **Purpose:** Comprehensive technical documentation for developers maintaining and extending this application.
 
 ---
@@ -31,6 +31,8 @@ ofxcat is a Java 21 command-line application that imports and categorizes financ
 - Categorize transactions using keyword rules, token-based matching, and exact matching
 - Generate CSV reports showing spending by category over time, including a GAP column for missing data
 - Detect data gaps by checking a balance invariant between consecutive transactions
+- Report spending ranked by vendor (vendor grouping via token overlap)
+- Detect recurring subscriptions by identifying consistent charge intervals and amounts
 - Learn from user input to improve categorization accuracy
 - Apply keyword rules for automatic categorization of common merchants
 
@@ -47,7 +49,8 @@ The application follows a **layered architecture** with dependency injection:
 ├─────────────────────────────────────┤
 │  Service Layer (Import, Category,   │  ← Business logic
 │   Reporting, TransferMatching,      │
-│   CategoryCombine)                  │
+│   CategoryCombine, VendorGrouping,  │
+│   VendorSpending, Subscription)     │
 ├─────────────────────────────────────┤
 │    DAO Layer (AccountDao, etc)      │  ← Data access
 ├─────────────────────────────────────┤
@@ -56,9 +59,10 @@ The application follows a **layered architecture** with dependency injection:
 ```
 
 ### Dependency Injection
-Uses **Google Guice** for dependency injection with two modules:
+Uses **Google Guice** for dependency injection with three modules:
 - `CLIModule`: Provides TextIO for interactive terminal UI
 - `DatastoreModule`: Configures database connection, can be on-disk or in-memory (for testing)
+- `MatchingModule`: Wires up `TokenNormalizer` and `TokenMatchingService` with config
 
 ### Key Patterns
 - **Factory Pattern**: `TransactionCleanerFactory` uses classpath scanning to discover bank-specific cleaners
@@ -145,6 +149,31 @@ java -jar ofxcat-<hash>.jar rename category \
 ```
 Alias for `combine categories`. Same behavior and options.
 
+#### Get Vendors
+```bash
+java -jar ofxcat-<hash>.jar get vendors \
+  --start-date=2024-01-01 \
+  --end-date=2024-12-31
+```
+Groups transactions by vendor using token overlap (same logic as categorization matching) and outputs a CSV ranked by total spend (largest absolute spend first):
+```
+VENDOR, TOTAL, TRANSACTIONS, TYPICAL
+Cressman Meats, -2843.00, 41, -69.34
+Netflix Com, -215.64, 12, -17.97
+```
+`TYPICAL` is the median transaction amount for that vendor.
+
+#### Get Subscriptions
+```bash
+java -jar ofxcat-<hash>.jar get subscriptions \
+  --start-date=2024-01-01 \
+  --end-date=2024-12-31 \
+  [--explain]
+```
+Detects recurring charges by inspecting vendor groups for consistent billing intervals and amounts. A vendor group qualifies when it has ≥ 3 transactions (≥ 2 for annual), all amounts within 20% of the median, and all inter-transaction intervals consistent with a canonical billing period (weekly / biweekly / monthly / quarterly / annual) within ±5 days. Monthly billing allows gaps up to 3× the period (e.g. a 60-day gap counts as one skipped month).
+
+`--explain` prints every vendor group with its detection outcome and, for rejected groups, the specific reason (TOO_FEW_TRANSACTIONS, AMOUNT_VARIANCE, or INTERVAL_MISMATCH) and the raw observed intervals.
+
 #### Help
 ```bash
 java -jar ofxcat-<hash>.jar help
@@ -202,13 +231,16 @@ ca.jonathanfritz.ofxcat/
 │   ├── CLI.java
 │   ├── CLIModule.java
 │   └── TextIOWrapper.java
+├── config/                # Configuration management
+│   ├── AppConfig.java
+│   └── AppConfigLoader.java
 ├── datastore/             # Database access layer
 │   ├── dto/               # Data transfer objects
 │   │   ├── Account.java
 │   │   ├── Category.java
 │   │   ├── Transaction.java
 │   │   ├── CategorizedTransaction.java
-│   │   ├── DescriptionCategory.java
+│   │   ├── TransactionToken.java
 │   │   └── Transfer.java
 │   ├── utils/             # Database utilities
 │   │   ├── DatabaseTransaction.java
@@ -216,11 +248,13 @@ ca.jonathanfritz.ofxcat/
 │   │   ├── Entity.java
 │   │   ├── ResultSetDeserializer.java
 │   │   ├── SqlConsumer.java
-│   │   └── SqlFunction.java
+│   │   ├── SqlFunction.java
+│   │   ├── TransactionState.java
+│   │   └── TransactionStateConsumer.java
 │   ├── AccountDao.java
 │   ├── CategoryDao.java
 │   ├── CategorizedTransactionDao.java
-│   ├── DescriptionCategoryDao.java
+│   ├── TransactionTokenDao.java
 │   └── TransferDao.java
 ├── exception/             # Custom exceptions
 │   ├── OfxCatException.java
@@ -236,19 +270,26 @@ ca.jonathanfritz.ofxcat/
 │   ├── KeywordRulesConfig.java
 │   ├── KeywordRulesLoader.java
 │   ├── MatchingModule.java
+│   ├── NormalizationConfig.java
 │   ├── TokenMatchingConfig.java
 │   ├── TokenMatchingService.java
 │   └── TokenNormalizer.java
-├── config/                # Configuration management
-│   ├── AppConfig.java
-│   └── AppConfigLoader.java
+├── model/                 # Value objects returned by service layer
+│   ├── MigrationReport.java
+│   ├── Subscription.java
+│   └── VendorGroup.java
 ├── service/               # Business logic
 │   ├── CategoryCombineService.java
 │   ├── GapDetectionService.java
-│   ├── TransactionImportService.java
+│   ├── ProgressCallback.java
+│   ├── ReportingService.java
+│   ├── SubscriptionDetectionService.java
+│   ├── TokenMigrationService.java
 │   ├── TransactionCategoryService.java
+│   ├── TransactionImportService.java
 │   ├── TransferMatchingService.java
-│   └── ReportingService.java
+│   ├── VendorGroupingService.java
+│   └── VendorSpendingService.java
 ├── utils/                 # Utilities
 │   ├── Accumulator.java
 │   ├── Log4jLogger.java
@@ -474,7 +515,48 @@ Identifies inter-account transfers:
 
 **Limitation:** Only matches transfers that occur on the same day with exact amounts. Does not handle delayed transfers or transactions with fees.
 
-### 4. Transaction Cleaning (Bank-Specific)
+### 4. Vendor Grouping
+
+**Class:** `VendorGroupingService`
+
+Groups transactions from a date range into `VendorGroup` objects by clustering transactions whose normalized token sets overlap above a configurable threshold (default 60%, same parameter as categorization matching):
+
+```
+1. Load all CategorizedTransactions in the date range
+2. For each transaction, load its tokens from TransactionToken table
+3. Cluster transactions: two transactions belong to the same vendor group when
+   |intersection(tokens_a, tokens_b)| / |union(tokens_a, tokens_b)| >= overlap_threshold
+4. Assign a display name: the most common raw description in the group, title-cased
+5. Return groups sorted by absolute total spend (descending)
+```
+
+**Used by:** `VendorSpendingService` (for `get vendors`) and `SubscriptionDetectionService` (for `get subscriptions`).
+
+### 5. Subscription Detection
+
+**Class:** `SubscriptionDetectionService`
+
+Inspects each vendor group for a recurring billing pattern:
+
+```
+1. Sort group's transactions by date
+2. Reject if fewer than min_occurrences (default 3; annual uses annual_min_occurrences = 2)
+3. Compute median transaction amount
+4. Reject if any amount deviates from median by more than amount_tolerance (default 20%)
+5. Compute day-gaps between consecutive transactions
+6. For each BillingPeriod (WEEKLY/BIWEEKLY/MONTHLY/QUARTERLY/ANNUAL):
+   a. Check if all gaps are within interval_tolerance_days (default 5) of an integer
+      multiple of the period length (N × period.days, N = 1..maxSkipMultiplier)
+   b. WEEKLY and BIWEEKLY: maxSkipMultiplier = 1 (no skipped cycles)
+      MONTHLY: maxSkipMultiplier = 3 (up to ~90-day gaps treated as skipped months)
+      QUARTERLY and ANNUAL: maxSkipMultiplier = 1
+   c. If all gaps match → return Subscription with period, median amount, last charge, next expected
+7. If no period matches → reject with INTERVAL_MISMATCH
+```
+
+The `--explain` mode runs the same logic but returns an `ExplainResult` for every vendor group, including rejection reason and raw intervals for rejected groups.
+
+### 6. Transaction Cleaning (Bank-Specific)
 
 **Class:** `RbcTransactionCleaner` (example)
 
@@ -526,6 +608,22 @@ keyword_rules_path: keyword-rules.yaml
 token_matching:
   # Minimum percentage of tokens that must match (0.0-1.0)
   overlap_threshold: 0.6
+
+# Vendor grouping settings (used by get vendors and get subscriptions)
+vendor_grouping:
+  # Minimum token overlap to assign two transactions to the same vendor (0.0-1.0)
+  overlap_threshold: 0.6
+
+# Subscription detection settings (used by get subscriptions)
+subscription_detection:
+  # Minimum transactions required to establish a recurring pattern
+  min_occurrences: 3
+  # Minimum transactions for annual billing detection (fewer years of data available)
+  annual_min_occurrences: 2
+  # Maximum fractional deviation from median amount (covers FX fluctuation, price increases)
+  amount_tolerance: 0.20
+  # Maximum days of drift per billing cycle from a canonical period length
+  interval_tolerance_days: 5
 ```
 
 A default configuration file is created on first run if one doesn't exist.
@@ -552,31 +650,61 @@ Controls terminal styling and formatting (colors, prompts, etc.).
 ### Test Structure
 ```
 src/test/java/ca/jonathanfritz/ofxcat/
+├── architecture/
+│   └── LayeredArchitectureTest.java    # ArchUnit enforcement of package dependency rules
 ├── cleaner/
 │   ├── rules/
+│   │   ├── AmountMatcherRuleTest.java
+│   │   └── TransactionMatcherRuleTest.java
 │   ├── DefaultTransactionCleanerTest.java
 │   ├── RbcTransactionCleanerTest.java
 │   └── TransactionCleanerFactoryTest.java
+├── cli/
+│   ├── CLIInputValidationTest.java
+│   └── CLITest.java
+├── config/
+│   ├── AppConfigLoaderTest.java
+│   └── AppConfigTest.java
 ├── datastore/
 │   ├── AccountDaoTest.java
 │   ├── CategoryDaoTest.java
 │   ├── CategorizedTransactionDaoTest.java
-│   ├── DescriptionCategoryDaoTest.java
+│   ├── DatabaseTransactionErrorHandlingTest.java
+│   ├── TransactionTokenDaoTest.java
 │   └── TransferDaoTest.java
+├── integration/
+│   ├── ImportFlowIntegrationTest.java
+│   ├── MultiAccountIntegrationTest.java
+│   └── ReportingWorkflowIntegrationTest.java
 ├── io/
 │   └── OfxParserTest.java
-├── integration/
-│   └── ReportingWorkflowIntegrationTest.java
+├── matching/
+│   ├── KeywordRuleTest.java
+│   ├── KeywordRulesConfigTest.java
+│   ├── KeywordRulesLoaderTest.java
+│   ├── TokenMatchingServiceTest.java
+│   └── TokenNormalizerTest.java
 ├── service/
 │   ├── CategoryCombineServiceTest.java
 │   ├── GapDetectionServiceTest.java
 │   ├── ReportingServiceTest.java
+│   ├── SubscriptionDetectionServiceTest.java
+│   ├── TokenMigrationServiceTest.java
+│   ├── TransactionCategoryServiceEdgeCaseTest.java
 │   ├── TransactionCategoryServiceTest.java
+│   ├── TransactionImportServiceBalanceTest.java
 │   ├── TransactionImportServiceTest.java
-│   └── TransferMatchingServiceTest.java
+│   ├── TransactionImportTokenStorageTest.java
+│   ├── TransferMatchingServiceEdgeCaseTest.java
+│   ├── TransferMatchingServiceTest.java
+│   ├── VendorGroupingServiceTest.java
+│   └── VendorSpendingServiceTest.java
 ├── utils/
-│   └── PathUtilsTest.java
+│   ├── AccumulatorTest.java
+│   ├── PathUtilsTest.java
+│   └── StringUtilsTest.java
 ├── AbstractDatabaseTest.java
+├── AdversarialInputTest.java
 ├── OfxCatImportValidationTest.java
 ├── OfxCatParameterParsingTest.java
 ├── OfxCatTest.java
@@ -597,10 +725,8 @@ Sample OFX files in `src/test/resources/`:
 - **Database Tests:** Extend `AbstractDatabaseTest` for Flyway setup
 - **Test Utilities:** `TestUtils` provides helper methods
 
-### Current Test Coverage Gaps (see TODOs)
-- CLI not tested (marked "TODO: test me?")
-- `TransactionCategoryService` marked "TODO: Test me!"
-- `TransactionImportService` marked "TODO: Improve test coverage"
+### Current Test Coverage Gaps
+- `TransactionImportService` — balance computation and token storage are tested, but the full interactive import flow has limited coverage
 
 ---
 
@@ -628,12 +754,7 @@ WARNING: java.lang.System::loadLibrary has been called
 **Impact:** Multi-day transfers or transfers with fees are not detected  
 **Potential Fix:** Implement fuzzy date/amount matching within configurable thresholds
 
-### 4. Token Match Threshold
-**File:** `~/.ofxcat/config.yaml`
-**Status:** Now configurable via `token_matching.overlap_threshold` setting
-**Default:** 0.6 (60%)
-
-### 5. LCBO/RAO Categorization Issue
+### 4. LCBO/RAO Categorization Issue
 **File:** `TransactionCategoryService.java:75`  
 **TODO:** "why does LCBO/RAO not auto-categorize?"  
 **Status:** Specific vendor not being matched, needs investigation
@@ -645,14 +766,11 @@ WARNING: java.lang.System::loadLibrary has been called
 ### High Priority
 
 #### 1. Missing Test Coverage
-**Impact:** High risk of regressions
+**Impact:** Medium risk of regressions
 
-- **CLI class** (`cli/CLI.java`) - No tests
-- **CLI parameter parsing** (`OfxCatTest.java`) - Empty test class
-- **TransactionCategoryService** - Critical business logic untested
-- **TransactionImportService** - Incomplete coverage
+- **TransactionImportService** - Full interactive import flow has limited coverage
 
-**Recommendation:** Achieve >80% coverage on service layer before adding features.
+**Recommendation:** Achieve >80% coverage on the full import flow.
 
 #### 2. Missing Features (TODOs)
 

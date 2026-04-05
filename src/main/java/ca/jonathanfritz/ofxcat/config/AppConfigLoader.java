@@ -138,12 +138,16 @@ public class AppConfigLoader {
                 + "  # Default: 3\n"
                 + "  min_occurrences: "
                 + config.getSubscriptionDetection().getMinOccurrences() + "\n"
+                + "  # Minimum occurrences for annual subscriptions (lower because 2 years of data is common)\n"
+                + "  # Default: 2\n"
+                + "  annual_min_occurrences: "
+                + config.getSubscriptionDetection().getAnnualMinOccurrences() + "\n"
                 + "  # Maximum fractional difference allowed between a transaction amount and the median\n"
-                + "  # Default: 0.05 (5%)\n"
+                + "  # Default: 0.15 (15%, covers currency fluctuation and gradual price increases)\n"
                 + "  amount_tolerance: "
                 + config.getSubscriptionDetection().getAmountTolerance() + "\n"
                 + "  # Maximum number of days an interval may deviate from a canonical billing period\n"
-                + "  # Default: 3\n"
+                + "  # Default: 5\n"
                 + "  interval_tolerance_days: "
                 + config.getSubscriptionDetection().getIntervalToleranceDays() + "\n";
     }
