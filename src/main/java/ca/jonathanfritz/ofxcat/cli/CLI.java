@@ -7,73 +7,75 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import jakarta.inject.Inject;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
-import org.beryx.textio.InputReader;
-import org.beryx.textio.TextIO;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jline.reader.LineReader;
+import org.jline.terminal.Terminal;
+import org.jline.utils.InfoCmp;
 
 // TODO: test me?
 public class CLI {
 
-    private final TextIO textIO;
-    private final TextIOWrapper textIOWrapper;
+    private final Terminal terminal;
+    private final LineReader lineReader;
+
+    private static final Logger logger = LogManager.getLogger(CLI.class);
 
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
 
     @Inject
-    public CLI(TextIO textIO, TextIOWrapper textIOWrapper) {
-        this.textIO = textIO;
-        this.textIOWrapper = textIOWrapper;
+    public CLI(Terminal terminal, LineReader lineReader) {
+        this.terminal = terminal;
+        this.lineReader = lineReader;
     }
 
     public void printWelcomeBanner() {
-        textIO.getTextTerminal()
-                .println(Arrays.asList(
-                        "         __               _   ",
-                        "        / _|             | |  ",
-                        "   ___ | |___  _____ __ _| |_ ",
-                        "  / _ \\|  _\\ \\/ / __/ _` | __|",
-                        " | (_) | |  >  < (_| (_| | |_ ",
-                        "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
-                        "                              "));
+        println(Arrays.asList(
+                "         __               _   ",
+                "        / _|             | |  ",
+                "   ___ | |___  _____ __ _| |_ ",
+                "  / _ \\|  _\\ \\/ / __/ _` | __|",
+                " | (_) | |  >  < (_| (_| | |_ ",
+                "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
+                "                              "));
     }
 
     /**
      * Prints the specified line to the terminal, along with a trailing newline character
      */
     public void println(String line) {
-        textIO.getTextTerminal().println(line);
+        terminal.writer().println(line);
+        terminal.writer().flush();
     }
 
     /**
      * Prints the specified lines to the terminal, advancing to the next line after each
      */
     public void println(List<String> lines) {
-        textIO.getTextTerminal().println(lines);
-    }
-
-    /**
-     * Prints the specified line to the terminal using the specified propertiesPrefix as defined in the
-     * src/main/resources/textio.properties file. Adds a trailing newline character.
-     */
-    public void println(String propertiesPrefix, String line) {
-        textIO.getTextTerminal().executeWithPropertiesPrefix(propertiesPrefix, t -> t.println(line));
+        lines.forEach(this::println);
     }
 
     /**
      * Prints the specified line to the terminal and blocks until the user presses the enter key
      */
     public void waitForInput(String line) {
-        textIO.newGenericInputReader(s -> new InputReader.ParseResult<>("")).read(line);
+        lineReader.readLine(line + " ");
     }
 
     public boolean promptYesNo(String prompt) {
-        return textIOWrapper.promptYesNo(prompt);
+        while (true) {
+            String input = lineReader.readLine(prompt + " [Y/n]: ").trim();
+            if (input.isEmpty() || input.equalsIgnoreCase("y")) {
+                return true;
+            } else if (input.equalsIgnoreCase("n")) {
+                return false;
+            }
+            println("Please enter y or n.");
+        }
     }
 
     /**
@@ -81,92 +83,58 @@ public class CLI {
      * human readable friendly name along the way
      */
     public Account assignAccountName(OfxAccount ofxAccount) {
-        // prompt the user to enter a name for the account
-        textIO.getTextTerminal().print("\nFound new ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.print(ofxAccount.getAccountType()));
-        textIO.getTextTerminal().print(" account with account number ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(ofxAccount.getAccountId()));
+        println("\nFound new " + ofxAccount.getAccountType() + " account with account number "
+                + ofxAccount.getAccountId());
 
-        final String accountName = textIO.newStringInputReader()
-                .withValueChecker((val, itemName) -> {
-                    if (StringUtils.isBlank(val)) {
-                        return Collections.singletonList("Account name must not be blank");
-                    }
-                    return null;
-                })
-                .read("Please enter a name for the account:");
-
-        // create the account object
-        return Account.newBuilder()
-                .setAccountNumber(ofxAccount.getAccountId())
-                .setBankId(ofxAccount.getBankId())
-                .setAccountType(ofxAccount.getAccountType())
-                .setName(accountName)
-                .build();
+        while (true) {
+            String accountName =
+                    lineReader.readLine("Please enter a name for the account: ").trim();
+            if (StringUtils.isBlank(accountName)) {
+                println("Account name must not be blank");
+                continue;
+            }
+            return Account.newBuilder()
+                    .setAccountNumber(ofxAccount.getAccountId())
+                    .setBankId(ofxAccount.getBankId())
+                    .setAccountType(ofxAccount.getAccountType())
+                    .setName(accountName)
+                    .build();
+        }
     }
 
     public void printFoundNewTransaction(Transaction transaction) {
-        textIO.getTextTerminal().println("\nFound new transaction:");
+        println("\nFound new transaction:");
         printTransaction(transaction);
     }
 
     public void printTransactionCategorizedAs(final Category category) {
-        textIO.getTextTerminal().print("\nCategorized transaction as ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(category.getName()));
+        println("\nCategorized transaction as " + category.getName());
     }
 
     public void exit() {
-        textIO.dispose();
-    }
-
-    private void printTransaction(Transaction transaction) {
-        // fit id
-        textIO.getTextTerminal().print("Transaction Id: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getFitId()));
-
-        // date
-        textIO.getTextTerminal().print("Date: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(transaction.getDate().toString()));
-
-        // type
-        textIO.getTextTerminal().print("Type: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(transaction.getType().name()));
-
-        // amount
-        textIO.getTextTerminal().print("Amount: ");
-        printCurrencyValue(transaction.getAmount());
-
-        // description
-        textIO.getTextTerminal().print("Description: ");
-        textIO.getTextTerminal().executeWithPropertiesPrefix("value", t -> t.println(transaction.getDescription()));
-
-        // account name
-        textIO.getTextTerminal().print("Account: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(transaction.getAccount().getName()));
-
-        // remaining balance
-        textIO.getTextTerminal().print("Balance: ");
-        printCurrencyValue(transaction.getBalance());
-    }
-
-    private void printCurrencyValue(float value) {
-        if (value >= 0) {
-            printCurrencyValue("$%.2f", value);
-        } else {
-            printCurrencyValue("-$%.2f", value);
+        try {
+            terminal.close();
+        } catch (java.io.IOException e) {
+            logger.warn("Failed to close terminal", e);
         }
     }
 
-    private void printCurrencyValue(String formatString, float value) {
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(String.format(java.util.Locale.US, formatString, Math.abs(value))));
+    private void printTransaction(Transaction transaction) {
+        println("Transaction Id: " + transaction.getFitId());
+        println("Date: " + transaction.getDate().toString());
+        println("Type: " + transaction.getType().name());
+        println("Amount: " + formatCurrency(transaction.getAmount()));
+        println("Description: " + transaction.getDescription());
+        println("Account: " + transaction.getAccount().getName());
+        println("Balance: " + formatCurrency(transaction.getBalance()));
+    }
+
+    private String formatCurrency(float value) {
+        if (value >= 0) {
+            return String.format(java.util.Locale.US, "$%.2f", value);
+        } else {
+            return String.format(java.util.Locale.US, "-$%.2f", Math.abs(value));
+        }
     }
 
     public Optional<Category> chooseCategoryOrChooseAnother(List<Category> categories) {
@@ -178,49 +146,49 @@ public class CLI {
     }
 
     /**
-     * Prompts the user to choose from one of the supplied distinctCategories. Includes an additional choice to "Choose
-     * another category"
+     * Prompts the user to choose from one of the supplied categories. Includes an additional escape choice.
+     *
      * @param categories the list of categories to choose from
-     * @return an {@link Optional<Category>} containing the selected category, or {@link Optional#empty()} if "Choose
-     * another category" is selected
+     * @return an {@link Optional} containing the selected category, or {@link Optional#empty()} if the escape
+     *     choice is selected
      */
-    private Optional<Category> chooseCategory(List<Category> categories, final String prompt) {
-        final List<String> potentialCategories = Stream.concat(
-                        categories.stream().map(Category::getName), Arrays.stream(new String[] {prompt}))
-                .collect(Collectors.toList());
-        final String choice = textIOWrapper.promptChooseString(
-                "\nSelect an existing category for the transaction:", potentialCategories);
-        return categories.stream()
-                .filter(pc -> pc.getName().equalsIgnoreCase(choice))
-                .findFirst();
+    private Optional<Category> chooseCategory(List<Category> categories, final String escapePrompt) {
+        println("\nSelect an existing category for the transaction:");
+        for (int i = 0; i < categories.size(); i++) {
+            println(String.format("  %d  %s", i + 1, categories.get(i).getName()));
+        }
+        println(String.format("  %d  %s", categories.size() + 1, escapePrompt));
+
+        int choice = readIntInRange(1, categories.size() + 1);
+        if (choice == categories.size() + 1) {
+            return Optional.empty();
+        }
+        return Optional.of(categories.get(choice - 1));
     }
 
     public String promptForNewCategoryName(List<Category> allCategories) {
-        // otherwise, prompt them to enter a new category name
-        return textIO.newStringInputReader()
-                .withValueChecker((val, itemName) -> {
-                    if (StringUtils.isBlank(val)) {
-                        return Collections.singletonList("Category names must not be blank");
-                    } else if (val.contains(",")) {
-                        // TODO: better csv escaping?
-                        return Collections.singletonList("Category names must not contain a comma");
-                    } else if (val.equalsIgnoreCase(NEW_CATEGORY_PROMPT)) {
-                        return Collections.singletonList(
-                                String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
-                    } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
-                        return Collections.singletonList(
-                                String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
-                    } else if (allCategories.stream()
-                            .anyMatch(c -> c.getName().trim().equalsIgnoreCase(val.trim()))) {
-                        return Collections.singletonList("Category names must be unique");
-                    }
-                    return null;
-                })
-                .read("\nPlease enter a new category for transaction");
+        while (true) {
+            String val = lineReader
+                    .readLine("\nPlease enter a new category for transaction: ")
+                    .trim();
+            if (StringUtils.isBlank(val)) {
+                println("Category names must not be blank");
+            } else if (val.contains(",")) {
+                println("Category names must not contain a comma");
+            } else if (val.equalsIgnoreCase(NEW_CATEGORY_PROMPT)) {
+                println(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
+            } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
+                println(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
+            } else if (allCategories.stream().anyMatch(c -> c.getName().trim().equalsIgnoreCase(val))) {
+                println("Category names must be unique");
+            } else {
+                return val;
+            }
+        }
     }
 
     /**
-     * Updates a progress bar on the current line. Uses moveToLineStart() to overwrite
+     * Updates a progress bar on the current line. Uses the carriage-return capability to overwrite
      * the previous progress, falling back to printing a new line if not supported.
      *
      * @param label the label to display before the progress bar
@@ -246,12 +214,13 @@ public class CLI {
         bar.append("] ").append(String.format("%3d%%", percentage));
         bar.append(" (").append(current).append("/").append(total).append(")");
 
-        // Try to overwrite the current line; if not supported, print new line
-        if (!textIO.getTextTerminal().moveToLineStart()) {
-            textIO.getTextTerminal().println(bar.toString());
+        boolean canOverwrite = terminal.getStringCapability(InfoCmp.Capability.carriage_return) != null;
+        if (canOverwrite) {
+            terminal.writer().print("\r" + bar);
         } else {
-            textIO.getTextTerminal().print(bar.toString());
+            terminal.writer().println(bar.toString());
         }
+        terminal.writer().flush();
     }
 
     /**
@@ -259,29 +228,30 @@ public class CLI {
      * Call this after the last updateProgressBar() to move to the next line.
      */
     public void finishProgressBar() {
-        textIO.getTextTerminal().println();
+        terminal.writer().println();
+        terminal.writer().flush();
     }
 
     public void printFoundNewTransfer(Transfer transfer) {
-        textIO.getTextTerminal().println("\nFound new transfer:");
+        println("\nFound new transfer:");
+        println("Amount: " + formatCurrency(transfer.getSink().getAmount()));
+        println("From: " + transfer.getSource().getAccount().getName());
+        println("To: " + transfer.getSink().getAccount().getName());
+        println("On: " + transfer.getSource().getDate().toString());
+    }
 
-        textIO.getTextTerminal().print("Amount: ");
-        printCurrencyValue(transfer.getSink().getAmount());
-
-        textIO.getTextTerminal().print("From: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value",
-                        t -> t.println(transfer.getSource().getAccount().getName()));
-
-        textIO.getTextTerminal().print("To: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(transfer.getSink().getAccount().getName()));
-
-        textIO.getTextTerminal().print("On: ");
-        textIO.getTextTerminal()
-                .executeWithPropertiesPrefix(
-                        "value", t -> t.println(transfer.getSource().getDate().toString()));
+    private int readIntInRange(int min, int max) {
+        while (true) {
+            String input = lineReader.readLine("Choice: ").trim();
+            try {
+                int value = Integer.parseInt(input);
+                if (value >= min && value <= max) {
+                    return value;
+                }
+            } catch (NumberFormatException ignored) {
+                // fall through to error message
+            }
+            println(String.format("Please enter a number between %d and %d.", min, max));
+        }
     }
 }

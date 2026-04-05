@@ -91,7 +91,7 @@ public class TransactionImportService {
     public void importTransactions(final File inputFile) throws OfxCatException {
         cli.printWelcomeBanner();
         cli.println("Loading transactions from file:");
-        cli.println("value", inputFile.toString());
+        cli.println(inputFile.toString());
 
         logger.debug("Attempting to parse file {}", inputFile);
         final List<OfxExport> ofxTransactions;

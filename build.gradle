@@ -20,10 +20,8 @@ version = '1.0-SNAPSHOT'
 dependencies {
     // interactive CLI
     implementation 'commons-cli:commons-cli:1.11.0'
-    implementation('org.beryx:text-io:3.4.1') {
-        // exclude slf4j to avoid conflicting logging setup
-        exclude group: 'org.slf4j', module: 'slf4j-api'
-    }
+    implementation 'org.jline:jline:3.29.0'
+    implementation 'org.jline:jline-terminal-jni:3.29.0'
 
     // OFX parsing
     implementation 'com.webcohesion.ofx4j:ofx4j:1.39'
@@ -185,9 +183,7 @@ spotbugsTest {
 def jacocoExcludes = [
     'ca/jonathanfritz/ofxcat/cli/CLI.class',
     'ca/jonathanfritz/ofxcat/cli/CLIModule.class',
-    'ca/jonathanfritz/ofxcat/cli/TextIOWrapper.class',
     'ca/jonathanfritz/ofxcat/matching/MatchingModule.class',
-    'ca/jonathanfritz/ofxcat/utils/Log4jLogger.class',
 ]
 
 jacocoTestReport {
