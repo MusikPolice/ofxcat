@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -89,6 +90,11 @@ public class TransactionImportService {
     }
 
     public void importTransactions(final File inputFile) throws OfxCatException {
+        importTransactions(inputFile, ProgressCallback.NOOP);
+    }
+
+    public void importTransactions(final File inputFile, final ProgressCallback progressCallback)
+            throws OfxCatException {
         cli.printWelcomeBanner();
         cli.println("Loading transactions from file:");
         cli.println(inputFile.toString());
@@ -105,12 +111,24 @@ public class TransactionImportService {
             throw new OfxCatException("An unexpected exception occurred", e);
         }
 
-        final List<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions);
+        final List<CategorizedTransaction> categorizedTransactions =
+                categorizeTransactions(ofxTransactions, progressCallback);
         cli.println(String.format("Successfully imported %d transactions", categorizedTransactions.size()));
     }
 
     // TODO: return number of ignored duplicate transactions so that this info can be displayed in UI
     public List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
+        return categorizeTransactions(ofxExports, ProgressCallback.NOOP);
+    }
+
+    public List<CategorizedTransaction> categorizeTransactions(
+            final List<OfxExport> ofxExports, final ProgressCallback progressCallback) {
+        final int total = ofxExports.stream()
+                .flatMap(e -> e.getTransactions().values().stream())
+                .mapToInt(List::size)
+                .sum();
+        final AtomicInteger processed = new AtomicInteger(0);
+
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
             // figure out which account these transactions belong to
@@ -208,6 +226,7 @@ public class TransactionImportService {
                 } catch (SQLException | OfxCatException e) {
                     logger.error("Failed to import transaction {}", transaction, e);
                 }
+                progressCallback.onProgress(processed.incrementAndGet(), total);
             });
         }
 

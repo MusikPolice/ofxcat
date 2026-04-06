@@ -9,6 +9,7 @@ import ca.jonathanfritz.ofxcat.matching.KeywordRulesConfig;
 import ca.jonathanfritz.ofxcat.model.MigrationReport;
 import ca.jonathanfritz.ofxcat.service.CategoryCombineService;
 import ca.jonathanfritz.ofxcat.service.GapDetectionService;
+import ca.jonathanfritz.ofxcat.service.ProgressCallback;
 import ca.jonathanfritz.ofxcat.service.ReportingService;
 import ca.jonathanfritz.ofxcat.service.SubscriptionDetectionService;
 import ca.jonathanfritz.ofxcat.service.TokenMigrationService;
@@ -353,6 +354,11 @@ class OfxCatImportValidationTest {
             importServiceCalled = true;
             importedFile = file;
         }
+
+        @Override
+        public void importTransactions(File file, ProgressCallback progressCallback) {
+            importTransactions(file);
+        }
     }
 
     private static class StubReportingService extends ReportingService {
@@ -430,6 +436,11 @@ class OfxCatImportValidationTest {
 
         @Override
         public void exit() {
+            // No-op
+        }
+
+        @Override
+        public void finishProgressBar() {
             // No-op
         }
     }

@@ -135,9 +135,9 @@ public class OfxCat {
         // Create database backup before import
         backupDatabase();
 
-        // TODO: show a progress bar?
-        // TODO: retain scrolling list of categorizations on screen
-        transactionImportService.importTransactions(pathToImportFile.toFile());
+        transactionImportService.importTransactions(
+                pathToImportFile.toFile(), (current, total) -> cli.updateProgressBar("Importing", current, total));
+        cli.finishProgressBar();
 
         backupOfxFile(pathToImportFile);
         deleteOfxFile(path, pathToImportFile);
