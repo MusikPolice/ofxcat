@@ -6,6 +6,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transaction;
 import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import jakarta.inject.Inject;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -14,9 +15,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jline.reader.LineReader;
 import org.jline.terminal.Terminal;
-import org.jline.utils.InfoCmp;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 
-// TODO: test me?
 public class CLI {
 
     private final Terminal terminal;
@@ -27,6 +29,23 @@ public class CLI {
     private static final String NEW_CATEGORY_PROMPT = "New Category";
     private static final String CHOOSE_ANOTHER_CATEGORY_PROMPT = "Choose another Category";
 
+    // Reusable styles
+    private static final AttributedStyle STYLE_LABEL =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).faint();
+    private static final AttributedStyle STYLE_VALUE =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).bold();
+    private static final AttributedStyle STYLE_HEADER =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN).bold();
+    private static final AttributedStyle STYLE_POSITIVE =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.BLUE).bold();
+    private static final AttributedStyle STYLE_NEGATIVE =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.RED).bold();
+    private static final AttributedStyle STYLE_PROMPT = AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW);
+    private static final AttributedStyle STYLE_ERROR =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.RED).bold();
+    private static final AttributedStyle STYLE_MUTED =
+            AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE).faint();
+
     @Inject
     public CLI(Terminal terminal, LineReader lineReader) {
         this.terminal = terminal;
@@ -34,14 +53,15 @@ public class CLI {
     }
 
     public void printWelcomeBanner() {
-        println(Arrays.asList(
+        List<String> bannerLines = Arrays.asList(
                 "         __               _   ",
                 "        / _|             | |  ",
                 "   ___ | |___  _____ __ _| |_ ",
                 "  / _ \\|  _\\ \\/ / __/ _` | __|",
                 " | (_) | |  >  < (_| (_| | |_ ",
                 "  \\___/|_| /_/\\_\\___\\__,_|\\__|",
-                "                              "));
+                "                              ");
+        bannerLines.forEach(line -> printAnsi(new AttributedString(line, STYLE_HEADER)));
     }
 
     /**
@@ -63,18 +83,19 @@ public class CLI {
      * Prints the specified line to the terminal and blocks until the user presses the enter key
      */
     public void waitForInput(String line) {
-        lineReader.readLine(line + " ");
+        lineReader.readLine(styledPrompt(line + " "));
     }
 
     public boolean promptYesNo(String prompt) {
         while (true) {
-            String input = lineReader.readLine(prompt + " [Y/n]: ").trim();
+            String input =
+                    lineReader.readLine(styledPrompt(prompt + " [Y/n]: ")).trim();
             if (input.isEmpty() || input.equalsIgnoreCase("y")) {
                 return true;
             } else if (input.equalsIgnoreCase("n")) {
                 return false;
             }
-            println("Please enter y or n.");
+            printError("Please enter y or n.");
         }
     }
 
@@ -83,14 +104,22 @@ public class CLI {
      * human readable friendly name along the way
      */
     public Account assignAccountName(OfxAccount ofxAccount) {
-        println("\nFound new " + ofxAccount.getAccountType() + " account with account number "
-                + ofxAccount.getAccountId());
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.append("\nFound new ");
+        sb.style(STYLE_HEADER);
+        sb.append(ofxAccount.getAccountType());
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(" account with account number ");
+        sb.style(STYLE_HEADER);
+        sb.append(ofxAccount.getAccountId());
+        printAnsi(sb.toAttributedString());
 
         while (true) {
-            String accountName =
-                    lineReader.readLine("Please enter a name for the account: ").trim();
+            String accountName = lineReader
+                    .readLine(styledPrompt("Please enter a name for the account: "))
+                    .trim();
             if (StringUtils.isBlank(accountName)) {
-                println("Account name must not be blank");
+                printError("Account name must not be blank");
                 continue;
             }
             return Account.newBuilder()
@@ -103,30 +132,48 @@ public class CLI {
     }
 
     public void printFoundNewTransaction(Transaction transaction) {
-        println("\nFound new transaction:");
+        printAnsi(new AttributedString("\nFound new transaction:", STYLE_HEADER));
         printTransaction(transaction);
     }
 
     public void printTransactionCategorizedAs(final Category category) {
-        println("\nCategorized transaction as " + category.getName());
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.append("\nCategorized transaction as ");
+        sb.style(STYLE_HEADER);
+        sb.append(category.getName());
+        printAnsi(sb.toAttributedString());
     }
 
     public void exit() {
         try {
             terminal.close();
-        } catch (java.io.IOException e) {
+        } catch (IOException e) {
             logger.warn("Failed to close terminal", e);
         }
     }
 
     private void printTransaction(Transaction transaction) {
-        println("Transaction Id: " + transaction.getFitId());
-        println("Date: " + transaction.getDate().toString());
-        println("Type: " + transaction.getType().name());
-        println("Amount: " + formatCurrency(transaction.getAmount()));
-        println("Description: " + transaction.getDescription());
-        println("Account: " + transaction.getAccount().getName());
-        println("Balance: " + formatCurrency(transaction.getBalance()));
+        printRow("Trans. Id", new AttributedString(transaction.getFitId(), STYLE_MUTED));
+        printRow("Date", new AttributedString(transaction.getDate().toString(), STYLE_VALUE));
+        printRow("Type", new AttributedString(transaction.getType().name(), STYLE_VALUE));
+        printRow("Amount", currencyString(transaction.getAmount()));
+        printRow("Description", new AttributedString(transaction.getDescription(), STYLE_VALUE));
+        printRow("Account", new AttributedString(transaction.getAccount().getName(), STYLE_VALUE));
+        printRow("Balance", currencyString(transaction.getBalance()));
+    }
+
+    private void printRow(String label, AttributedString value) {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(STYLE_LABEL);
+        sb.append(String.format("%12s  ", label));
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(value);
+        printAnsi(sb.toAttributedString());
+    }
+
+    private AttributedString currencyString(float value) {
+        AttributedStyle style = value >= 0 ? STYLE_POSITIVE : STYLE_NEGATIVE;
+        return new AttributedString(formatCurrency(value), style);
     }
 
     private String formatCurrency(float value) {
@@ -153,11 +200,21 @@ public class CLI {
      *     choice is selected
      */
     private Optional<Category> chooseCategory(List<Category> categories, final String escapePrompt) {
-        println("\nSelect an existing category for the transaction:");
+        printAnsi(new AttributedString("\nSelect a category:", STYLE_HEADER));
         for (int i = 0; i < categories.size(); i++) {
-            println(String.format("  %d  %s", i + 1, categories.get(i).getName()));
+            AttributedStringBuilder sb = new AttributedStringBuilder();
+            sb.style(STYLE_PROMPT);
+            sb.append(String.format("  %d  ", i + 1));
+            sb.style(STYLE_VALUE);
+            sb.append(categories.get(i).getName());
+            printAnsi(sb.toAttributedString());
         }
-        println(String.format("  %d  %s", categories.size() + 1, escapePrompt));
+        AttributedStringBuilder escapeSb = new AttributedStringBuilder();
+        escapeSb.style(STYLE_PROMPT);
+        escapeSb.append(String.format("  %d  ", categories.size() + 1));
+        escapeSb.style(STYLE_MUTED);
+        escapeSb.append(escapePrompt);
+        printAnsi(escapeSb.toAttributedString());
 
         int choice = readIntInRange(1, categories.size() + 1);
         if (choice == categories.size() + 1) {
@@ -169,18 +226,18 @@ public class CLI {
     public String promptForNewCategoryName(List<Category> allCategories) {
         while (true) {
             String val = lineReader
-                    .readLine("\nPlease enter a new category for transaction: ")
+                    .readLine(styledPrompt("\nPlease enter a new category for transaction: "))
                     .trim();
             if (StringUtils.isBlank(val)) {
-                println("Category names must not be blank");
+                printError("Category names must not be blank");
             } else if (val.contains(",")) {
-                println("Category names must not contain a comma");
+                printError("Category names must not contain a comma");
             } else if (val.equalsIgnoreCase(NEW_CATEGORY_PROMPT)) {
-                println(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
+                printError(String.format("Category cannot be called \"%s\"", NEW_CATEGORY_PROMPT));
             } else if (val.equalsIgnoreCase(CHOOSE_ANOTHER_CATEGORY_PROMPT)) {
-                println(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
+                printError(String.format("Category cannot be called \"%s\"", CHOOSE_ANOTHER_CATEGORY_PROMPT));
             } else if (allCategories.stream().anyMatch(c -> c.getName().trim().equalsIgnoreCase(val))) {
-                println("Category names must be unique");
+                printError("Category names must be unique");
             } else {
                 return val;
             }
@@ -188,8 +245,8 @@ public class CLI {
     }
 
     /**
-     * Updates a progress bar on the current line. Uses the carriage-return capability to overwrite
-     * the previous progress, falling back to printing a new line if not supported.
+     * Updates a progress bar on the current line, overwriting the previous output. Falls back to
+     * printing a new line on dumb terminals.
      *
      * @param label the label to display before the progress bar
      * @param current the current progress value
@@ -200,25 +257,39 @@ public class CLI {
         int barWidth = 30;
         int filled = (percentage * barWidth) / 100;
 
-        StringBuilder bar = new StringBuilder();
-        bar.append(label).append(" [");
+        boolean isDumb = "dumb".equals(terminal.getType());
+        char filledChar = isDumb ? '=' : '█';
+        char emptyChar = isDumb ? ' ' : '░';
+        char headChar = isDumb ? '>' : '█';
+
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(STYLE_VALUE);
+        sb.append(label).append(" ");
+        sb.style(STYLE_PROMPT);
+        sb.append("[");
+        sb.style(STYLE_POSITIVE);
         for (int i = 0; i < barWidth; i++) {
             if (i < filled) {
-                bar.append("=");
+                sb.append(filledChar);
             } else if (i == filled) {
-                bar.append(">");
+                sb.append(headChar);
             } else {
-                bar.append(" ");
+                sb.style(STYLE_MUTED);
+                sb.append(emptyChar);
             }
         }
-        bar.append("] ").append(String.format("%3d%%", percentage));
-        bar.append(" (").append(current).append("/").append(total).append(")");
+        sb.style(STYLE_PROMPT);
+        sb.append("] ");
+        sb.style(STYLE_VALUE);
+        sb.append(String.format("%3d%%", percentage));
+        sb.style(STYLE_MUTED);
+        sb.append(String.format(" (%d/%d)", current, total));
 
-        boolean canOverwrite = terminal.getStringCapability(InfoCmp.Capability.carriage_return) != null;
-        if (canOverwrite) {
-            terminal.writer().print("\r" + bar);
+        String rendered = sb.toAttributedString().toAnsi(terminal);
+        if (isDumb) {
+            terminal.writer().println(rendered);
         } else {
-            terminal.writer().println(bar.toString());
+            terminal.writer().print("\r" + rendered);
         }
         terminal.writer().flush();
     }
@@ -233,16 +304,34 @@ public class CLI {
     }
 
     public void printFoundNewTransfer(Transfer transfer) {
-        println("\nFound new transfer:");
-        println("Amount: " + formatCurrency(transfer.getSink().getAmount()));
-        println("From: " + transfer.getSource().getAccount().getName());
-        println("To: " + transfer.getSink().getAccount().getName());
-        println("On: " + transfer.getSource().getDate().toString());
+        printAnsi(new AttributedString("\nFound new transfer:", STYLE_HEADER));
+        printRow("Amount", currencyString(transfer.getSink().getAmount()));
+        printRow("From", new AttributedString(transfer.getSource().getAccount().getName(), STYLE_VALUE));
+        printRow("To", new AttributedString(transfer.getSink().getAccount().getName(), STYLE_VALUE));
+        printRow("On", new AttributedString(transfer.getSource().getDate().toString(), STYLE_VALUE));
+    }
+
+    private void printAnsi(AttributedString s) {
+        terminal.writer().println(s.toAnsi(terminal));
+        terminal.writer().flush();
+    }
+
+    private void printError(String message) {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(STYLE_ERROR);
+        sb.append("✗  ");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(message);
+        printAnsi(sb.toAttributedString());
+    }
+
+    private String styledPrompt(String text) {
+        return new AttributedString(text, STYLE_PROMPT).toAnsi(terminal);
     }
 
     private int readIntInRange(int min, int max) {
         while (true) {
-            String input = lineReader.readLine("Choice: ").trim();
+            String input = lineReader.readLine(styledPrompt("Choice: ")).trim();
             try {
                 int value = Integer.parseInt(input);
                 if (value >= min && value <= max) {
@@ -251,7 +340,7 @@ public class CLI {
             } catch (NumberFormatException ignored) {
                 // fall through to error message
             }
-            println(String.format("Please enter a number between %d and %d.", min, max));
+            printError(String.format("Please enter a number between %d and %d.", min, max));
         }
     }
 }
