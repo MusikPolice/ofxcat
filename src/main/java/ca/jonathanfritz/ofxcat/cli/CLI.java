@@ -257,10 +257,15 @@ public class CLI {
         int barWidth = 30;
         int filled = (percentage * barWidth) / 100;
 
-        boolean isDumb = "dumb".equals(terminal.getType());
-        char filledChar = isDumb ? '=' : '█';
-        char emptyChar = isDumb ? ' ' : '░';
-        char headChar = isDumb ? '>' : '█';
+        // System.console() is non-null when stdout is connected to a real terminal (not piped).
+        // Use it to decide whether in-place updates (carriage return) are appropriate.
+        // ASCII chars are used unconditionally: Unicode block chars (█ ░) are multi-byte UTF-8
+        // sequences that get garbled on Windows consoles running with a non-UTF-8 code page (e.g.
+        // CP437), which is the default when JLine's JNI library fails to load.
+        boolean isInteractive = System.console() != null;
+        char filledChar = '=';
+        char emptyChar = ' ';
+        char headChar = '>';
 
         AttributedStringBuilder sb = new AttributedStringBuilder();
         sb.style(STYLE_VALUE);
@@ -286,10 +291,10 @@ public class CLI {
         sb.append(String.format(" (%d/%d)", current, total));
 
         String rendered = sb.toAttributedString().toAnsi(terminal);
-        if (isDumb) {
-            terminal.writer().println(rendered);
-        } else {
+        if (isInteractive) {
             terminal.writer().print("\r" + rendered);
+        } else {
+            terminal.writer().println(rendered);
         }
         terminal.writer().flush();
     }

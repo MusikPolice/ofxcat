@@ -135,9 +135,7 @@ public class OfxCat {
         // Create database backup before import
         backupDatabase();
 
-        transactionImportService.importTransactions(
-                pathToImportFile.toFile(), (current, total) -> cli.updateProgressBar("Importing", current, total));
-        cli.finishProgressBar();
+        transactionImportService.importTransactions(pathToImportFile.toFile());
 
         backupOfxFile(pathToImportFile);
         deleteOfxFile(path, pathToImportFile);
@@ -513,6 +511,17 @@ public class OfxCat {
 
     // TODO: add a mode that allows reprocessing of transactions from some category
     public static void main(String[] args) {
+        // JLine logs via JUL. Suppress INFO/WARNING messages so they don't appear on stderr.
+        // Setting the named logger level alone is insufficient: JUL propagates messages up to the
+        // root logger whose default ConsoleHandler fires independently. Set both the named logger
+        // and every handler on the root logger to SEVERE so nothing below that reaches stderr.
+        java.util.logging.Logger jlineLogger = java.util.logging.Logger.getLogger("org.jline");
+        jlineLogger.setLevel(java.util.logging.Level.SEVERE);
+        java.util.logging.Logger rootJulLogger = java.util.logging.Logger.getLogger("");
+        for (java.util.logging.Handler handler : rootJulLogger.getHandlers()) {
+            handler.setLevel(java.util.logging.Level.SEVERE);
+        }
+
         final PathUtils pathUtils = new PathUtils();
 
         // Load configuration, creating default if needed

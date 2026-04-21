@@ -3,6 +3,7 @@ package ca.jonathanfritz.ofxcat.cli;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -125,6 +126,41 @@ class CLITest {
         assertThat(ctx.outputText(), containsString("Importing"));
         assertThat(ctx.outputText(), containsString("60%"));
         assertThat(ctx.outputText(), containsString("(6/10)"));
+    }
+
+    @Test
+    void updateProgressBarUsesAsciiChars() throws IOException {
+        // ASCII chars are used unconditionally: Unicode block chars (█ ░) are multi-byte UTF-8
+        // that get garbled on Windows consoles with a non-UTF-8 code page (e.g. CP437).
+        TestContext ctx = setup();
+        ctx.cli().updateProgressBar("Importing", 5, 10);
+        String output = ctx.outputText();
+        assertFalse(output.contains("█"), "Progress bar must not use Unicode block chars");
+        assertFalse(output.contains("░"), "Progress bar must not use Unicode shade chars");
+        assertThat(output, containsString("="));
+    }
+
+    @Test
+    void updateProgressBarAtZeroPercent() throws IOException {
+        TestContext ctx = setup();
+        ctx.cli().updateProgressBar("Importing", 0, 100);
+        assertThat(ctx.outputText(), containsString("  0%"));
+        assertThat(ctx.outputText(), containsString("(0/100)"));
+    }
+
+    @Test
+    void updateProgressBarAtHundredPercent() throws IOException {
+        TestContext ctx = setup();
+        ctx.cli().updateProgressBar("Importing", 100, 100);
+        assertThat(ctx.outputText(), containsString("100%"));
+        assertThat(ctx.outputText(), containsString("(100/100)"));
+    }
+
+    @Test
+    void updateProgressBarWithZeroTotalDoesNotThrow() throws IOException {
+        TestContext ctx = setup();
+        assertDoesNotThrow(() -> ctx.cli().updateProgressBar("Importing", 0, 0));
+        assertThat(ctx.outputText(), containsString("  0%"));
     }
 
     // ==================== promptYesNo ====================
