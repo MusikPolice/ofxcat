@@ -7,6 +7,7 @@ import ca.jonathanfritz.ofxcat.datastore.dto.Transfer;
 import ca.jonathanfritz.ofxcat.io.OfxAccount;
 import jakarta.inject.Inject;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +54,7 @@ public class CLI {
     }
 
     public void printWelcomeBanner() {
+        warnIfColorSuppressed();
         List<String> bannerLines = Arrays.asList(
                 "         __               _   ",
                 "        / _|             | |  ",
@@ -257,12 +259,9 @@ public class CLI {
         int barWidth = 30;
         int filled = (percentage * barWidth) / 100;
 
-        // System.console() is non-null when stdout is connected to a real terminal (not piped).
-        // Use it to decide whether in-place updates (carriage return) are appropriate.
-        // ASCII chars are used unconditionally: Unicode block chars (█ ░) are multi-byte UTF-8
-        // sequences that get garbled on Windows consoles running with a non-UTF-8 code page (e.g.
-        // CP437), which is the default when JLine's JNI library fails to load.
-        boolean isInteractive = System.console() != null;
+        // ASCII chars used unconditionally: Unicode block chars (█ ░) are multi-byte UTF-8 sequences
+        // that get garbled on Windows consoles with a non-UTF-8 code page (e.g. CP437).
+        boolean isInteractive = isInteractiveTerminal();
         char filledChar = '=';
         char emptyChar = ' ';
         char headChar = '>';
@@ -317,8 +316,33 @@ public class CLI {
     }
 
     private void printAnsi(AttributedString s) {
-        terminal.writer().println(s.toAnsi(terminal));
+        String line = isColorSupported() ? s.toAnsi() : s.toString();
+        terminal.writer().println(line);
         terminal.writer().flush();
+    }
+
+    // Returns true when the terminal supports ANSI colour sequences.
+    // System.console() is reliable when non-null but returns null in PTY-based terminals like Git
+    // Bash (mintty), which set TERM instead. NO_COLOR is the standard opt-out signal.
+    private static boolean isColorSupported() {
+        if (System.getenv("NO_COLOR") != null) {
+            return false;
+        }
+        return isInteractiveTerminal();
+    }
+
+    // Returns true when stdout is connected to an interactive terminal that supports cursor control.
+    // Covers Windows Console (System.console()), PTY emulators (TERM env var), and terminals that
+    // set COLORTERM explicitly.
+    private static boolean isInteractiveTerminal() {
+        if (System.console() != null) {
+            return true;
+        }
+        String term = System.getenv("TERM");
+        if (term != null && !term.equalsIgnoreCase("dumb")) {
+            return true;
+        }
+        return System.getenv("COLORTERM") != null;
     }
 
     private void printError(String message) {
@@ -347,5 +371,184 @@ public class CLI {
             }
             printError(String.format("Please enter a number between %d and %d.", min, max));
         }
+    }
+
+    public void printHelp() {
+        warnIfColorSuppressed();
+        println("");
+
+        printAnsi(cmdLine("import [FILENAME]"));
+        println("   Imports the transactions in the specified *.ofx file.");
+        println("");
+
+        printAnsi(cmdLine("get accounts"));
+        println("   Prints a list of known accounts in CSV format.");
+        println("");
+
+        printAnsi(cmdLine("get categories"));
+        println("   Prints a list of known transaction categories in CSV format.");
+        println("");
+
+        printAnsi(cmdLine("get transactions --start-date=[START DATE] [OPTIONS]"));
+        println("   Prints the amount spent in each known transaction category.");
+        printAnsi(flagLine("start-date", "Required. Start date inclusive in format yyyy-mm-dd"));
+        printAnsi(flagLine("end-date", "Optional. End date inclusive in format yyyy-mm-dd"));
+        println("               Defaults to today if not specified.");
+        printAnsi(flagLine("category-id", "Optional. If specified, only transactions that belong"));
+        println("                  to the specified category will be printed.");
+        printAnsi(formatFlagLine());
+        printAnsi(enumDescLine("terminal", "prints CSV to the console."));
+        printAnsi(enumDescLine("xlsx", "writes an Excel file and prints the path."));
+        printAnsi(flagLine("output-file", "Optional. Output file path (only used with --format xlsx)."));
+        println("                  Defaults to ~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx");
+        println("");
+
+        printAnsi(cmdLine("migrate [OPTIONS]"));
+        println("   Re-runs token migration on all transactions, applying current keyword rules.");
+        println("   Use this after updating keyword-rules.yaml to recategorize existing transactions.");
+        printAnsi(flagLine("dry-run", "Optional. Show what would change without making actual changes."));
+        println("");
+
+        printAnsi(cmdLine("get vendors --start-date=START [OPTIONS]"));
+        println("   Prints total spending per vendor for the specified date range.");
+        printAnsi(flagLine("start-date", "Required. Start date inclusive in format yyyy-mm-dd"));
+        printAnsi(flagLine("end-date", "Optional. End date inclusive in format yyyy-mm-dd"));
+        println("               Defaults to today if not specified.");
+        printAnsi(formatFlagLine());
+        printAnsi(enumDescLine("terminal", "prints CSV to the console."));
+        printAnsi(enumDescLine("xlsx", "writes an Excel file and prints the path."));
+        println("             Note: XLSX does not include a pie chart. To add one, open the file");
+        println("             in Excel or LibreOffice and insert a chart from the VENDOR/TOTAL columns.");
+        printAnsi(flagLine("output-file", "Optional. Output file path (only used with --format xlsx)."));
+        println("                  Defaults to ~/.ofxcat/reports/vendors-<start>-to-<end>.xlsx");
+        println("");
+
+        printAnsi(cmdLine("get subscriptions [OPTIONS]"));
+        println("   Detects recurring charges and prints them in CSV format.");
+        printAnsi(flagLine("start-date", "Optional. Start date inclusive in format yyyy-mm-dd."));
+        println("                 Defaults to 13 months before --end-date.");
+        printAnsi(flagLine("end-date", "Optional. End date inclusive in format yyyy-mm-dd."));
+        println("               Defaults to today.");
+        printAnsi(flagLine("explain", "Optional. Show every vendor group with the reason it was"));
+        println("              detected as a subscription or rejected.");
+        println("");
+
+        printAnsi(cmdLine("get gaps"));
+        println("   Prints a list of detected gaps in the transaction record in CSV format.");
+        println("   A gap exists when the balance invariant between consecutive transactions is");
+        println("   violated, indicating that one or more transactions are missing from the record.");
+        println("   Accounts with fewer than two transactions are listed as INDETERMINATE.");
+        println("");
+
+        printAnsi(cmdLine("combine categories --source=SOURCE --target=TARGET"));
+        println("   Moves all transactions from the source category to the target category,");
+        println("   then deletes the source category. Useful for merging duplicate categories.");
+        println("   The target category is created if it doesn't already exist.");
+        printAnsi(flagLine("source", "Required. Name of the category to move transactions from."));
+        printAnsi(flagLine("target", "Required. Name of the category to move transactions to."));
+        println("");
+
+        printAnsi(cmdLine("rename category --source=SOURCE --target=TARGET"));
+        println("   Alias for 'combine categories'. Renames a category by moving all its");
+        println("   transactions to the target (created if it doesn't exist) and deleting the source.");
+        println("");
+
+        printAnsi(cmdLine("help"));
+        println("   Displays this help text.");
+    }
+
+    private void warnIfColorSuppressed() {
+        if (!isColorSupported()) {
+            println("Note: Colour output suppressed (stdout is not connected to an interactive terminal).");
+            println("");
+        }
+    }
+
+    private AttributedString cmdLine(String signature) {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append("ofxcat");
+
+        // Tokenize preserving [...] spans that may contain spaces (e.g. [START DATE])
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int depth = 0;
+        for (char c : signature.toCharArray()) {
+            if (c == '[') {
+                depth++;
+            } else if (c == ']') {
+                depth--;
+            }
+            if (c == ' ' && depth == 0) {
+                if (current.length() > 0) {
+                    tokens.add(current.toString());
+                    current = new StringBuilder();
+                }
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) tokens.add(current.toString());
+
+        for (String token : tokens) {
+            sb.style(AttributedStyle.DEFAULT);
+            sb.append(" ");
+            if (token.startsWith("--")) {
+                int eqIdx = token.indexOf('=');
+                if (eqIdx >= 0) {
+                    sb.style(STYLE_PROMPT);
+                    sb.append(token.substring(0, eqIdx + 1));
+                    sb.style(STYLE_MUTED);
+                    sb.append(token.substring(eqIdx + 1));
+                } else {
+                    sb.style(STYLE_PROMPT);
+                    sb.append(token);
+                }
+            } else if (token.startsWith("[")) {
+                sb.style(STYLE_MUTED);
+                sb.append(token);
+            } else {
+                sb.style(STYLE_HEADER);
+                sb.append(token);
+            }
+        }
+        return sb.toAttributedString();
+    }
+
+    private AttributedString flagLine(String flag, String description) {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(STYLE_PROMPT);
+        sb.append("   --" + flag);
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(": " + description);
+        return sb.toAttributedString();
+    }
+
+    private AttributedString formatFlagLine() {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(STYLE_PROMPT);
+        sb.append("   --format");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(": Optional. Output format: ");
+        sb.style(STYLE_VALUE);
+        sb.append("terminal");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(" (default) or ");
+        sb.style(STYLE_VALUE);
+        sb.append("xlsx");
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(".");
+        return sb.toAttributedString();
+    }
+
+    private AttributedString enumDescLine(String enumValue, String description) {
+        AttributedStringBuilder sb = new AttributedStringBuilder();
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append("             ");
+        sb.style(STYLE_VALUE);
+        sb.append(enumValue);
+        sb.style(AttributedStyle.DEFAULT);
+        sb.append(": " + description);
+        return sb.toAttributedString();
     }
 }

@@ -448,75 +448,13 @@ public class OfxCat {
     }
 
     private void printHelp() {
-        cli.println(Arrays.asList(
-                "ofxcat import [FILENAME]",
-                "   Imports the transactions in the specified *.ofx file.",
-                "ofxcat get accounts",
-                "   Prints a list of known accounts in CSV format.",
-                "ofxcat get categories",
-                "   Prints a list of known transaction categories in CSV format.",
-                "ofxcat get transactions --start-date=[START DATE] [OPTIONS]",
-                "   Prints the amount spent in each known transaction category.",
-                "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
-                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
-                "               Defaults to today if not specified.",
-                "   --category-id: Optional. If specified, only transactions that belong",
-                "                  to the specified category will be printed.",
-                "   --format: Optional. Output format: terminal (default) or xlsx.",
-                "             terminal: prints CSV to the console.",
-                "             xlsx: writes an Excel file and prints the path.",
-                "   --output-file: Optional. Output file path (only used with --format xlsx).",
-                "                  Defaults to ~/.ofxcat/reports/transactions-<start>-to-<end>.xlsx",
-                "ofxcat migrate [OPTIONS]",
-                "   Re-runs token migration on all transactions, applying current keyword rules.",
-                "   Use this after updating keyword-rules.yaml to recategorize existing transactions.",
-                "   --dry-run: Optional. Show what would change without making actual changes.",
-                "ofxcat get vendors --start-date=START [OPTIONS]",
-                "   Prints total spending per vendor for the specified date range.",
-                "   --start-date: Required. Start date inclusive in format yyyy-mm-dd",
-                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd",
-                "               Defaults to today if not specified.",
-                "   --format: Optional. Output format: terminal (default) or xlsx.",
-                "             terminal: prints CSV to the console.",
-                "             xlsx: writes an Excel file and prints the path.",
-                "             Note: XLSX does not include a pie chart. To add one, open the file",
-                "             in Excel or LibreOffice and insert a chart from the VENDOR/TOTAL columns.",
-                "   --output-file: Optional. Output file path (only used with --format xlsx).",
-                "                  Defaults to ~/.ofxcat/reports/vendors-<start>-to-<end>.xlsx",
-                "ofxcat get subscriptions [OPTIONS]",
-                "   Detects recurring charges and prints them in CSV format.",
-                "   --start-date: Optional. Start date inclusive in format yyyy-mm-dd.",
-                "                 Defaults to 13 months before --end-date.",
-                "   --end-date: Optional. End date inclusive in format yyyy-mm-dd.",
-                "               Defaults to today.",
-                "   --explain: Optional. Show every vendor group with the reason it was",
-                "              detected as a subscription or rejected.",
-                "ofxcat get gaps",
-                "   Prints a list of detected gaps in the transaction record in CSV format.",
-                "   A gap exists when the balance invariant between consecutive transactions is",
-                "   violated, indicating that one or more transactions are missing from the record.",
-                "   Accounts with fewer than two transactions are listed as INDETERMINATE.",
-                "ofxcat combine categories --source=SOURCE --target=TARGET",
-                "   Moves all transactions from the source category to the target category,",
-                "   then deletes the source category. Useful for merging duplicate categories.",
-                "   The target category is created if it doesn't already exist.",
-                "   --source: Required. Name of the category to move transactions from.",
-                "   --target: Required. Name of the category to move transactions to.",
-                "ofxcat rename category --source=SOURCE --target=TARGET",
-                "   Alias for 'combine categories'. Renames a category by moving all its",
-                "   transactions to the target (created if it doesn't exist) and deleting the source.",
-                "ofxcat help",
-                "   Displays this help text"));
+        cli.printHelp();
     }
 
     // TODO: add a mode that allows reprocessing of transactions from some category
     public static void main(String[] args) {
-        // JLine logs via JUL. Suppress INFO/WARNING messages so they don't appear on stderr.
-        // Setting the named logger level alone is insufficient: JUL propagates messages up to the
-        // root logger whose default ConsoleHandler fires independently. Set both the named logger
-        // and every handler on the root logger to SEVERE so nothing below that reaches stderr.
-        java.util.logging.Logger jlineLogger = java.util.logging.Logger.getLogger("org.jline");
-        jlineLogger.setLevel(java.util.logging.Level.SEVERE);
+        // JLine logs via JUL; suppress everything below SEVERE to avoid startup noise.
+        java.util.logging.Logger.getLogger("org.jline").setLevel(java.util.logging.Level.SEVERE);
         java.util.logging.Logger rootJulLogger = java.util.logging.Logger.getLogger("");
         for (java.util.logging.Handler handler : rootJulLogger.getHandlers()) {
             handler.setLevel(java.util.logging.Level.SEVERE);

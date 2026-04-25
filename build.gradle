@@ -20,7 +20,11 @@ version = '1.0-SNAPSHOT'
 dependencies {
     // interactive CLI
     implementation 'commons-cli:commons-cli:1.11.0'
-    implementation 'org.jline:jline:3.29.0'
+    // Use specific JLine sub-modules rather than the umbrella jline artifact to avoid pulling in
+    // terminal providers whose runtime dependencies are absent (jansi, jna) or incompatible (ffm
+    // requires Java 22). jline-reader transitively brings in jline-terminal; jline-terminal-jni
+    // transitively brings in jline-native with the Windows/Linux/Mac DLLs.
+    implementation 'org.jline:jline-reader:3.29.0'
     implementation 'org.jline:jline-terminal-jni:3.29.0'
 
     // OFX parsing
@@ -102,7 +106,8 @@ shadowJar {
     manifest {
         attributes(
                 'Main-Class': application.mainClass,
-                'Multi-Release': 'true'
+                'Multi-Release': 'true',
+                'Enable-Native-Access': 'ALL-UNNAMED'
         )
     }
 }
