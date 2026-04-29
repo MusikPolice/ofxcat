@@ -113,7 +113,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                tis.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Both transactions imported
         assertEquals(2, imported.size(), "Both transfer transactions should be imported");
@@ -199,7 +200,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                tis.categorizeTransactions(ofxExports).transactions();
 
         // Verify: All 6 transactions imported
         assertEquals(6, imported.size(), "All 6 transactions should be imported");
@@ -263,7 +265,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> firstImport = tis1.categorizeTransactions(checkingExport);
+        List<CategorizedTransaction> firstImport =
+                tis1.categorizeTransactions(checkingExport).transactions();
 
         // Verify first import: Transaction imported, no transfer yet
         assertEquals(1, firstImport.size());
@@ -300,7 +303,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> secondImport = tis2.categorizeTransactions(savingsExport);
+        List<CategorizedTransaction> secondImport =
+                tis2.categorizeTransactions(savingsExport).transactions();
 
         // Verify second import: Transaction imported, transfer now matched
         assertEquals(1, secondImport.size());
@@ -353,7 +357,8 @@ class MultiAccountIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                tis.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Transaction imported
         assertEquals(1, imported.size());

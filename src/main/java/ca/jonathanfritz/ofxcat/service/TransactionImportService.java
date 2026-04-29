@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -105,12 +106,18 @@ public class TransactionImportService {
             throw new OfxCatException("An unexpected exception occurred", e);
         }
 
-        final List<CategorizedTransaction> categorizedTransactions = categorizeTransactions(ofxTransactions);
-        cli.println(String.format("Successfully imported %d transactions", categorizedTransactions.size()));
+        final ImportResult result = categorizeTransactions(ofxTransactions);
+        final String importMessage = result.duplicateCount() > 0
+                ? String.format(
+                        "Successfully imported %d transactions (%d duplicates skipped)",
+                        result.transactions().size(), result.duplicateCount())
+                : String.format(
+                        "Successfully imported %d transactions",
+                        result.transactions().size());
+        cli.println(importMessage);
     }
 
-    // TODO: return number of ignored duplicate transactions so that this info can be displayed in UI
-    public List<CategorizedTransaction> categorizeTransactions(final List<OfxExport> ofxExports) {
+    public ImportResult categorizeTransactions(final List<OfxExport> ofxExports) {
         final Map<Account, List<Transaction>> accountTransactions = new HashMap<>();
         for (OfxExport ofxExport : ofxExports) {
             // figure out which account these transactions belong to
@@ -171,6 +178,7 @@ public class TransactionImportService {
         // at this point, we can attempt to identify inter-account transfers
         final List<CategorizedTransaction> categorizedTransactions =
                 new ArrayList<>(identifyTransfers(accountTransactions));
+        final AtomicInteger duplicateCount = new AtomicInteger(0);
 
         for (Map.Entry<Account, List<Transaction>> entry : accountTransactions.entrySet()) {
             // TODO: this can probably be cleaned up too
@@ -179,6 +187,7 @@ public class TransactionImportService {
                 try (DatabaseTransaction t = new DatabaseTransaction(connection)) {
                     if (categorizedTransactionDao.isDuplicate(t, transaction)) {
                         logger.info("Ignored duplicate Transaction {}", transaction);
+                        duplicateCount.incrementAndGet();
                         return;
                     }
 
@@ -216,7 +225,7 @@ public class TransactionImportService {
         // days to clear
         identifyTransfers(categorizedTransactionDao.findUnlinkedTransfers());
 
-        return categorizedTransactions;
+        return new ImportResult(categorizedTransactions, duplicateCount.get());
     }
 
     private List<CategorizedTransaction> identifyTransfers(Map<Account, List<Transaction>> accountTransactions) {
