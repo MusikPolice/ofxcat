@@ -130,17 +130,20 @@ public class VendorGroupingService {
             }
         }
 
-        // Evaluate each candidate pair and union if overlap meets the threshold.
+        // Evaluate each candidate pair and union if Jaccard similarity meets the threshold.
+        // Jaccard = |intersection| / |union| = shared / (|A| + |B| - shared).
+        // This is symmetric and never inflates to 1.0 due to one side having a small token set,
+        // which prevents single-token descriptions from acting as universal bridge nodes.
         for (Map.Entry<TxPair, Integer> entry : sharedTokenCounts.entrySet()) {
             TxPair pair = entry.getKey();
             int shared = entry.getValue();
             Set<String> tokensA = tokensByTxId.getOrDefault(pair.a(), Collections.emptySet());
             Set<String> tokensB = tokensByTxId.getOrDefault(pair.b(), Collections.emptySet());
-            int minSize = Math.min(tokensA.size(), tokensB.size());
-            if (minSize == 0) {
+            if (tokensA.isEmpty() || tokensB.isEmpty()) {
                 continue;
             }
-            double overlap = (double) shared / minSize;
+            int unionSize = tokensA.size() + tokensB.size() - shared;
+            double overlap = (double) shared / unionSize;
             if (overlap >= overlapThreshold) {
                 union(parent, pair.a(), pair.b());
             }

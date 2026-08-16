@@ -88,14 +88,12 @@ class VendorGroupingServiceTest extends AbstractDatabaseTest {
 
     @Test
     void transactionsWithSufficientOverlapGroupTogether() {
-        // 2 of 3 tokens overlap → ratio = 2/2 = 1.0 (above default 0.6 threshold)
         insertWithTokens("NETFLIX MONTHLY CA", -15f, Set.of("netflix", "monthly", "ca"));
         insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"));
 
         List<VendorGroup> groups = vendorGroupingService.groupByVendor(JAN_01, DEC_31);
 
-        // "netflix" appears in both; overlap = 1/min(3,2) = 1/2 = 0.5 which is below default 0.6
-        // so these should be separate groups
+        // "netflix" appears in both; Jaccard = 1/|{netflix,monthly,ca,com}| = 1/4 = 0.25 < 0.5 threshold
         assertEquals(2, groups.size());
     }
 
@@ -108,6 +106,21 @@ class VendorGroupingServiceTest extends AbstractDatabaseTest {
         List<VendorGroup> groups = vendorGroupingService.groupByVendor(JAN_01, DEC_31);
 
         assertEquals(2, groups.size());
+    }
+
+    @Test
+    void singleTokenDescriptionDoesNotBridgeUnrelatedVendors() {
+        // "INDIGO #903" → only token is "indigo" (numeric "903" is filtered).
+        // With the old minSize formula, overlap("indigo" vs "indigo","online","brampton") = 1/1 = 1.0,
+        // bridging the 1-token description into the online-brampton cluster and then transitively
+        // pulling in anything that shared "online". With Jaccard, 1/3 = 0.33 < 0.5 → no merge.
+        insertWithTokens("INDIGO #903", -25f, Set.of("indigo"));
+        insertWithTokens("INDIGO ONLINE BRAMPTON ON", -30f, Set.of("indigo", "online", "brampton"));
+        insertWithTokens("SCHEDULED ONLINE PAYMENT", -100f, Set.of("scheduled", "online"));
+
+        List<VendorGroup> groups = vendorGroupingService.groupByVendor(JAN_01, DEC_31);
+
+        assertEquals(3, groups.size());
     }
 
     @Test
@@ -155,9 +168,8 @@ class VendorGroupingServiceTest extends AbstractDatabaseTest {
         insertWithTokens("NETFLIX.COM", -15f, Set.of("netflix", "com"));
         insertWithTokens("NETFLIX *MONTHLY", -15f, Set.of("netflix", "monthly"));
 
-        // "netflix" is the only core token (appears in both; "com" and "monthly" appear in only one)
-        // overlap between these two: shared=1 ("netflix"), min(2,2)=2 → ratio=0.5 < 0.6 → separate groups
-        // so each forms its own group; display name for the .COM one uses its core token
+        // Jaccard = 1/|{netflix,com,monthly}| = 1/3 = 0.33 < 0.5 threshold → separate groups;
+        // each forms its own group with its own core tokens as the display name
         List<VendorGroup> groups = vendorGroupingService.groupByVendor(JAN_01, DEC_31);
 
         List<String> names = groups.stream().map(VendorGroup::displayName).toList();

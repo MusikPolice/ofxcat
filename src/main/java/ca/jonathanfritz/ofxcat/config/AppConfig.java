@@ -106,8 +106,11 @@ public class AppConfig {
         private double overlapThreshold;
 
         public VendorGroupingSettings() {
-            // Default: 60% overlap required to assign two transactions to the same vendor
-            this.overlapThreshold = 0.6;
+            // Default: 50% Jaccard similarity required to assign two transactions to the same vendor.
+            // Jaccard (|intersection|/|union|) is more conservative than the minSize formula,
+            // so 0.5 is calibrated to match the practical clustering behaviour of the old 0.6 minSize
+            // threshold while preventing single-token descriptions from bridging unrelated vendors.
+            this.overlapThreshold = 0.5;
         }
 
         public double getOverlapThreshold() {
