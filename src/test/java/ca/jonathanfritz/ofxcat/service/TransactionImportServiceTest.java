@@ -84,7 +84,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
         final List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(ofxExports);
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
         Assertions.assertEquals(1, categorizedTransactions.size());
         Assertions.assertEquals(
                 fitId, categorizedTransactions.get(0).getTransaction().getFitId());
@@ -137,9 +137,9 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transferDao,
                 transactionTokenDao,
                 tokenNormalizer);
-        final List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(ofxExports);
-        Assertions.assertTrue(categorizedTransactions.isEmpty());
+        final ImportResult result = transactionImportService.categorizeTransactions(ofxExports);
+        Assertions.assertTrue(result.transactions().isEmpty());
+        Assertions.assertEquals(1, result.duplicateCount());
 
         // make sure that the original transaction still exists
         // this will throw an SQLException if there are two transactions with the same FitID
@@ -197,7 +197,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
         final List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(ofxExports);
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         Assertions.assertEquals(2, categorizedTransactions.size());
         Assertions.assertTrue(
@@ -279,7 +279,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
         List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(sourceOfxFile);
+                transactionImportService.categorizeTransactions(sourceOfxFile).transactions();
 
         // the source transaction was categorized, printed to the CLI, and inserted into the database; a transfer was
         // not created
@@ -313,7 +313,8 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transferDao,
                 transactionTokenDao,
                 tokenNormalizer);
-        categorizedTransactions = transactionImportService.categorizeTransactions(sinkOfxFile);
+        categorizedTransactions =
+                transactionImportService.categorizeTransactions(sinkOfxFile).transactions();
 
         // the sink transaction was categorized, printed to the CLI, and inserted into the database
         Assertions.assertEquals(1, categorizedTransactions.size());
@@ -440,7 +441,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
         final List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(ofxExports);
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // the transaction was categorized with the brand new category
         Assertions.assertEquals(1, categorizedTransactions.size());
@@ -510,7 +511,8 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+        final List<CategorizedTransaction> result =
+                tis.categorizeTransactions(List.of(ofxExport)).transactions();
 
         // With AVAILBAL anchor: initialBalance = 1000.00 - (-100.00) = 1100.00; balance = 1000.00
         // With LEDGERBAL anchor: balance would be 750.00
@@ -565,7 +567,8 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+        final List<CategorizedTransaction> result =
+                tis.categorizeTransactions(List.of(ofxExport)).transactions();
 
         // With LEDGERBAL anchor: initialBalance = 900.00 - (-100.00) = 1000.00; balance = 900.00
         Assertions.assertEquals(1, result.size());
@@ -625,7 +628,8 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = tis.categorizeTransactions(List.of(ofxExport));
+        final List<CategorizedTransaction> result =
+                tis.categorizeTransactions(List.of(ofxExport)).transactions();
 
         // With LEDGERBAL anchor: initialBalance = -622.69 - (-100.00) = -522.69; balance = -622.69
         // With AVAILBAL anchor: balance would be 9377.31 (wrong)
@@ -664,7 +668,7 @@ class TransactionImportServiceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
         final List<CategorizedTransaction> categorizedTransactions =
-                transactionImportService.categorizeTransactions(ofxExports);
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // the transaction was categorized as UNKNOWN
         Assertions.assertEquals(1, categorizedTransactions.size());

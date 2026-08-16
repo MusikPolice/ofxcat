@@ -128,7 +128,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = transactionImportService.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: All 10 transactions were imported
         assertEquals(10, imported.size(), "All 10 transactions should be imported");
@@ -185,7 +186,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> firstImport = tis1.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> firstImport =
+                tis1.categorizeTransactions(ofxExports).transactions();
         assertEquals(2, firstImport.size(), "First import should have 2 transactions");
 
         // Second import of same file
@@ -206,7 +208,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> secondImport = tis2.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> secondImport =
+                tis2.categorizeTransactions(ofxExports).transactions();
         assertEquals(0, secondImport.size(), "Second import should have 0 new transactions (duplicates ignored)");
 
         // Verify database still has only 2 transactions (by checking fitIds from first import)
@@ -258,7 +261,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                tis.categorizeTransactions(ofxExports).transactions();
 
         // Verify
         assertEquals(3, imported.size());
@@ -311,7 +315,8 @@ class ImportFlowIntegrationTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> imported = tis.categorizeTransactions(ofxExports);
+        List<CategorizedTransaction> imported =
+                tis.categorizeTransactions(ofxExports).transactions();
 
         // Verify
         assertEquals(4, imported.size());

@@ -80,7 +80,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: No transactions imported, no errors
         Assertions.assertEquals(0, result.size());
@@ -125,7 +126,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Transaction balance equals final balance (the balance AFTER the transaction)
         Assertions.assertEquals(1, result.size());
@@ -187,7 +189,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Transaction balance equals final balance (the balance AFTER the transaction)
         Assertions.assertEquals(1, result.size());
@@ -248,7 +251,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Three transactions with correct running balances
         Assertions.assertEquals(3, result.size());
@@ -308,7 +312,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Balances calculated in chronological order despite OFX file order
         Assertions.assertEquals(3, result.size());
@@ -372,7 +377,8 @@ class TransactionImportServiceBalanceTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Verify: Transactions processed in correct chronological order
         Assertions.assertEquals(2, result.size());

@@ -83,7 +83,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Then: The transaction was imported
         assertEquals(1, result.size());
@@ -136,7 +137,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Then: The transaction was imported with UNKNOWN category
         assertEquals(1, result.size());
@@ -184,7 +186,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        final List<CategorizedTransaction> result = transactionImportService.categorizeTransactions(ofxExports);
+        final List<CategorizedTransaction> result =
+                transactionImportService.categorizeTransactions(ofxExports).transactions();
 
         // Then: Both transactions were imported
         assertEquals(2, result.size());
@@ -230,7 +233,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> firstResult = firstImportService.categorizeTransactions(firstExport);
+        List<CategorizedTransaction> firstResult =
+                firstImportService.categorizeTransactions(firstExport).transactions();
         assertEquals(1, firstResult.size());
         assertEquals(groceryCategory, firstResult.getFirst().getCategory());
 
@@ -259,7 +263,8 @@ class TransactionImportTokenStorageTest extends AbstractDatabaseTest {
                 transactionTokenDao,
                 tokenNormalizer);
 
-        List<CategorizedTransaction> secondResult = secondImportService.categorizeTransactions(secondExport);
+        List<CategorizedTransaction> secondResult =
+                secondImportService.categorizeTransactions(secondExport).transactions();
 
         // Then: The second transaction was auto-categorized using token matching
         assertEquals(1, secondResult.size());
